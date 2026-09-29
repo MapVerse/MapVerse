@@ -1,0 +1,17 @@
+:root {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  /* Liberty's land color, so the page doesn't flash while tiles load */
+  background: #f8f4f0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
