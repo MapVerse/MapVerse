@@ -4,6 +4,7 @@ import {
   NavigationControl,
   ScaleControl,
 } from '@vis.gl/react-maplibre'
+import SearchBox from '../features/search/SearchBox.tsx'
 import { maplibre } from './maplibre.ts'
 import { LIBERTY_STYLE_URL } from './styles.ts'
 
@@ -17,10 +18,14 @@ export default function MapView() {
       initialViewState={INITIAL_VIEW}
       mapStyle={LIBERTY_STYLE_URL}
       hash
+      // Drops the default MapLibre link but keeps the data attribution the
+      // licenses require; it collapses to an ⓘ button once the map is moved.
+      attributionControl={{ compact: true }}
     >
       <NavigationControl position="top-right" visualizePitch />
       <GeolocateControl position="top-right" trackUserLocation />
       <ScaleControl position="bottom-left" />
+      <SearchBox />
     </Map>
   )
 }

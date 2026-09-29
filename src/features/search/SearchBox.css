@@ -1,0 +1,71 @@
+.search {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  /* leave room for the map controls on the right */
+  width: min(360px, calc(100% - 70px));
+}
+
+.search input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  outline: none;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 10%);
+  color: #1f2328;
+  font: inherit;
+  /* 16px keeps iOS from zooming in on focus */
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.search input:focus-visible {
+  box-shadow: 0 0 0 2px #2563eb;
+}
+
+.search-results,
+.search-message {
+  margin: 6px 0 0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgb(0 0 0 / 10%);
+  font-size: 15px;
+}
+
+.search-results {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 4px 0;
+  list-style: none;
+}
+
+.search-results li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.search-results li:hover,
+.search-results li[aria-selected='true'] {
+  background: #eef2ff;
+}
+
+.search-name {
+  color: #1f2328;
+}
+
+.search-detail {
+  color: #59636e;
+  font-size: 13px;
+}
+
+.search-message {
+  padding: 10px 14px;
+  color: #59636e;
+}
