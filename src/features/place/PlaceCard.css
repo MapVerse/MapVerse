@@ -1,0 +1,44 @@
+.place-card .maplibregl-popup-content {
+  padding: 12px 30px 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.place-card .maplibregl-popup-close-button {
+  padding: 2px 8px;
+  font-size: 18px;
+}
+
+.place-name {
+  margin: 0;
+  color: #1f2328;
+  font-size: 16px;
+}
+
+.place-category {
+  margin: 2px 0 0;
+  color: #2563eb;
+  font-weight: 500;
+}
+
+.place-address {
+  margin: 6px 0 0;
+  color: #59636e;
+}
+
+.place-links {
+  display: flex;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.place-links a {
+  color: #2563eb;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.place-links a:hover {
+  text-decoration: underline;
+}
