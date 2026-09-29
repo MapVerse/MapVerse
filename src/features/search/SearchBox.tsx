@@ -94,6 +94,8 @@ export default function SearchBox({ onSelect, onClear }: Props) {
             setQuery(event.target.value)
             setOpen(true)
             setActive(-1)
+            // Emptying the box drops the selected place, like the clear button
+            if (!event.target.value) onClear()
           }}
           onFocus={() => setOpen(true)}
           onBlur={() => setOpen(false)}

@@ -51,13 +51,6 @@ export default function PlaceCard({ place, offset, onClose }: Props) {
         >
           Yol tarifi
         </a>
-        <a
-          href={`https://www.openstreetmap.org/?mlat=${latText}&mlon=${lngText}#map=19/${latText}/${lngText}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          OpenStreetMap'te aç
-        </a>
       </div>
     </Popup>
   )

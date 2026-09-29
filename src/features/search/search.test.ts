@@ -29,6 +29,7 @@ describe('toSearchResult', () => {
       lngLat: [28.9741, 41.0256],
       osm: { type: 'N', id: 42 },
       bbox: undefined,
+      outline: false,
     })
   })
 
@@ -53,7 +54,25 @@ describe('toSearchResult', () => {
       address: 'Türkiye',
       osm: { type: 'R', id: 7 },
       bbox: [28, 40.8, 29.9, 41.6],
+      outline: true,
     })
+  })
+
+  it('does not outline buildings, even though they have an extent', () => {
+    const result = toSearchResult({
+      geometry: { coordinates: [28.97, 41.03] },
+      properties: {
+        osm_type: 'W',
+        osm_id: 9,
+        osm_value: 'yes',
+        type: 'house',
+        street: 'İstiklal Caddesi',
+        housenumber: '1',
+        extent: [28.969, 41.031, 28.971, 41.029],
+      },
+    })
+    expect(result.outline).toBe(false)
+    expect(result.bbox).toBeDefined()
   })
 
   it('names unnamed addresses after their street', () => {

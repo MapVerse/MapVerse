@@ -10,6 +10,10 @@ export type Place = {
   osm?: OsmRef
   /** west, south, east, north; set for areas such as cities or parks */
   bbox?: [number, number, number, number]
+  /** Outline the area's boundary when selected (cities, districts…) */
+  outline?: boolean
+  /** Sprite image of a POI picked on the map */
+  icon?: string
 }
 
 const EARTH_RADIUS_M = 6_371_008.8

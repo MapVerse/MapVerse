@@ -11,6 +11,8 @@ import Boundary from '../features/place/Boundary.tsx'
 import PlaceCard from '../features/place/PlaceCard.tsx'
 import type { Place } from '../features/place/place.ts'
 import { findPoiLayerIds, toPoi } from '../features/place/poi.ts'
+import SelectedPoi, { type PoiMatch } from '../features/place/SelectedPoi.tsx'
+import { addSelectedPinImage } from '../features/place/selectedPin.ts'
 import SearchBox from '../features/search/SearchBox.tsx'
 import { maplibre } from './maplibre.ts'
 import { LIBERTY_STYLE_URL } from './styles.ts'
@@ -18,8 +20,8 @@ import { LIBERTY_STYLE_URL } from './styles.ts'
 // Istanbul; the URL hash (#zoom/lat/lng) takes precedence when present.
 const INITIAL_VIEW = { longitude: 28.9784, latitude: 41.0082, zoom: 11 }
 
-/** Search results get a pin; map POIs already have an icon of their own. */
-type Selection = { place: Place; pinned: boolean }
+/** Search results get a marker; map POIs get a pin with their icon enlarged. */
+type Selection = { place: Place; pinned: boolean; poi?: PoiMatch }
 
 export default function MapView() {
   const [poiLayerIds, setPoiLayerIds] = useState<string[]>([])
@@ -31,7 +33,15 @@ export default function MapView() {
     const feature = event.features?.[0]
     setSelection(
       feature
-        ? { place: toPoi(feature, event.lngLat.toArray()), pinned: false }
+        ? {
+            place: toPoi(feature, event.lngLat.toArray()),
+            pinned: false,
+            poi: {
+              id: feature.id,
+              name: feature.properties.name,
+              class: feature.properties.class,
+            },
+          }
         : null,
     )
   }
@@ -47,9 +57,10 @@ export default function MapView() {
       attributionControl={{ compact: true }}
       interactiveLayerIds={poiLayerIds}
       cursor={hoveringPoi ? 'pointer' : undefined}
-      onLoad={(event) =>
+      onLoad={(event) => {
+        addSelectedPinImage(event.target)
         setPoiLayerIds(findPoiLayerIds(event.target.getStyle()))
-      }
+      }}
       onMouseEnter={() => setHoveringPoi(true)}
       onMouseLeave={() => setHoveringPoi(false)}
       onClick={onMapClick}
@@ -61,7 +72,17 @@ export default function MapView() {
         onSelect={(result) => setSelection({ place: result, pinned: true })}
         onClear={() => setSelection(null)}
       />
-      {place?.osm && place.bbox && <Boundary key={place.key} osm={place.osm} />}
+      {place?.outline && place.osm && (
+        <Boundary key={`outline:${place.key}`} osm={place.osm} />
+      )}
+      {selection?.poi && (
+        <SelectedPoi
+          lngLat={selection.place.lngLat}
+          icon={selection.place.icon}
+          layerIds={poiLayerIds}
+          match={selection.poi}
+        />
+      )}
       {selection?.pinned && (
         <Marker
           longitude={selection.place.lngLat[0]}
@@ -71,9 +92,9 @@ export default function MapView() {
       )}
       {selection && (
         <PlaceCard
-          key={selection.place.key}
+          key={`card:${selection.place.key}`}
           place={selection.place}
-          offset={selection.pinned ? 42 : 14}
+          offset={selection.pinned ? 42 : 50}
           onClose={() => setSelection(null)}
         />
       )}

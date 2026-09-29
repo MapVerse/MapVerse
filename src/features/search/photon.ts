@@ -26,6 +26,16 @@ export type PhotonFeature = {
 
 const API = 'https://photon.komoot.io'
 
+/** Result types worth outlining; buildings and streets would just be boxes. */
+const OUTLINED_TYPES = new Set([
+  'country',
+  'state',
+  'county',
+  'city',
+  'district',
+  'locality',
+])
+
 export async function searchPlaces(
   query: string,
   options: {
@@ -91,6 +101,7 @@ export function toSearchResult({
     lngLat: geometry.coordinates,
     osm,
     bbox: p.extent && [p.extent[0], p.extent[3], p.extent[2], p.extent[1]],
+    outline: !!osm && OUTLINED_TYPES.has(p.type ?? ''),
   }
 }
 

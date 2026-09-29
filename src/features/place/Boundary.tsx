@@ -21,17 +21,12 @@ export default function Boundary({ osm }: { osm: OsmRef }) {
   return (
     <Source id="selected-area" type="geojson" data={outline}>
       <Layer
-        id="selected-area-fill"
-        type="fill"
-        paint={{ 'fill-color': '#e5484d', 'fill-opacity': 0.06 }}
-      />
-      <Layer
         id="selected-area-outline"
         type="line"
         paint={{
           'line-color': '#e5484d',
-          'line-width': 2,
-          'line-dasharray': [2, 1.5],
+          'line-width': 1.5,
+          'line-dasharray': [3, 2],
         }}
       />
     </Source>

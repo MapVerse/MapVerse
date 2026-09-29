@@ -21,10 +21,15 @@ export function toPoi(
       ? (feature.geometry.coordinates as [number, number])
       : clicked
   const category = categoryLabel(p.subclass, p.class)
+  // Layout values come back evaluated for this feature; images stringify to their name
+  const icon = (
+    feature.layer.layout as { 'icon-image'?: unknown } | undefined
+  )?.['icon-image']
   return {
     key: `poi:${lngLat.join(',')}`,
     name: p['name:tr'] || p.name || category || 'Yer',
     category,
     lngLat,
+    icon: icon ? String(icon) : undefined,
   }
 }

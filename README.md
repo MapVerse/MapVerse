@@ -9,8 +9,8 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 - OpenFreeMap vektör altlığı (Liberty stili), API anahtarı gerekmez
 - Yakınlaştırma, pusula/eğim, konumum ve ölçek kontrolleri
 - Yer ve adres arama ([Photon](https://photon.komoot.io)): ekrandaki alana göre öncelikli öneriler, uzaklık bilgisi, klavyeyle seçim ve son aramalar
-- İl, ilçe ya da park gibi alan sonuçlarında alan sınırının çizilmesi ([Nominatim](https://nominatim.openstreetmap.org))
-- Haritadaki mekânlara tıklayınca ad, kategori, adres ve yol tarifi linki içeren kart
+- İl, ilçe ya da semt gibi alan sonuçlarında alan sınırının çizilmesi ([Nominatim](https://nominatim.openstreetmap.org))
+- Haritadaki mekânlara tıklayınca simgesi büyüyen bir iğne ve ad, kategori, adres, yol tarifi linki içeren kart
 - Harita konumu URL'de tutulur (`#zoom/enlem/boylam`), link paylaşınca aynı görünüm açılır
 
 ## Geliştirme
