@@ -4,6 +4,7 @@ import {
   NavigationControl,
   ScaleControl,
 } from '@vis.gl/react-maplibre'
+import SearchBox from '../features/search/SearchBox.tsx'
 import { maplibre } from './maplibre.ts'
 import { LIBERTY_STYLE_URL } from './styles.ts'
 
@@ -24,6 +25,7 @@ export default function MapView() {
       <NavigationControl position="top-right" visualizePitch />
       <GeolocateControl position="top-right" trackUserLocation />
       <ScaleControl position="bottom-left" />
+      <SearchBox />
     </Map>
   )
 }

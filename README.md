@@ -8,6 +8,7 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 
 - OpenFreeMap vektör altlığı (Liberty stili), API anahtarı gerekmez
 - Yakınlaştırma, pusula/eğim, konumum ve ölçek kontrolleri
+- Yer ve adres arama: yazarken öneriler, klavyeyle seçim, seçilen yere uçma ([Photon](https://photon.komoot.io))
 - Harita konumu URL'de tutulur (`#zoom/enlem/boylam`), link paylaşınca aynı görünüm açılır
 
 ## Geliştirme
@@ -19,6 +20,7 @@ npm install
 npm run dev           # geliştirme sunucusu
 npm run build         # tip kontrolü + üretim derlemesi
 npm run lint          # oxlint
+npm test              # vitest
 npm run format        # prettier
 ```
 
@@ -26,7 +28,7 @@ npm run format        # prettier
 
 - [x] İskelet: tam ekran harita, kontroller, CI, GitHub Pages yayını
 - [ ] Stil değiştirici ve koyu mod
-- [ ] Arama (Photon)
+- [x] Arama (Photon)
 - [ ] İşaretler ve popup (localStorage, GeoJSON dışa/içe aktarma)
 - [ ] 3D binalar ve arazi
 - [ ] Mobil cila ve uçtan uca test
