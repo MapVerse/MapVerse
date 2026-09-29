@@ -4,6 +4,8 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Relative asset paths, so the build also works under /MapVerse/ on GitHub Pages
+  base: './',
   build: {
     // maplibre-gl is lazy-loaded in its own ~1 MB chunk; that's expected
     chunkSizeWarningLimit: 1200,

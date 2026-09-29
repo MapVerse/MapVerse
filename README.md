@@ -2,6 +2,8 @@
 
 MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 
+**Canlı:** https://mapverse.github.io/MapVerse/
+
 ## Özellikler
 
 - OpenFreeMap vektör altlığı (Liberty stili), API anahtarı gerekmez
@@ -22,12 +24,12 @@ npm run format        # prettier
 
 ## Yol haritası
 
-- [x] İskelet: tam ekran harita, kontroller, CI
+- [x] İskelet: tam ekran harita, kontroller, CI, GitHub Pages yayını
 - [ ] Stil değiştirici ve koyu mod
 - [ ] Arama (Photon)
 - [ ] İşaretler ve popup (localStorage, GeoJSON dışa/içe aktarma)
 - [ ] 3D binalar ve arazi
-- [ ] Mobil cila, uçtan uca test, GitHub Pages yayını
+- [ ] Mobil cila ve uçtan uca test
 
 ## Atıflar
 
