@@ -3,6 +3,9 @@ import type { ExpressionSpecification } from 'maplibre-gl'
 import { useEffect } from 'react'
 import { PIN_HEAD_OFFSET, SELECTED_PIN } from './selectedPin.ts'
 
+/** Largest icon side that fits the white circle in the pin's head, in px. */
+const HEAD_ICON_PX = 18
+
 /** Identifies the picked feature within the style's POI layers. */
 export type PoiMatch = { id?: string | number; name?: string; class?: string }
 
@@ -16,6 +19,12 @@ type Props = {
 /** A pin over the selected map POI, with the POI's icon enlarged in its head. */
 export default function SelectedPoi({ lngLat, icon, layerIds, match }: Props) {
   const { current: map } = useMap()
+  // Sprite icons come in different sizes; scale this one to fit the head
+  const image = icon && map?.hasImage(icon) ? map.getImage(icon) : undefined
+  const side = image
+    ? Math.max(image.data.width, image.data.height) / image.pixelRatio
+    : 0
+  const iconSize = side > 0 ? Math.min(1.6, HEAD_ICON_PX / side) : 1.2
 
   // Fade out the POI's own small icon while the pin stands in for it
   useEffect(() => {
@@ -72,13 +81,15 @@ export default function SelectedPoi({ lngLat, icon, layerIds, match }: Props) {
           type="symbol"
           layout={{
             'icon-image': icon,
-            'icon-size': 1.4,
+            'icon-size': iconSize,
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
           }}
           paint={{
             'icon-translate': [0, -PIN_HEAD_OFFSET],
             'icon-translate-anchor': 'viewport',
+            // Only affects single-colour (SDF) icons
+            'icon-color': '#e5484d',
           }}
         />
       )}
