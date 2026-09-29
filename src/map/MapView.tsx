@@ -7,6 +7,7 @@ import {
   type MapLayerMouseEvent,
 } from '@vis.gl/react-maplibre'
 import { useState } from 'react'
+import Directions from '../features/directions/Directions.tsx'
 import Boundary from '../features/place/Boundary.tsx'
 import PlaceCard from '../features/place/PlaceCard.tsx'
 import type { Place } from '../features/place/place.ts'
@@ -27,9 +28,13 @@ export default function MapView() {
   const [poiLayerIds, setPoiLayerIds] = useState<string[]>([])
   const [hoveringPoi, setHoveringPoi] = useState(false)
   const [selection, setSelection] = useState<Selection | null>(null)
+  const [directionsTo, setDirectionsTo] = useState<Place | null>(null)
+  const [labelLayerId, setLabelLayerId] = useState<string>()
   const place = selection?.place
 
   function onMapClick(event: MapLayerMouseEvent) {
+    // Directions handle their own clicks (picking a starting point)
+    if (directionsTo) return
     const feature = event.features?.[0]
     setSelection(
       feature
@@ -55,11 +60,13 @@ export default function MapView() {
       // Drops the default MapLibre link but keeps the data attribution the
       // licenses require; it collapses to an ⓘ button once the map is moved.
       attributionControl={{ compact: true }}
-      interactiveLayerIds={poiLayerIds}
+      interactiveLayerIds={directionsTo ? [] : poiLayerIds}
       cursor={hoveringPoi ? 'pointer' : undefined}
       onLoad={(event) => {
+        const style = event.target.getStyle()
         addSelectedPinImage(event.target)
-        setPoiLayerIds(findPoiLayerIds(event.target.getStyle()))
+        setPoiLayerIds(findPoiLayerIds(style))
+        setLabelLayerId(style.layers.find((l) => l.type === 'symbol')?.id)
       }}
       onMouseEnter={() => setHoveringPoi(true)}
       onMouseLeave={() => setHoveringPoi(false)}
@@ -69,6 +76,7 @@ export default function MapView() {
       <GeolocateControl position="top-right" trackUserLocation />
       <ScaleControl position="bottom-left" />
       <SearchBox
+        hidden={!!directionsTo}
         onSelect={(result) => setSelection({ place: result, pinned: true })}
         onClear={() => setSelection(null)}
       />
@@ -90,12 +98,20 @@ export default function MapView() {
           color="#e5484d"
         />
       )}
-      {selection && (
+      {selection && !directionsTo && (
         <PlaceCard
           key={`card:${selection.place.key}`}
           place={selection.place}
           offset={selection.pinned ? 42 : 50}
+          onDirections={() => setDirectionsTo(selection.place)}
           onClose={() => setSelection(null)}
+        />
+      )}
+      {directionsTo && (
+        <Directions
+          to={directionsTo}
+          beforeId={labelLayerId}
+          onClose={() => setDirectionsTo(null)}
         />
       )}
     </Map>

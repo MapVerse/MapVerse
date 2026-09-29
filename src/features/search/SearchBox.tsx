@@ -8,11 +8,12 @@ import { useRecentSearches } from './useRecentSearches.ts'
 import './SearchBox.css'
 
 type Props = {
+  hidden?: boolean
   onSelect: (result: SearchResult) => void
   onClear: () => void
 }
 
-export default function SearchBox({ onSelect, onClear }: Props) {
+export default function SearchBox({ hidden, onSelect, onClear }: Props) {
   const { current: map } = useMap()
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
@@ -74,7 +75,7 @@ export default function SearchBox({ onSelect, onClear }: Props) {
   }
 
   return (
-    <div className="search" role="search">
+    <div className="search" role="search" hidden={hidden}>
       <div className="search-field">
         <input
           ref={inputRef}

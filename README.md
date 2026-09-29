@@ -10,7 +10,8 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 - Yakınlaştırma, pusula/eğim, konumum ve ölçek kontrolleri
 - Yer ve adres arama ([Photon](https://photon.komoot.io)): ekrandaki alana göre öncelikli öneriler, uzaklık bilgisi, klavyeyle seçim ve son aramalar
 - İl, ilçe ya da semt gibi alan sonuçlarında alan sınırının çizilmesi ([Nominatim](https://nominatim.openstreetmap.org))
-- Haritadaki mekânlara tıklayınca simgesi büyüyen bir iğne ve ad, kategori, adres, yol tarifi linki içeren kart
+- Haritadaki mekânlara tıklayınca simgesi büyüyen bir iğne ve ad, kategori, adres içeren kart
+- Uygulama içinde yol tarifi ([Valhalla](https://valhalla.github.io/valhalla/)): araba, yürüyüş ve bisiklet; alternatif rotalar; Türkçe adım adım tarif; başlangıç olarak konumun ya da haritada seçtiğin nokta
 - Harita konumu URL'de tutulur (`#zoom/enlem/boylam`), link paylaşınca aynı görünüm açılır
 
 ## Geliştirme
@@ -25,6 +26,8 @@ npm run lint          # oxlint
 npm test              # vitest
 npm run format        # prettier
 ```
+
+Rotalar varsayılan olarak FOSSGIS'in herkese açık Valhalla sunucusundan (`valhalla1.openstreetmap.de`) alınır. Bu sunucu düşük hacimli kullanım içindir; kendi Valhalla sunucunu kullanmak için derlemeden önce `VITE_VALHALLA_URL` değişkenini tanımla.
 
 ## Yol haritası
 

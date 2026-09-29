@@ -4,15 +4,24 @@ import { reverseGeocode } from '../search/photon.ts'
 import type { Place } from './place.ts'
 import './PlaceCard.css'
 
-type Props = { place: Place; offset: number; onClose: () => void }
+type Props = {
+  place: Place
+  offset: number
+  onDirections: () => void
+  onClose: () => void
+}
 
-export default function PlaceCard({ place, offset, onClose }: Props) {
+export default function PlaceCard({
+  place,
+  offset,
+  onDirections,
+  onClose,
+}: Props) {
   const [lng, lat] = place.lngLat
   const needsLookup = place.address === undefined
   // undefined while the lookup runs, null when it finds nothing
   const [lookedUp, setLookedUp] = useState<string | null>()
   const address = needsLookup ? lookedUp : place.address
-  const [latText, lngText] = [lat.toFixed(6), lng.toFixed(6)]
 
   useEffect(() => {
     if (!needsLookup) return
@@ -43,15 +52,9 @@ export default function PlaceCard({ place, offset, onClose }: Props) {
       {address !== null && (
         <p className="place-address">{address ?? 'Adres aranıyor…'}</p>
       )}
-      <div className="place-links">
-        <a
-          href={`https://www.google.com/maps/dir/?api=1&destination=${latText},${lngText}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          Yol tarifi
-        </a>
-      </div>
+      <button type="button" className="place-directions" onClick={onDirections}>
+        Yol tarifi
+      </button>
     </Popup>
   )
 }
