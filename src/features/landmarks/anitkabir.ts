@@ -189,14 +189,32 @@ function roadOfLions(): Part[] {
     // Low walls along the lawns
     const wall = ROAD + side * 24
     parts.push(block([wall - 0.4, 66, wall + 0.4, 306], 0, 0.9, 'stone'))
-    // 12 lions down each side, lying on their plinths
+    // 12 lions down each side, in pairs, lying on their plinths and
+    // looking across the road at each other
     for (let i = 0; i < 12; i++) {
       const u = ROAD + side * 9.6
       const v = 78 + i * 19.2
+      // From `back` to `front` of a lion, measured towards the road
+      const piece = (
+        back: number,
+        front: number,
+        half: number,
+        base: number,
+        top: number,
+        material: Material,
+      ) => {
+        const [u0, u1] = [u - side * back, u - side * front].sort(
+          (a, b) => a - b,
+        )
+        return block([u0, v - half, u1, v + half], base, top, material)
+      }
       parts.push(
-        block([u - 0.8, v - 1.7, u + 0.8, v + 1.7], 0, 1.3, 'stone'),
-        block([u - 0.55, v - 1.2, u + 0.55, v + 1.2], 1.3, 2.2, 'whitewash'),
-        block([u - 0.5, v - 1.5, u + 0.5, v - 0.6], 2.2, 2.9, 'whitewash'),
+        piece(-1.7, 1.7, 0.8, 0, 1.3, 'stone'),
+        // Haunches, maned chest, head and front paws
+        piece(-1.3, 0.5, 0.55, 1.3, 2.1, 'whitewash'),
+        piece(0.2, 1, 0.65, 1.3, 2.6, 'whitewash'),
+        piece(0.8, 1.5, 0.45, 2, 2.9, 'whitewash'),
+        piece(1, 1.6, 0.5, 1.3, 1.6, 'whitewash'),
       )
     }
     // And a row of trees in each lawn

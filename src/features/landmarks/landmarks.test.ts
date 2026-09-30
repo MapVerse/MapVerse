@@ -104,11 +104,23 @@ describe('Anıtkabir', () => {
   const anitkabir = landmark('anitkabir')
   const blocks = anitkabir.parts.filter((p) => p.kind === 'block')
 
-  it('has the Road of Lions, with 12 lions down each side', () => {
-    const lions = blocks.filter(
-      (p) => p.material === 'whitewash' && p.base === 1.3,
+  it('has the Road of Lions, with 12 lions down each side facing it', () => {
+    const heads = blocks.filter(
+      (p) => p.material === 'whitewash' && p.base === 2,
     )
-    expect(lions).toHaveLength(24)
+    expect(heads).toHaveLength(24)
+    // Across the road, on the complex's grid, from its centre line
+    const angle = (37.55 * Math.PI) / 180
+    const across = ({ footprint }: { footprint: [number, number][] }) => {
+      const u =
+        footprint.reduce(
+          (sum, [x, y]) => sum + x * Math.cos(angle) + y * Math.sin(angle),
+          0,
+        ) / footprint.length
+      return Math.abs(u + 13.6)
+    }
+    // Each head is on the road side of its lion's plinth
+    for (const head of heads) expect(across(head)).toBeLessThan(9.6)
   })
 
   it('has its 44 columns round the Hall of Honour', () => {
