@@ -153,6 +153,11 @@
   margin-left: 26px;
 }
 
+.directions-chips-inline {
+  flex: none;
+  margin-left: 0;
+}
+
 .directions-chips button {
   display: inline-flex;
   align-items: center;

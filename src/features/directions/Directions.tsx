@@ -10,6 +10,8 @@ import type { TravelMode } from './valhalla.ts'
 import './Directions.css'
 
 type Origin = { name: string; lngLat: [number, number] }
+/** Which end of the route the next map click sets. */
+type Target = 'origin' | 'destination'
 
 const MODES: { mode: TravelMode; label: string; icon: StrokeName }[] = [
   { mode: 'auto', label: 'Araba', icon: 'car' },
@@ -18,7 +20,8 @@ const MODES: { mode: TravelMode; label: string; icon: StrokeName }[] = [
 ]
 
 type Props = {
-  to: Place
+  /** Where to go; when missing, the destination is picked on the map */
+  to: Place | null
   /** Style layer to draw routes beneath, so labels stay readable */
   beforeId?: string
   onClose: () => void
@@ -32,9 +35,16 @@ export default function Directions({ to, beforeId, onClose }: Props) {
   const [locating, setLocating] = useState<'pending' | 'failed' | 'done'>(() =>
     'geolocation' in navigator ? 'pending' : 'failed',
   )
-  const [picking, setPicking] = useState(false)
+  const [destination, setDestination] = useState<Place | null>(to)
+  const [picking, setPicking] = useState<Target | null>(
+    to ? null : 'destination',
+  )
   const [selected, setSelected] = useState(0)
-  const { routes, status } = useRoutes(origin?.lngLat ?? null, to.lngLat, mode)
+  const { routes, status } = useRoutes(
+    origin?.lngLat ?? null,
+    destination?.lngLat ?? null,
+    mode,
+  )
   const route = routes[selected] ?? routes[0]
 
   // Bumped to ask for the user's location again
@@ -59,22 +69,30 @@ export default function Directions({ to, beforeId, onClose }: Props) {
       },
       () => {
         setLocating('failed')
-        setPicking(true)
+        setPicking((target) => target ?? 'origin')
       },
     )
   }, [locateAttempt])
 
-  // While picking, the next click on the map becomes the starting point
+  // While picking, the next click on the map sets that end of the route
   useEffect(() => {
     if (!picking || !map) return
     const canvas = map.getCanvas()
     canvas.style.cursor = 'crosshair'
     const onClick = (event: { lngLat: { toArray(): [number, number] } }) => {
-      setPicking(false)
-      setOrigin({
-        name: 'Haritada seçilen nokta',
-        lngLat: event.lngLat.toArray(),
-      })
+      const lngLat = event.lngLat.toArray()
+      if (picking === 'destination') {
+        setDestination({
+          key: `picked:${lngLat}`,
+          name: 'Haritada seçilen nokta',
+          lngLat,
+        })
+        // Without a starting point yet, ask for that next
+        setPicking(!origin && locating === 'failed' ? 'origin' : null)
+      } else {
+        setOrigin({ name: 'Haritada seçilen nokta', lngLat })
+        setPicking(null)
+      }
       setSelected(0)
     }
     map.once('click', onClick)
@@ -82,7 +100,7 @@ export default function Directions({ to, beforeId, onClose }: Props) {
       map.off('click', onClick)
       canvas.style.cursor = ''
     }
-  }, [picking, map])
+  }, [picking, map, origin, locating])
 
   useEffect(() => {
     if (!map || !route) return
@@ -116,17 +134,20 @@ export default function Directions({ to, beforeId, onClose }: Props) {
     )
   }, [map, route])
 
-  const message = picking
-    ? locating === 'failed' && !origin
-      ? 'Konumuna erişilemedi. Başlangıç için haritada bir noktaya tıkla.'
-      : 'Başlangıç için haritada bir noktaya tıkla.'
-    : status === 'loading'
-      ? 'Rota hesaplanıyor…'
-      : status === 'none'
-        ? 'Bu iki nokta arasında rota bulunamadı.'
-        : status === 'error'
-          ? 'Rota şu anda hesaplanamıyor.'
-          : null
+  const message =
+    picking === 'destination'
+      ? 'Varış için haritada bir noktaya tıkla.'
+      : picking === 'origin'
+        ? locating === 'failed' && !origin
+          ? 'Konumuna erişilemedi. Başlangıç için haritada bir noktaya tıkla.'
+          : 'Başlangıç için haritada bir noktaya tıkla.'
+        : status === 'loading'
+          ? 'Rota hesaplanıyor…'
+          : status === 'none'
+            ? 'Bu iki nokta arasında rota bulunamadı.'
+            : status === 'error'
+              ? 'Rota şu anda hesaplanamıyor.'
+              : null
 
   const lines: FeatureCollection<LineString, { selected: boolean }> = {
     type: 'FeatureCollection',
@@ -192,18 +213,41 @@ export default function Directions({ to, beforeId, onClose }: Props) {
             )}
             <button
               type="button"
-              aria-pressed={picking}
-              onClick={() => setPicking((p) => !p)}
+              aria-label="Başlangıcı haritadan seç"
+              aria-pressed={picking === 'origin'}
+              onClick={() =>
+                setPicking((p) => (p === 'origin' ? null : 'origin'))
+              }
             >
-              <Icon name={picking ? 'close' : 'pin'} size={16} />
-              {picking ? 'Vazgeç' : 'Haritadan seç'}
+              <Icon name={picking === 'origin' ? 'close' : 'pin'} size={16} />
+              {picking === 'origin' ? 'Vazgeç' : 'Haritadan seç'}
             </button>
           </div>
           <div className="directions-point">
             <span className="directions-dot directions-dot-destination" />
             <div className="directions-point-text">
               <span className="directions-point-label">Varış</span>
-              <span className="directions-point-name">{to.name}</span>
+              <span className="directions-point-name">
+                {destination?.name ?? 'Varış noktası seç'}
+              </span>
+            </div>
+            <div className="directions-chips directions-chips-inline">
+              <button
+                type="button"
+                aria-label="Varışı haritadan seç"
+                aria-pressed={picking === 'destination'}
+                onClick={() =>
+                  setPicking((p) =>
+                    p === 'destination' ? null : 'destination',
+                  )
+                }
+              >
+                <Icon
+                  name={picking === 'destination' ? 'close' : 'pin'}
+                  size={16}
+                />
+                {picking === 'destination' ? 'Vazgeç' : 'Haritadan seç'}
+              </button>
             </div>
           </div>
         </div>
@@ -287,9 +331,14 @@ export default function Directions({ to, beforeId, onClose }: Props) {
           <span className="route-origin" />
         </Marker>
       )}
-      <Marker longitude={to.lngLat[0]} latitude={to.lngLat[1]}>
-        <span className="route-destination" />
-      </Marker>
+      {destination && (
+        <Marker
+          longitude={destination.lngLat[0]}
+          latitude={destination.lngLat[1]}
+        >
+          <span className="route-destination" />
+        </Marker>
+      )}
     </>
   )
 }

@@ -11,16 +11,23 @@ type Result = { key: string; routes: Route[]; status: Status }
 
 export function useRoutes(
   from: [number, number] | null,
-  to: [number, number],
+  to: [number, number] | null,
   mode: TravelMode,
 ): { routes: Route[]; status: Status } {
   const [result, setResult] = useState<Result | null>(null)
   const [fromLng, fromLat] = from ?? []
-  const [toLng, toLat] = to
-  const key = from && `${from}|${to}|${mode}`
+  const [toLng, toLat] = to ?? []
+  const key = from && to && `${from}|${to}|${mode}`
 
   useEffect(() => {
-    if (fromLng === undefined || fromLat === undefined) return
+    if (
+      fromLng === undefined ||
+      fromLat === undefined ||
+      toLng === undefined ||
+      toLat === undefined
+    ) {
+      return
+    }
     const request = `${[fromLng, fromLat]}|${[toLng, toLat]}|${mode}`
     const controller = new AbortController()
     getRoutes([fromLng, fromLat], [toLng, toLat], mode, controller.signal)

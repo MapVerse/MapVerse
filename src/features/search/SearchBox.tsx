@@ -1,6 +1,6 @@
 import { useMap } from '@vis.gl/react-maplibre'
 import { useId, useRef, useState, type KeyboardEvent } from 'react'
-import { Icon } from '../../icons/Icon.tsx'
+import { Glyph, Icon } from '../../icons/Icon.tsx'
 import CategoryBadge from '../place/CategoryBadge.tsx'
 import { distanceMeters, formatDistance } from '../place/place.ts'
 import { findMatch } from './match.ts'
@@ -13,9 +13,16 @@ type Props = {
   hidden?: boolean
   onSelect: (result: SearchResult) => void
   onClear: () => void
+  /** Opens directions, to the selected place if there is one */
+  onDirections: () => void
 }
 
-export default function SearchBox({ hidden, onSelect, onClear }: Props) {
+export default function SearchBox({
+  hidden,
+  onSelect,
+  onClear,
+  onDirections,
+}: Props) {
   const { current: map } = useMap()
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
@@ -61,6 +68,16 @@ export default function SearchBox({ hidden, onSelect, onClear }: Props) {
     inputRef.current?.focus()
   }
 
+  /** The search button picks the highlighted result, or opens the list. */
+  function search() {
+    if (!showRecent && items.length > 0) {
+      select(items[active] ?? items[0])
+    } else {
+      setOpen(true)
+      inputRef.current?.focus()
+    }
+  }
+
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
@@ -79,21 +96,21 @@ export default function SearchBox({ hidden, onSelect, onClear }: Props) {
   return (
     <div className="search" role="search" hidden={hidden}>
       <div className="search-field">
-        <span className="search-icon">
-          <Icon name="search" size={20} />
+        <span className="search-logo" aria-hidden="true">
+          <Glyph name="logo" size={26} />
         </span>
         <input
           ref={inputRef}
           type="search"
           role="combobox"
-          aria-label="Yer veya adres ara"
+          aria-label="Arama ve yer seçimi"
           aria-autocomplete="list"
           aria-expanded={items.length > 0}
           aria-controls={listId}
           aria-activedescendant={
             items.length > 0 && active >= 0 ? `${listId}-${active}` : undefined
           }
-          placeholder="Yer veya adres ara"
+          placeholder="Arama ve yer seçimi"
           autoComplete="off"
           value={query}
           onChange={(event) => {
@@ -110,13 +127,34 @@ export default function SearchBox({ hidden, onSelect, onClear }: Props) {
         {query && (
           <button
             type="button"
-            className="search-clear"
+            className="search-action search-clear"
             aria-label="Aramayı temizle"
             onClick={clear}
           >
             <Icon name="close" size={18} />
           </button>
         )}
+        <button
+          type="button"
+          className="search-action"
+          aria-label="Ara"
+          title="Ara"
+          // Keep focus in the box so the open list is still there on click
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={search}
+        >
+          <Icon name="search" size={22} strokeWidth={1.9} />
+        </button>
+        <span className="search-divider" />
+        <button
+          type="button"
+          className="search-action"
+          aria-label="Yol tarifi"
+          title="Yol tarifi"
+          onClick={onDirections}
+        >
+          <Icon name="route" size={22} strokeWidth={1.9} />
+        </button>
       </div>
       {items.length > 0 && (
         <div

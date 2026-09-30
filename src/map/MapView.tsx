@@ -52,13 +52,16 @@ export default function MapView() {
   const [poiLayerIds, setPoiLayerIds] = useState<string[]>([])
   const [hoveringPoi, setHoveringPoi] = useState(false)
   const [selection, setSelection] = useState<Selection | null>(null)
-  const [directionsTo, setDirectionsTo] = useState<Place | null>(null)
+  // Open directions, to a place or (when null) to a point picked on the map
+  const [directions, setDirections] = useState<{ to: Place | null } | null>(
+    null,
+  )
   const [labelLayerId, setLabelLayerId] = useState<string>()
   const place = selection?.place
 
   function onMapClick(event: MapLayerMouseEvent) {
-    // Directions handle their own clicks (picking a starting point)
-    if (directionsTo) return
+    // Directions handle their own clicks (picking either end of a route)
+    if (directions) return
     const feature = event.features?.[0]
     setSelection(
       feature
@@ -85,7 +88,7 @@ export default function MapView() {
       // Drops the default MapLibre link but keeps the data attribution the
       // licenses require; it collapses to an ⓘ button once the map is moved.
       attributionControl={{ compact: true }}
-      interactiveLayerIds={directionsTo ? [] : poiLayerIds}
+      interactiveLayerIds={directions ? [] : poiLayerIds}
       cursor={hoveringPoi ? 'pointer' : undefined}
       onLoad={(event) => {
         const style = event.target.getStyle()
@@ -101,14 +104,15 @@ export default function MapView() {
       <TiltControl position="top-right" />
       <ScaleControl position="bottom-left" />
       <SearchBox
-        hidden={!!directionsTo}
+        hidden={!!directions}
         onSelect={(result) => setSelection({ place: result })}
         onClear={() => setSelection(null)}
+        onDirections={() => setDirections({ to: selection?.place ?? null })}
       />
       {place?.outline && place.osm && (
         <Boundary key={`outline:${place.key}`} osm={place.osm} />
       )}
-      {selection?.poi && !directionsTo && (
+      {selection?.poi && !directions && (
         <SelectedPoi
           lngLat={selection.place.lngLat}
           icon={selection.place.icon}
@@ -117,20 +121,20 @@ export default function MapView() {
           match={selection.poi}
         />
       )}
-      {selection && !directionsTo && (
+      {selection && !directions && (
         <PlaceCard
           key={`card:${selection.place.key}`}
           place={selection.place}
           offset={selection.poi ? 26 : 8}
-          onDirections={() => setDirectionsTo(selection.place)}
+          onDirections={() => setDirections({ to: selection.place })}
           onClose={() => setSelection(null)}
         />
       )}
-      {directionsTo && (
+      {directions && (
         <Directions
-          to={directionsTo}
+          to={directions.to}
           beforeId={labelLayerId}
-          onClose={() => setDirectionsTo(null)}
+          onClose={() => setDirections(null)}
         />
       )}
     </Map>
