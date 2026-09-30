@@ -12,8 +12,9 @@ export type Place = {
   bbox?: [number, number, number, number]
   /** Outline the area's boundary when selected (cities, districts…) */
   outline?: boolean
-  /** Sprite image of a POI picked on the map */
+  /** Sprite image of a POI picked on the map, and its tint if single-colour */
   icon?: string
+  iconColor?: string
 }
 
 const EARTH_RADIUS_M = 6_371_008.8

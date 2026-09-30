@@ -1,10 +1,6 @@
 import { Layer, Source, useMap } from '@vis.gl/react-maplibre'
 import type { ExpressionSpecification } from 'maplibre-gl'
 import { useEffect } from 'react'
-import { PIN_HEAD_OFFSET, SELECTED_PIN } from './selectedPin.ts'
-
-/** Largest icon side that fits the white circle in the pin's head, in px. */
-const HEAD_ICON_PX = 18
 
 /** Identifies the picked feature within the style's POI layers. */
 export type PoiMatch = { id?: string | number; name?: string; class?: string }
@@ -12,21 +8,31 @@ export type PoiMatch = { id?: string | number; name?: string; class?: string }
 type Props = {
   lngLat: [number, number]
   icon?: string
+  iconColor?: string
   layerIds: string[]
   match: PoiMatch
 }
 
-/** A pin over the selected map POI, with the POI's icon enlarged in its head. */
-export default function SelectedPoi({ lngLat, icon, layerIds, match }: Props) {
+/** Aim for about this size, in px, without growing an icon by more than 1.8×. */
+const TARGET_ICON_PX = 30
+
+/** Shows the selected map POI's own icon, enlarged in place. */
+export default function SelectedPoi({
+  lngLat,
+  icon,
+  iconColor,
+  layerIds,
+  match,
+}: Props) {
   const { current: map } = useMap()
-  // Sprite icons come in different sizes; scale this one to fit the head
   const image = icon && map?.hasImage(icon) ? map.getImage(icon) : undefined
   const side = image
     ? Math.max(image.data.width, image.data.height) / image.pixelRatio
     : 0
-  const iconSize = side > 0 ? Math.min(1.6, HEAD_ICON_PX / side) : 1.2
+  const scale =
+    side > 0 ? Math.min(1.8, Math.max(1.3, TARGET_ICON_PX / side)) : 1.6
 
-  // Fade out the POI's own small icon while the pin stands in for it
+  // Fade out the POI's own small icon while the enlarged copy stands in for it
   useEffect(() => {
     if (!map) return
     const style = map.getMap()
@@ -59,6 +65,7 @@ export default function SelectedPoi({ lngLat, icon, layerIds, match }: Props) {
     }
   }, [map, layerIds, match.id, match.name, match.class])
 
+  if (!icon) return null
   return (
     <Source
       id="selected-poi"
@@ -66,33 +73,22 @@ export default function SelectedPoi({ lngLat, icon, layerIds, match }: Props) {
       data={{ type: 'Point', coordinates: lngLat }}
     >
       <Layer
-        id="selected-poi-pin"
+        id="selected-poi-icon"
         type="symbol"
         layout={{
-          'icon-image': SELECTED_PIN,
+          'icon-image': icon,
+          'icon-size': scale,
+          // Grow upwards from the icon's bottom edge, clear of its label
           'icon-anchor': 'bottom',
           'icon-allow-overlap': true,
           'icon-ignore-placement': true,
         }}
+        paint={{
+          'icon-translate': [0, side / 2],
+          'icon-translate-anchor': 'viewport',
+          ...(iconColor ? { 'icon-color': iconColor } : {}),
+        }}
       />
-      {icon && (
-        <Layer
-          id="selected-poi-icon"
-          type="symbol"
-          layout={{
-            'icon-image': icon,
-            'icon-size': iconSize,
-            'icon-allow-overlap': true,
-            'icon-ignore-placement': true,
-          }}
-          paint={{
-            'icon-translate': [0, -PIN_HEAD_OFFSET],
-            'icon-translate-anchor': 'viewport',
-            // Only affects single-colour (SDF) icons
-            'icon-color': '#e5484d',
-          }}
-        />
-      )}
     </Source>
   )
 }

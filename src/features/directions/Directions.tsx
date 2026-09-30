@@ -249,6 +249,9 @@ export default function Directions({ to, beforeId, onClose }: Props) {
           <span className="route-origin" />
         </Marker>
       )}
+      <Marker longitude={to.lngLat[0]} latitude={to.lngLat[1]}>
+        <span className="route-destination" />
+      </Marker>
     </>
   )
 }

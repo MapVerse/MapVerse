@@ -42,6 +42,9 @@ export default function PlaceCard({
       offset={offset}
       maxWidth="300px"
       closeOnClick={false}
+      // Keep focus where it was (e.g. the search box): moving it onto the card's
+      // button let the Enter that picked a result press that button as well
+      focusAfterOpen={false}
       onClose={onClose}
       className="place-card"
     >

@@ -21,15 +21,20 @@ export function toPoi(
       ? (feature.geometry.coordinates as [number, number])
       : clicked
   const category = categoryLabel(p.subclass, p.class)
-  // Layout values come back evaluated for this feature; images stringify to their name
+  // Layout and paint values come back evaluated for this feature; images and
+  // colours stringify to their name and CSS form
   const icon = (
     feature.layer.layout as { 'icon-image'?: unknown } | undefined
   )?.['icon-image']
+  const iconColor = (
+    feature.layer.paint as { 'icon-color'?: unknown } | undefined
+  )?.['icon-color']
   return {
     key: `poi:${lngLat.join(',')}`,
     name: p['name:tr'] || p.name || category || 'Yer',
     category,
     lngLat,
     icon: icon ? String(icon) : undefined,
+    iconColor: iconColor ? String(iconColor) : undefined,
   }
 }
