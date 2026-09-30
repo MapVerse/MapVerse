@@ -11,6 +11,7 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 - OpenFreeMap vektör verisi üzerinde kendi harita stilimiz: açık gri zemin, beyaz yollar ve beyaz 3B binalar; API anahtarı gerekmez
 - Koyu mod: harita, mekân rozetleri, rotalar ve tüm arayüz koyu temaya geçer. Ayarlar düğmesinden Açık, Koyu ya da cihaza uyan Sistem seçilir ve seçim hatırlanır
 - Haritayı yatırıp binaları 3B gösteren düğme
+- 3B arazi: dağlar ve tepeler yükseltisiyle, gölgeli kabartmayla görünür ([Terrain Tiles](https://registry.opendata.aws/terrain-tiles/), API anahtarı gerekmez). Ayarlar panelinden açılıp kapanır ve seçim hatırlanır
 - Yakınlaştırma, pusula/eğim, konumum ve ölçek kontrolleri
 - Yer ve adres arama ([Photon](https://photon.komoot.io)): ekrandaki alana göre öncelikli öneriler, uzaklık bilgisi, klavyeyle seçim ve son aramalar
 - İl, ilçe ya da semt gibi alan sonuçlarında alan sınırının çizilmesi ([Nominatim](https://nominatim.openstreetmap.org))
@@ -41,10 +42,11 @@ Rotalar varsayılan olarak FOSSGIS'in herkese açık Valhalla sunucusundan (`val
 - [x] Koyu mod ve ayarlar
 - [x] Arama (Photon)
 - [ ] İşaretler ve popup (localStorage, GeoJSON dışa/içe aktarma)
-- [ ] 3D binalar ve arazi
+- [x] 3D binalar ve arazi
 - [ ] Mobil cila ve uçtan uca test
 
 ## Atıflar
 
 Harita verisi © [OpenStreetMap](https://www.openstreetmap.org/copyright) katkıcıları.
 Tile'lar [OpenFreeMap](https://openfreemap.org) ve [OpenMapTiles](https://openmaptiles.org) ile sunulur.
+Yükselti verisi [Mapzen Terrain Tiles](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) (AWS Open Data) üzerinden gelir.

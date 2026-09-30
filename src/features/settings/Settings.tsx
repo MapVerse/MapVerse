@@ -1,9 +1,13 @@
-import { useControl } from '@vis.gl/react-maplibre'
+import { useControl, useMap } from '@vis.gl/react-maplibre'
 import type { ControlPosition, IControl } from 'maplibre-gl'
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../../icons/Icon.tsx'
 import type { StrokeName } from '../../icons/strokes.ts'
+import {
+  setTerrainEnabled,
+  useTerrainEnabled,
+} from '../../map/terrainSetting.ts'
 import {
   setThemePreference,
   useTheme,
@@ -36,16 +40,28 @@ const THEMES: { value: ThemePreference; label: string; icon: StrokeName }[] = [
   { value: 'system', label: 'Sistem', icon: 'monitor' },
 ]
 
-/** A map button that opens the settings: theme, and clearing recent searches. */
+/** A map button that opens the settings: theme, 3D terrain, recent searches. */
 export default function Settings({ position }: { position: ControlPosition }) {
   const slot = useControl(() => new Slot(), { position })
+  const { current: map } = useMap()
   const toggleRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
   const preference = useThemePreference()
   const theme = useTheme()
+  const terrain = useTerrainEnabled()
   const recent = useRecentSearches()
   const panelId = useId()
   const themeLabelId = useId()
+  const terrainLabelId = useId()
+  const terrainNoteId = useId()
+
+  function toggleTerrain() {
+    setTerrainEnabled(!terrain)
+    // Relief only shows on a tilted map, so tilt a flat one
+    if (!terrain && map && map.getPitch() < 10) {
+      map.easeTo({ pitch: 55, duration: 1000 })
+    }
+  }
 
   // Close on Escape or on a click anywhere else
   useEffect(() => {
@@ -115,6 +131,28 @@ export default function Settings({ position }: { position: ControlPosition }) {
                 {theme === 'dark' ? 'koyu' : 'açık'}.
               </p>
             )}
+          </div>
+
+          <div className="mv-settings-section">
+            <span className="mv-settings-label">Harita</span>
+            <button
+              type="button"
+              role="switch"
+              className="mv-settings-switch"
+              aria-checked={terrain}
+              aria-labelledby={terrainLabelId}
+              aria-describedby={terrainNoteId}
+              onClick={toggleTerrain}
+            >
+              <Icon name="mountain" size={20} />
+              <span className="mv-settings-switch-text">
+                <span id={terrainLabelId}>3B arazi</span>
+                <span id={terrainNoteId} className="mv-settings-note">
+                  Dağlar ve tepeler kabartmalı görünür
+                </span>
+              </span>
+              <span className="mv-settings-switch-track" aria-hidden="true" />
+            </button>
           </div>
 
           <div className="mv-settings-section">

@@ -19,7 +19,8 @@ import { useTheme } from '../theme/theme.ts'
 import './controls.css'
 import { maplibre } from './maplibre.ts'
 import { resolvePoiImage } from './poiStyle.ts'
-import { MAP_STYLES } from './style.ts'
+import { mapStyle } from './style.ts'
+import { useTerrainEnabled } from './terrainSetting.ts'
 import TiltControl from './TiltControl.tsx'
 
 // Istanbul; the URL hash (#zoom/lat/lng) takes precedence when present.
@@ -52,6 +53,7 @@ type Selection = { place: Place; poi?: PoiMatch }
 
 export default function MapView() {
   const theme = useTheme()
+  const terrain = useTerrainEnabled()
   const [poiLayerIds, setPoiLayerIds] = useState<string[]>([])
   const [hoveringPoi, setHoveringPoi] = useState(false)
   const [selection, setSelection] = useState<Selection | null>(null)
@@ -85,7 +87,7 @@ export default function MapView() {
       mapLib={maplibre}
       initialViewState={INITIAL_VIEW}
       ref={installImageResolver}
-      mapStyle={MAP_STYLES[theme]}
+      mapStyle={mapStyle(theme, terrain)}
       locale={LOCALE}
       hash
       // Drops the default MapLibre link but keeps the data attribution the

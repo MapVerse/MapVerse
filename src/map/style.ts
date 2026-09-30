@@ -2,6 +2,7 @@ import type {
   ExpressionSpecification,
   FilterSpecification,
   LayerSpecification,
+  RasterDEMSourceSpecification,
   StyleSpecification,
 } from 'maplibre-gl'
 import type { Theme } from '../theme/theme.ts'
@@ -37,6 +38,12 @@ const LIGHT = {
   labelSubtle: '#9ca3af',
   halo: '#ffffff',
   lightIntensity: 0.16,
+  // Relief on the 3D terrain, and the sky above the horizon
+  hillShadow: '#4b5563',
+  hillHighlight: '#ffffff',
+  hillAccent: '#6b7280',
+  hillStrength: 0.45,
+  sky: '#d7e3ef',
 }
 
 type Palette = typeof LIGHT
@@ -69,6 +76,11 @@ const DARK: Palette = {
   labelSubtle: '#6f7a8a',
   halo: '#1b1e24',
   lightIntensity: 0.2,
+  hillShadow: '#000000',
+  hillHighlight: '#4a5363',
+  hillAccent: '#0c0e12',
+  hillStrength: 0.55,
+  sky: '#10151c',
 }
 
 const PALETTES: Record<Theme, Palette> = { light: LIGHT, dark: DARK }
@@ -287,18 +299,65 @@ function placeLabel(
   }
 }
 
-function buildStyle(theme: Theme): StyleSpecification {
+// Elevation from the open Terrain Tiles dataset on AWS (no key needed).
+// Terrain and hillshade read it through separate sources, as MapLibre
+// recommends, since each fetches the tiles at its own zoom.
+const DEM_SOURCE: RasterDEMSourceSpecification = {
+  type: 'raster-dem',
+  tiles: [
+    'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
+  ],
+  encoding: 'terrarium',
+  tileSize: 256,
+  maxzoom: 15,
+  attribution:
+    '<a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank">Mapzen Terrain Tiles</a>',
+}
+
+function hillshade(c: Palette): LayerSpecification {
+  return {
+    id: 'hillshade',
+    type: 'hillshade',
+    source: 'hillshade-dem',
+    paint: {
+      'hillshade-shadow-color': c.hillShadow,
+      'hillshade-highlight-color': c.hillHighlight,
+      'hillshade-accent-color': c.hillAccent,
+      'hillshade-exaggeration': c.hillStrength,
+    },
+  }
+}
+
+function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
   const c = PALETTES[theme]
   return {
     version: 8,
     name: 'MapVerse',
     glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+    // Restyle at once: with terrain, MapLibre caches the map as textures and
+    // would keep the first frame of a colour fade, i.e. the old theme
+    transition: { duration: 0, delay: 0 },
     sources: {
       openmaptiles: {
         type: 'vector',
         url: 'https://tiles.openfreemap.org/planet',
       },
+      ...(terrain && {
+        'terrain-dem': DEM_SOURCE,
+        'hillshade-dem': DEM_SOURCE,
+      }),
     },
+    ...(terrain && {
+      terrain: { source: 'terrain-dem', exaggeration: 1.4 },
+      sky: {
+        'sky-color': c.sky,
+        'horizon-color': c.land,
+        'fog-color': c.land,
+        'sky-horizon-blend': 0.6,
+        'horizon-fog-blend': 0.6,
+        'fog-ground-blend': 0.7,
+      },
+    }),
     // Soft, high light so building sides shade gently
     light: {
       anchor: 'map',
@@ -371,6 +430,8 @@ function buildStyle(theme: Theme): StyleSpecification {
           'fill-opacity': byZoom(5, 0.4, 12, 0.9),
         },
       },
+      // Under the water, which covers the sea floor's relief
+      ...(terrain ? [hillshade(c)] : []),
       {
         id: 'water',
         type: 'fill',
@@ -683,7 +744,16 @@ function buildStyle(theme: Theme): StyleSpecification {
   }
 }
 
-export const MAP_STYLES: Record<Theme, StyleSpecification> = {
-  light: buildStyle('light'),
-  dark: buildStyle('dark'),
+const styles = new Map<string, StyleSpecification>()
+
+/** The map style for a theme, with or without 3D terrain. */
+export function mapStyle(theme: Theme, terrain: boolean): StyleSpecification {
+  // The same object each time, so the map only restyles on a real change
+  const key = `${theme}:${terrain}`
+  let style = styles.get(key)
+  if (!style) {
+    style = buildStyle(theme, terrain)
+    styles.set(key, style)
+  }
+  return style
 }
