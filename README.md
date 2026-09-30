@@ -6,7 +6,8 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 
 ## Özellikler
 
-- OpenFreeMap vektör altlığı (Liberty stili), API anahtarı gerekmez
+- OpenFreeMap vektör verisi üzerinde kendi harita stilimiz: açık gri zemin, beyaz yollar ve beyaz 3B binalar; API anahtarı gerekmez
+- Haritayı yatırıp binaları 3B gösteren düğme
 - Yakınlaştırma, pusula/eğim, konumum ve ölçek kontrolleri
 - Yer ve adres arama ([Photon](https://photon.komoot.io)): ekrandaki alana göre öncelikli öneriler, uzaklık bilgisi, klavyeyle seçim ve son aramalar
 - İl, ilçe ya da semt gibi alan sonuçlarında alan sınırının çizilmesi ([Nominatim](https://nominatim.openstreetmap.org))

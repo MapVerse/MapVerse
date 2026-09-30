@@ -26,6 +26,14 @@ export function decodePolyline6(encoded: string): [number, number][] {
   return points
 }
 
+/** Clock time after `seconds` from `now`, like 10:04. */
+export function formatArrival(seconds: number, now = new Date()): string {
+  return new Date(now.getTime() + seconds * 1000).toLocaleTimeString('tr-TR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function formatDuration(seconds: number): string {
   const minutes = Math.max(1, Math.round(seconds / 60))
   if (minutes < 60) return `${minutes} dk`

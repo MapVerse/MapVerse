@@ -4,6 +4,7 @@ import {
   NavigationControl,
   ScaleControl,
   type MapLayerMouseEvent,
+  type MapRef,
 } from '@vis.gl/react-maplibre'
 import { useState } from 'react'
 import Directions from '../features/directions/Directions.tsx'
@@ -15,11 +16,18 @@ import SelectedPoi, { type PoiMatch } from '../features/place/SelectedPoi.tsx'
 import SearchBox from '../features/search/SearchBox.tsx'
 import './controls.css'
 import { maplibre } from './maplibre.ts'
-import { applyPoiStyle } from './poiStyle.ts'
-import { LIBERTY_STYLE_URL } from './styles.ts'
+import { resolvePoiImage } from './poiStyle.ts'
+import { MAP_STYLE } from './style.ts'
+import TiltControl from './TiltControl.tsx'
 
 // Istanbul; the URL hash (#zoom/lat/lng) takes precedence when present.
 const INITIAL_VIEW = { longitude: 28.9784, latitude: 41.0082, zoom: 11 }
+
+/** POI badges are drawn the first time the map needs each one. */
+function installImageResolver(ref: MapRef | null) {
+  const map = ref?.getMap()
+  map?.setMissingStyleImageResolver((id) => resolvePoiImage(map, id))
+}
 
 /** `poi` is set when the place was picked from the map's own POIs. */
 type Selection = { place: Place; poi?: PoiMatch }
@@ -54,7 +62,8 @@ export default function MapView() {
     <Map
       mapLib={maplibre}
       initialViewState={INITIAL_VIEW}
-      mapStyle={LIBERTY_STYLE_URL}
+      ref={installImageResolver}
+      mapStyle={MAP_STYLE}
       hash
       // Drops the default MapLibre link but keeps the data attribution the
       // licenses require; it collapses to an ⓘ button once the map is moved.
@@ -63,9 +72,7 @@ export default function MapView() {
       cursor={hoveringPoi ? 'pointer' : undefined}
       onLoad={(event) => {
         const style = event.target.getStyle()
-        const poiLayers = findPoiLayerIds(style)
-        applyPoiStyle(event.target, poiLayers)
-        setPoiLayerIds(poiLayers)
+        setPoiLayerIds(findPoiLayerIds(style))
         setLabelLayerId(style.layers.find((l) => l.type === 'symbol')?.id)
       }}
       onMouseEnter={() => setHoveringPoi(true)}
@@ -74,6 +81,7 @@ export default function MapView() {
     >
       <NavigationControl position="top-right" visualizePitch />
       <GeolocateControl position="top-right" trackUserLocation />
+      <TiltControl position="top-right" />
       <ScaleControl position="bottom-left" />
       <SearchBox
         hidden={!!directionsTo}

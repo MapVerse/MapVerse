@@ -1,16 +1,21 @@
 import { GLYPHS, type GlyphName } from './glyphs.ts'
 
-/** Map badge image size in CSS px, with room for its border and shadow. */
-export const BADGE_IMAGE_PX = 28
-const TILE_PX = 21
-const GLYPH_PX = 13.5
+/** Map badge image size in CSS px, with room for its shadow. */
+export const BADGE_IMAGE_PX = 30
+const DISC_PX = 22
+const GLYPH_PX = 13
 const RATIO = 2
 
 /**
- * Draws a POI badge: a rounded tile in the category colour with a white
- * border, a soft shadow and the category glyph in two tones of white.
+ * Draws a POI badge. Normally a white disc with a soft shadow and the
+ * category glyph in its colour; when selected, the disc takes the category
+ * colour and the glyph turns white.
  */
-export function drawBadge(glyph: GlyphName, color: string): ImageData {
+export function drawBadge(
+  glyph: GlyphName,
+  color: string,
+  selected = false,
+): ImageData {
   const size = BADGE_IMAGE_PX * RATIO
   const canvas = document.createElement('canvas')
   canvas.width = size
@@ -18,30 +23,33 @@ export function drawBadge(glyph: GlyphName, color: string): ImageData {
   const ctx = canvas.getContext('2d')!
   ctx.scale(RATIO, RATIO)
 
-  const inset = (BADGE_IMAGE_PX - TILE_PX) / 2
-  ctx.shadowColor = 'rgb(15 23 42 / 32%)'
-  ctx.shadowBlur = 2.5
-  ctx.shadowOffsetY = 0.8
-  ctx.fillStyle = '#fff'
+  const center = BADGE_IMAGE_PX / 2
+  const radius = DISC_PX / 2
+  ctx.shadowColor = 'rgb(15 23 42 / 22%)'
+  ctx.shadowBlur = 4
+  ctx.shadowOffsetY = 1
+  ctx.fillStyle = selected ? color : '#fff'
   ctx.beginPath()
-  ctx.roundRect(inset - 1.5, inset - 1.5, TILE_PX + 3, TILE_PX + 3, 8)
+  ctx.arc(center, center, radius, 0, 2 * Math.PI)
   ctx.fill()
 
   ctx.shadowColor = 'transparent'
-  ctx.fillStyle = color
+  ctx.lineWidth = selected ? 2 : 1
+  ctx.strokeStyle = selected ? '#fff' : 'rgb(15 23 42 / 7%)'
   ctx.beginPath()
-  ctx.roundRect(inset, inset, TILE_PX, TILE_PX, 6.5)
-  ctx.fill()
+  ctx.arc(center, center, radius - ctx.lineWidth / 2, 0, 2 * Math.PI)
+  ctx.stroke()
 
-  const offset = (BADGE_IMAGE_PX - GLYPH_PX) / 2
+  const offset = center - GLYPH_PX / 2
   ctx.translate(offset, offset)
   ctx.scale(GLYPH_PX / 24, GLYPH_PX / 24)
-  ctx.fillStyle = '#fff'
-  ctx.strokeStyle = '#fff'
+  const ink = selected ? '#fff' : color
+  ctx.fillStyle = ink
+  ctx.strokeStyle = ink
   ctx.lineJoin = 'round'
   ctx.lineWidth = 1.4
   for (const layer of GLYPHS[glyph]) {
-    ctx.globalAlpha = 'light' in layer ? 0.55 : 1
+    ctx.globalAlpha = 'light' in layer ? (selected ? 0.55 : 0.4) : 1
     const path = new Path2D(layer.d)
     ctx.fill(path, 'evenodd' in layer ? 'evenodd' : 'nonzero')
     if ('soften' in layer) ctx.stroke(path)

@@ -1,6 +1,10 @@
 import { Layer, Source, useMap } from '@vis.gl/react-maplibre'
 import type { ExpressionSpecification } from 'maplibre-gl'
 import { useEffect } from 'react'
+import {
+  POI_IMAGE_PREFIX,
+  SELECTED_POI_IMAGE_PREFIX,
+} from '../../map/poiStyle.ts'
 
 /** Identifies the picked feature within the style's POI layers. */
 export type PoiMatch = { id?: string | number; name?: string; class?: string }
@@ -16,7 +20,7 @@ type Props = {
 /** Aim for about this size, in px, without growing an icon by more than 1.8×. */
 const TARGET_ICON_PX = 30
 
-/** Shows the selected map POI's own icon, enlarged in place. */
+/** Shows the selected map POI's badge enlarged in place, filled with its colour. */
 export default function SelectedPoi({
   lngLat,
   icon,
@@ -66,6 +70,9 @@ export default function SelectedPoi({
   }, [map, layerIds, match.id, match.name, match.class])
 
   if (!icon) return null
+  const selectedIcon = icon.startsWith(POI_IMAGE_PREFIX)
+    ? SELECTED_POI_IMAGE_PREFIX + icon.slice(POI_IMAGE_PREFIX.length)
+    : icon
   return (
     <Source
       id="selected-poi"
@@ -76,7 +83,7 @@ export default function SelectedPoi({
         id="selected-poi-icon"
         type="symbol"
         layout={{
-          'icon-image': icon,
+          'icon-image': selectedIcon,
           'icon-size': scale,
           // Grow upwards from the icon's bottom edge, clear of its label
           'icon-anchor': 'bottom',

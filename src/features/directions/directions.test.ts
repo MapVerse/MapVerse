@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { decodePolyline6, formatDuration, maneuverIcon } from './directions.ts'
+import {
+  decodePolyline6,
+  formatArrival,
+  formatDuration,
+  maneuverIcon,
+} from './directions.ts'
 import { parseRoutes } from './valhalla.ts'
 
 // Reference encoder, to build fixtures
@@ -84,6 +89,14 @@ describe('formatDuration', () => {
     expect(formatDuration(1080)).toBe('18 dk')
     expect(formatDuration(3900)).toBe('1 sa 5 dk')
     expect(formatDuration(7200)).toBe('2 sa')
+  })
+})
+
+describe('formatArrival', () => {
+  it('adds the travel time to the clock', () => {
+    const now = new Date(2026, 8, 30, 9, 47)
+    expect(formatArrival(1020, now)).toBe('10:04')
+    expect(formatArrival(60 * 60 * 15, now)).toBe('00:47')
   })
 })
 

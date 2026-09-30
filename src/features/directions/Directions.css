@@ -214,8 +214,14 @@
   color: var(--mv-accent-strong);
 }
 
-.directions-route-distance {
+.directions-route-distance,
+.directions-route-arrival {
   color: var(--mv-muted);
+}
+
+.directions-route-arrival::before {
+  margin-right: 8px;
+  content: '·';
 }
 
 .directions-tag {
@@ -270,19 +276,20 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Start and end of a route, in the same style as the location puck */
 .route-origin,
 .route-destination {
   display: block;
-  width: 12px;
-  height: 12px;
-  border: 3px solid var(--mv-accent);
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  border: 4px solid #fff;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
+  background: var(--mv-accent);
+  box-shadow: 0 2px 6px rgb(15 23 42 / 28%);
 }
 
 .route-destination {
-  border-color: #fff;
   background: var(--mv-danger);
 }
 
