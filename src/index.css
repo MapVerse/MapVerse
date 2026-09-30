@@ -27,7 +27,7 @@
   color-scheme: light;
   font-family: var(--mv-font);
   /* the map's land colour, so the page doesn't flash while tiles load */
-  background: #eef0f3;
+  background: #f4f2ee;
 }
 
 /* Set on <html> by the theme (before the app loads; see index.html) */
