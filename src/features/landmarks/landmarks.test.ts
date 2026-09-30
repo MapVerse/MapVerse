@@ -144,6 +144,35 @@ describe('Anıtkabir', () => {
   })
 })
 
+describe('Atlantis', () => {
+  const atlantis = landmark('atlantis')
+  const blocks = atlantis.parts.filter((p) => p.kind === 'block')
+  const [main] = blocks
+
+  /** Whether a point is inside an outline, by counting its crossings. */
+  const within = ([x, y]: [number, number], outline: [number, number][]) =>
+    outline.reduce((inside, [x0, y0], i) => {
+      const [x1, y1] = outline[(i + 1) % outline.length]
+      const crosses =
+        y0 > y !== y1 > y && x < x0 + ((y - y0) * (x1 - x0)) / (y1 - y0)
+      return crosses ? !inside : inside
+    }, false)
+
+  it('lays its green roofs and glass vault along its main building', () => {
+    const roofs = blocks.filter(
+      (p) =>
+        p.material === 'green' ||
+        (p.material === 'windows' && p.base >= main.top),
+    )
+    expect(roofs).toHaveLength(6)
+    for (const { footprint } of roofs) {
+      for (const point of footprint) {
+        expect(within(point, main.footprint)).toBe(true)
+      }
+    }
+  })
+})
+
 describe('mosques', () => {
   const minarets = (mosque: Landmark) =>
     mosque.parts.filter(
