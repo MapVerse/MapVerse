@@ -21,7 +21,7 @@
 .search:focus-within {
   box-shadow:
     var(--mv-shadow),
-    0 0 0 2px var(--mv-accent);
+    0 0 0 2px var(--mv-search-ring);
 }
 
 .search-field {

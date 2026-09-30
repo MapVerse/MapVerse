@@ -19,6 +19,8 @@
   --mv-danger: #e5484d;
   --mv-success: #15803d;
   --mv-success-soft: #dcfce7;
+  /* the ring round the search box while it's in use */
+  --mv-search-ring: #10b981;
   --mv-radius: 16px;
   --mv-radius-sm: 12px;
   --mv-shadow: 0 1px 2px rgb(15 23 42 / 6%), 0 6px 20px rgb(15 23 42 / 12%);
@@ -47,6 +49,7 @@
   --mv-danger: #f0686c;
   --mv-success: #4ade80;
   --mv-success-soft: rgb(74 222 128 / 14%);
+  --mv-search-ring: #34d399;
   --mv-shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 6px 20px rgb(0 0 0 / 45%);
   --mv-shadow-sm: 0 1px 2px rgb(0 0 0 / 30%), 0 2px 8px rgb(0 0 0 / 30%);
 
