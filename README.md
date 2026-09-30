@@ -1,4 +1,4 @@
-<img src="public/icon.svg" width="64" alt="" />
+<img src="public/logo.svg" width="64" alt="" />
 
 # MapVerse
 
