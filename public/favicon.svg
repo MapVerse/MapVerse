@@ -1,4 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <path fill="#2563eb" d="M16 2C10.5 2 6 6.4 6 11.9 6 19.3 16 30 16 30s10-10.7 10-18.1C26 6.4 21.5 2 16 2z"/>
-  <circle cx="16" cy="12" r="4" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <defs>
+    <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd84a"/>
+      <stop offset="1" stop-color="#ffb800"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="12" cy="21.6" rx="3.8" ry="1.25" fill="#0f172a" fill-opacity=".16"/>
+  <path d="M12 2.5A7 7 0 0 1 19 9.5C19 14.4 14.3 18.8 12.9 20.3A1.25 1.25 0 0 1 11.1 20.3C9.7 18.8 5 14.4 5 9.5A7 7 0 0 1 12 2.5Z" fill="url(#fill)" stroke="#d99a00" stroke-width=".7" stroke-linejoin="round"/>
+  <circle cx="12" cy="9.5" r="2.7" fill="#fff"/>
 </svg>

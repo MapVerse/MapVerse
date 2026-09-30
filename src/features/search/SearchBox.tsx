@@ -1,6 +1,6 @@
 import { useMap } from '@vis.gl/react-maplibre'
 import { useId, useRef, useState, type KeyboardEvent } from 'react'
-import { Glyph, Icon } from '../../icons/Icon.tsx'
+import { Icon } from '../../icons/Icon.tsx'
 import CategoryBadge from '../place/CategoryBadge.tsx'
 import { distanceMeters, formatDistance } from '../place/place.ts'
 import { findMatch } from './match.ts'
@@ -96,9 +96,13 @@ export default function SearchBox({
   return (
     <div className="search" role="search" hidden={hidden}>
       <div className="search-field">
-        <span className="search-logo" aria-hidden="true">
-          <Glyph name="logo" size={26} />
-        </span>
+        <img
+          className="search-logo"
+          src={`${import.meta.env.BASE_URL}favicon.svg`}
+          alt=""
+          width={28}
+          height={28}
+        />
         <input
           ref={inputRef}
           type="search"

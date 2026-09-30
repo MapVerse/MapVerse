@@ -33,9 +33,7 @@
 }
 
 .search-logo {
-  display: flex;
   flex: none;
-  color: var(--mv-danger);
 }
 
 .search input {

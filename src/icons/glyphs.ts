@@ -352,19 +352,6 @@ export const GLYPHS = {
       evenodd: true,
     },
   ],
-  // The app's mark: a pin with a soft shadow at its tip
-  logo: [
-    {
-      d:
-        'M12 2.5A7 7 0 0 1 19 9.5C19 14.4 14.3 18.8 12.9 20.3A1.25 1.25 0 0 1 11.1 20.3C9.7 18.8 5 14.4 5 9.5A7 7 0 0 1 12 2.5Z' +
-        circle(12, 9.5, 2.6),
-      evenodd: true,
-    },
-    {
-      d: 'M8.4 21.4A3.6 1.2 0 1 0 15.6 21.4A3.6 1.2 0 1 0 8.4 21.4Z',
-      light: true,
-    },
-  ],
   pin: [
     {
       d:

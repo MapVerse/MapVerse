@@ -1,3 +1,5 @@
+<img src="public/favicon.svg" width="64" alt="" />
+
 # MapVerse
 
 MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
