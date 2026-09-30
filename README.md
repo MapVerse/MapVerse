@@ -9,6 +9,7 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 ## Özellikler
 
 - OpenFreeMap vektör verisi üzerinde kendi harita stilimiz: açık gri zemin, beyaz yollar ve beyaz 3B binalar; API anahtarı gerekmez
+- Koyu mod: harita, mekân rozetleri, rotalar ve tüm arayüz koyu temaya geçer. Ayarlar düğmesinden Açık, Koyu ya da cihaza uyan Sistem seçilir ve seçim hatırlanır
 - Haritayı yatırıp binaları 3B gösteren düğme
 - Yakınlaştırma, pusula/eğim, konumum ve ölçek kontrolleri
 - Yer ve adres arama ([Photon](https://photon.komoot.io)): ekrandaki alana göre öncelikli öneriler, uzaklık bilgisi, klavyeyle seçim ve son aramalar
@@ -16,6 +17,7 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 - Haritadaki mekânlara tıklayınca simgenin yerinde büyümesi ve ad, kategori, adres içeren kart
 - Uygulama içinde yol tarifi ([Valhalla](https://valhalla.github.io/valhalla/)): araba, yürüyüş ve bisiklet; alternatif rotalar; Türkçe adım adım tarif; başlangıç ve varış için konumun, aradığın yer ya da haritada seçtiğin nokta. Arama çubuğundaki rota düğmesiyle de açılır
 - Uygulamaya özel çizilmiş ikon seti: kategori renkleriyle harita rozetleri, iki tonlu kategori sembolleri ve arayüz için çizgi ikonlar
+- Ayarlar panelinden son aramaları temizleme
 - Harita konumu URL'de tutulur (`#zoom/enlem/boylam`), link paylaşınca aynı görünüm açılır
 
 ## Geliştirme
@@ -36,7 +38,7 @@ Rotalar varsayılan olarak FOSSGIS'in herkese açık Valhalla sunucusundan (`val
 ## Yol haritası
 
 - [x] İskelet: tam ekran harita, kontroller, CI, GitHub Pages yayını
-- [ ] Stil değiştirici ve koyu mod
+- [x] Koyu mod ve ayarlar
 - [x] Arama (Photon)
 - [ ] İşaretler ve popup (localStorage, GeoJSON dışa/içe aktarma)
 - [ ] 3D binalar ve arazi

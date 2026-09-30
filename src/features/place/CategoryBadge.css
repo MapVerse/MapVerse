@@ -3,6 +3,12 @@
   flex: none;
   place-items: center;
   border-radius: 32%;
-  background: color-mix(in srgb, var(--badge-color) 13%, white);
+  background: color-mix(in srgb, var(--badge-color) 13%, var(--mv-surface));
   color: var(--badge-color);
+}
+
+/* The lighter shade used for dark map labels, on a stronger tint */
+:root[data-theme='dark'] .category-badge {
+  background: color-mix(in srgb, var(--badge-color) 18%, var(--mv-surface));
+  color: color-mix(in srgb, var(--badge-color) 70%, white);
 }

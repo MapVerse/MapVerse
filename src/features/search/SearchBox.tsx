@@ -6,7 +6,7 @@ import { distanceMeters, formatDistance } from '../place/place.ts'
 import { findMatch } from './match.ts'
 import type { SearchResult } from './photon.ts'
 import { MIN_QUERY_LENGTH, usePlaceSearch } from './usePlaceSearch.ts'
-import { useRecentSearches } from './useRecentSearches.ts'
+import { addRecentSearch, useRecentSearches } from './useRecentSearches.ts'
 import './SearchBox.css'
 
 type Props = {
@@ -30,7 +30,7 @@ export default function SearchBox({
   const [active, setActive] = useState(-1)
   // Only search while the list is open, so picking a result doesn't refetch it
   const { results, status } = usePlaceSearch(open ? query : '')
-  const { recent, addRecent } = useRecentSearches()
+  const recent = useRecentSearches()
   const listId = useId()
 
   const trimmed = query.trim()
@@ -49,7 +49,7 @@ export default function SearchBox({
     setQuery(result.name)
     setOpen(false)
     setActive(-1)
-    addRecent(result)
+    addRecentSearch(result)
     if (result.bbox) {
       map?.fitBounds(result.bbox, {
         padding: { top: 80, right: 60, bottom: 40, left: 40 },

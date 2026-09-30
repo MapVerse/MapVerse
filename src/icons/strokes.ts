@@ -1,4 +1,4 @@
-import { circle } from './shapes.ts'
+import { circle, rr } from './shapes.ts'
 
 /** Line icons for the interface, drawn for this app on a 24×24 grid. */
 export const STROKES = {
@@ -10,6 +10,20 @@ export const STROKES = {
     circle(5.8, 18.5, 2.2) +
     'M8 18.5H15.5A3 3 0 0 0 15.5 12.5H8.5A3 3 0 0 1 8.5 6.5H18.5M16 4L18.5 6.5L16 9',
   cube: 'M12 3L20 7.5V16.5L12 21L4 16.5V7.5ZM4 7.5L12 12L20 7.5M12 12V21',
+  // Settings
+  settings:
+    circle(7.2, 7.5, 2.6) +
+    'M11.8 7.5H20M4 16.5H12.2' +
+    circle(16.8, 16.5, 2.6),
+  sun:
+    circle(12, 12, 4) +
+    'M12 2.8V4.7M12 19.3V21.2M2.8 12H4.7M19.3 12H21.2' +
+    'M5.5 5.5L6.84 6.84M17.16 17.16L18.5 18.5M18.5 5.5L17.16 6.84M6.84 17.16L5.5 18.5',
+  moon: 'M20 14.2A8.2 8.2 0 1 1 9.8 4A6.5 6.5 0 0 0 20 14.2Z',
+  monitor: rr(3, 4.5, 18, 12, 2.2) + 'M12 16.5V20M8.2 20H15.8',
+  trash:
+    'M4.5 6.6H19.5M9.4 6.6V4.9A1.1 1.1 0 0 1 10.5 3.8H13.5A1.1 1.1 0 0 1 14.6 4.9V6.6' +
+    'M6.4 6.6L7.2 18.6A2.1 2.1 0 0 0 9.3 20.6H14.7A2.1 2.1 0 0 0 16.8 18.6L17.6 6.6M10.2 10.6V16.4M13.8 10.6V16.4',
   locate:
     circle(12, 12, 6.3) +
     circle(12, 12, 1.9) +

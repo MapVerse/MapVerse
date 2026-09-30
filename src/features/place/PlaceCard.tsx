@@ -1,6 +1,7 @@
 import { Popup } from '@vis.gl/react-maplibre'
 import { useEffect, useState } from 'react'
 import { Icon } from '../../icons/Icon.tsx'
+import { useTheme } from '../../theme/theme.ts'
 import { reverseGeocode } from '../search/photon.ts'
 import { categoryInfo, labelColor } from './categories.ts'
 import CategoryBadge from './CategoryBadge.tsx'
@@ -26,6 +27,7 @@ export default function PlaceCard({
   const [lookedUp, setLookedUp] = useState<string | null>()
   const address = needsLookup ? lookedUp : place.address
   const info = categoryInfo(place.categoryKey)
+  const theme = useTheme()
 
   useEffect(() => {
     if (!needsLookup) return
@@ -60,7 +62,7 @@ export default function PlaceCard({
           {place.category && place.category !== place.name && (
             <p
               className="place-category"
-              style={info && { color: labelColor(info.color) }}
+              style={info && { color: labelColor(info.color, theme) }}
             >
               {place.category}
             </p>

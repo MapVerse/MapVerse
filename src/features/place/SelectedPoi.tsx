@@ -1,10 +1,8 @@
 import { Layer, Source, useMap } from '@vis.gl/react-maplibre'
 import type { ExpressionSpecification } from 'maplibre-gl'
 import { useEffect } from 'react'
-import {
-  POI_IMAGE_PREFIX,
-  SELECTED_POI_IMAGE_PREFIX,
-} from '../../map/poiStyle.ts'
+import { selectedPoiImage } from '../../map/poiStyle.ts'
+import { useTheme } from '../../theme/theme.ts'
 
 /** Identifies the picked feature within the style's POI layers. */
 export type PoiMatch = { id?: string | number; name?: string; class?: string }
@@ -29,6 +27,7 @@ export default function SelectedPoi({
   match,
 }: Props) {
   const { current: map } = useMap()
+  const theme = useTheme()
   const image = icon && map?.hasImage(icon) ? map.getImage(icon) : undefined
   const side = image
     ? Math.max(image.data.width, image.data.height) / image.pixelRatio
@@ -36,7 +35,8 @@ export default function SelectedPoi({
   const scale =
     side > 0 ? Math.min(1.8, Math.max(1.3, TARGET_ICON_PX / side)) : 1.6
 
-  // Fade out the POI's own small icon while the enlarged copy stands in for it
+  // Fade out the POI's own small icon while the enlarged copy stands in for it.
+  // A theme change restyles the POI layers, so it's done again after one.
   useEffect(() => {
     if (!map) return
     const style = map.getMap()
@@ -67,12 +67,10 @@ export default function SelectedPoi({
         }
       }
     }
-  }, [map, layerIds, match.id, match.name, match.class])
+  }, [map, theme, layerIds, match.id, match.name, match.class])
 
   if (!icon) return null
-  const selectedIcon = icon.startsWith(POI_IMAGE_PREFIX)
-    ? SELECTED_POI_IMAGE_PREFIX + icon.slice(POI_IMAGE_PREFIX.length)
-    : icon
+  const selectedIcon = selectedPoiImage(icon, theme)
   return (
     <Source
       id="selected-poi"

@@ -14,10 +14,12 @@ import type { Place } from '../features/place/place.ts'
 import { findPoiLayerIds, toPoi } from '../features/place/poi.ts'
 import SelectedPoi, { type PoiMatch } from '../features/place/SelectedPoi.tsx'
 import SearchBox from '../features/search/SearchBox.tsx'
+import Settings from '../features/settings/Settings.tsx'
+import { useTheme } from '../theme/theme.ts'
 import './controls.css'
 import { maplibre } from './maplibre.ts'
 import { resolvePoiImage } from './poiStyle.ts'
-import { MAP_STYLE } from './style.ts'
+import { MAP_STYLES } from './style.ts'
 import TiltControl from './TiltControl.tsx'
 
 // Istanbul; the URL hash (#zoom/lat/lng) takes precedence when present.
@@ -49,6 +51,7 @@ function installImageResolver(ref: MapRef | null) {
 type Selection = { place: Place; poi?: PoiMatch }
 
 export default function MapView() {
+  const theme = useTheme()
   const [poiLayerIds, setPoiLayerIds] = useState<string[]>([])
   const [hoveringPoi, setHoveringPoi] = useState(false)
   const [selection, setSelection] = useState<Selection | null>(null)
@@ -82,7 +85,7 @@ export default function MapView() {
       mapLib={maplibre}
       initialViewState={INITIAL_VIEW}
       ref={installImageResolver}
-      mapStyle={MAP_STYLE}
+      mapStyle={MAP_STYLES[theme]}
       locale={LOCALE}
       hash
       // Drops the default MapLibre link but keeps the data attribution the
@@ -102,6 +105,7 @@ export default function MapView() {
       <NavigationControl position="top-right" visualizePitch />
       <GeolocateControl position="top-right" trackUserLocation />
       <TiltControl position="top-right" />
+      <Settings position="top-right" />
       <ScaleControl position="bottom-left" />
       <SearchBox
         hidden={!!directions}

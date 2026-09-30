@@ -1,4 +1,5 @@
 import type { GlyphName } from '../../icons/glyphs.ts'
+import type { Theme } from '../../theme/theme.ts'
 
 type Group =
   | 'food'
@@ -157,10 +158,17 @@ export function categoryLabel(
   return first && humanize(first)
 }
 
-/** A darker shade of a category colour, readable as text on the map. */
-export function labelColor(color: string): string {
+/**
+ * A shade of a category colour that reads as text on the map: darker on the
+ * light map, lighter on the dark one.
+ */
+export function labelColor(color: string, theme: Theme = 'light'): string {
   const channels = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16))
-  return `rgb(${channels.map((c) => Math.round(c * 0.72)).join(' ')})`
+  const shade =
+    theme === 'light'
+      ? (c: number) => c * 0.72
+      : (c: number) => c + (255 - c) * 0.3
+  return `rgb(${channels.map((c) => Math.round(shade(c))).join(' ')})`
 }
 
 function humanize(key: string) {

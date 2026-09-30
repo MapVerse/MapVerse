@@ -41,8 +41,9 @@ describe('categoryInfo', () => {
     expect(categoryInfo('water_park')).toBeUndefined()
   })
 
-  it('darkens colours for map labels', () => {
+  it('shades colours for map labels', () => {
     expect(labelColor('#3b82f6')).toBe('rgb(42 94 177)')
+    expect(labelColor('#3b82f6', 'dark')).toBe('rgb(118 168 249)')
   })
 })
 

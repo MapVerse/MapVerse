@@ -3,6 +3,7 @@ import type { FeatureCollection, LineString } from 'geojson'
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../../icons/Icon.tsx'
 import type { StrokeName } from '../../icons/strokes.ts'
+import { useTheme, type Theme } from '../../theme/theme.ts'
 import { formatDistance, type Place } from '../place/place.ts'
 import { formatArrival, formatDuration, maneuverIcon } from './directions.ts'
 import { useRoutes } from './useRoutes.ts'
@@ -19,6 +20,15 @@ const MODES: { mode: TravelMode; label: string; icon: StrokeName }[] = [
   { mode: 'bicycle', label: 'Bisiklet', icon: 'bike' },
 ]
 
+// A white edge lifts routes off the light map; a dark one off the dark map
+const ROUTE_COLORS: Record<
+  Theme,
+  { casing: string; alternate: string; selected: string }
+> = {
+  light: { casing: '#ffffff', alternate: '#a3b4cc', selected: '#2f7bf5' },
+  dark: { casing: '#11151b', alternate: '#56657b', selected: '#4c8df6' },
+}
+
 type Props = {
   /** Where to go; when missing, the destination is picked on the map */
   to: Place | null
@@ -30,6 +40,7 @@ type Props = {
 export default function Directions({ to, beforeId, onClose }: Props) {
   const { current: map } = useMap()
   const panelRef = useRef<HTMLElement>(null)
+  const colors = ROUTE_COLORS[useTheme()]
   const [mode, setMode] = useState<TravelMode>('auto')
   const [origin, setOrigin] = useState<Origin | null>(null)
   const [locating, setLocating] = useState<'pending' | 'failed' | 'done'>(() =>
@@ -307,7 +318,7 @@ export default function Directions({ to, beforeId, onClose }: Props) {
           type="line"
           beforeId={beforeId}
           layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-          paint={{ 'line-color': '#ffffff', 'line-width': 11 }}
+          paint={{ 'line-color': colors.casing, 'line-width': 11 }}
         />
         <Layer
           id="routes-alternate"
@@ -315,7 +326,7 @@ export default function Directions({ to, beforeId, onClose }: Props) {
           beforeId={beforeId}
           filter={['!', ['get', 'selected']]}
           layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-          paint={{ 'line-color': '#a3b4cc', 'line-width': 6 }}
+          paint={{ 'line-color': colors.alternate, 'line-width': 6 }}
         />
         <Layer
           id="routes-selected"
@@ -323,7 +334,7 @@ export default function Directions({ to, beforeId, onClose }: Props) {
           beforeId={beforeId}
           filter={['get', 'selected']}
           layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-          paint={{ 'line-color': '#2f7bf5', 'line-width': 7 }}
+          paint={{ 'line-color': colors.selected, 'line-width': 7 }}
         />
       </Source>
       {origin && (
