@@ -9,10 +9,10 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 ## Özellikler
 
 - OpenFreeMap vektör verisi üzerinde kendi harita stilimiz: sıcak açık zemin, mavi su, yeşil parklar, renkli semt tonları ve sarı otoyollar; API anahtarı gerekmez
-- Koyu mod: harita, mekân rozetleri, rotalar ve tüm arayüz koyu temaya geçer. Ayarlar düğmesinden Açık, Koyu ya da cihaza uyan Sistem seçilir ve seçim hatırlanır
+- Koyu mod: harita, mekân rozetleri, rotalar ve tüm arayüz koyu temaya geçer. Sağ üstteki profil menüsünden Açık, Koyu ya da cihaza uyan Sistem seçilir ve seçim hatırlanır
 - Haritayı yatırıp binaları 3B gösteren düğme
 - Yakınlaşınca site ve sanayi sitesi adları: harita karolarında olmayan bu adlar görünen alan için OpenStreetMap'ten (Overpass) alınır ve saklanır
-- 3B arazi: dağlar ve tepeler yükseltisiyle, gölgeli kabartmayla görünür ([Terrain Tiles](https://registry.opendata.aws/terrain-tiles/), API anahtarı gerekmez). Ayarlar panelinden açılıp kapanır ve seçim hatırlanır
+- 3B arazi: dağlar ve tepeler yükseltisiyle, gölgeli kabartmayla görünür ([Terrain Tiles](https://registry.opendata.aws/terrain-tiles/), API anahtarı gerekmez). Profil menüsünden açılıp kapanır ve seçim hatırlanır
 - Yakınlaştırma, pusula/eğim, konumum ve ölçek kontrolleri
 - Yer ve adres arama ([Photon](https://photon.komoot.io)): ekrandaki alana göre öncelikli öneriler, uzaklık bilgisi, klavyeyle seçim ve son aramalar
 - Aramaya tıklayınca kategoriler: restoran, kafe, market, eczane, akaryakıt, ATM, otel, hastane, park, müze, otopark ve cami. Seçilen türde en yakın yerler uzaklığa göre listelenir ve haritada işaretlenir ([Overpass API](https://overpass-api.de), API anahtarı gerekmez)
@@ -20,7 +20,8 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 - Haritadaki mekânlara tıklayınca simgenin yerinde büyümesi ve ad, kategori, adres içeren kart
 - Uygulama içinde yol tarifi ([Valhalla](https://valhalla.github.io/valhalla/)): araba, yürüyüş ve bisiklet; alternatif rotalar; Türkçe adım adım tarif; başlangıç ve varış için konumun, aradığın yer ya da haritada seçtiğin nokta. Arama çubuğundaki rota düğmesiyle de açılır
 - Uygulamaya özel çizilmiş ikon seti: kategori renkleriyle harita rozetleri, iki tonlu kategori sembolleri ve arayüz için çizgi ikonlar
-- Ayarlar panelinden son aramaları temizleme
+- Sağ üstte profil: adınla giriş yapıp fotoğraf ekleyebilirsin (yalnızca bu cihazda saklanır); aynı menüde tema, 3B arazi ve son aramaları temizleme
+- Liquid glass tarzı arama kutusu ve gruplanmış harita düğmeleri: yakınlaştırma, pusula ile 3B görünüm ve konumum ayrı kapsüllerde
 - Harita konumu URL'de tutulur (`#zoom/enlem/boylam`), link paylaşınca aynı görünüm açılır
 
 ## Geliştirme

@@ -1,0 +1,174 @@
+/* The profile button sits level with the search box, above the map buttons,
+   and its menu opens over them */
+.maplibregl-ctrl-top-right .maplibregl-ctrl.mv-account {
+  position: relative;
+  z-index: 1;
+  margin-top: 17px;
+}
+
+.mv-account .mv-account-toggle {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  color: var(--mv-text);
+  cursor: pointer;
+}
+
+.mv-account .mv-account-toggle:not(:disabled):hover {
+  --glass-tint: var(--glass-tint-strong);
+}
+
+.mv-account .mv-account-toggle:focus-visible {
+  outline: 2px solid var(--mv-accent);
+  outline-offset: 2px;
+}
+
+.mv-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  box-sizing: border-box;
+  border-radius: 50%;
+  object-fit: cover;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Initials on the logo's yellow */
+.mv-avatar-initials {
+  background: linear-gradient(#ffe45c, #ffc700);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 6%);
+  color: #1f2937;
+}
+
+.mv-avatar-guest {
+  color: var(--mv-text);
+}
+
+.mv-account-panel {
+  --glass-tint: var(--glass-tint-strong);
+
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  box-sizing: border-box;
+  width: min(312px, calc(100vw - 24px));
+  max-height: calc(100vh - 100px);
+  padding: 16px;
+  overflow-y: auto;
+  border-radius: 24px;
+  color: var(--mv-text);
+  font-family: var(--mv-font);
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.mv-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mv-profile .mv-avatar-guest {
+  background: var(--glass-hover);
+}
+
+.mv-profile-text {
+  min-width: 0;
+}
+
+.mv-profile-name,
+.mv-profile-note {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mv-profile-name {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.mv-profile-note {
+  color: var(--mv-muted);
+  font-size: 13px;
+}
+
+.mv-sign-in {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.mv-sign-in input {
+  min-width: 0;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  outline: none;
+  background: var(--glass-fill);
+  color: var(--mv-text);
+  font: inherit;
+  font-size: 15px;
+}
+
+.mv-sign-in input:focus {
+  border-color: var(--mv-accent);
+}
+
+.mv-account .mv-sign-in button {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: var(--mv-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.mv-account .mv-sign-in button:not(:disabled):hover {
+  background: var(--mv-primary-hover);
+}
+
+.mv-account .mv-sign-in button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.mv-sign-in .mv-settings-hint {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
+.mv-profile-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.mv-account .mv-profile-actions button {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  background: var(--glass-fill);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mv-account .mv-profile-actions button:hover {
+  background: var(--glass-hover);
+}

@@ -1,18 +1,4 @@
-/* Liquid glass: the map shows through, blurred and a little more vivid,
-   under a sheen and a bright rim of light round the edge */
 .search {
-  --glass-tint: rgb(255 255 255 / 58%);
-  --glass-sheen: rgb(255 255 255 / 45%);
-  --glass-rim: rgb(255 255 255 / 85%);
-  --glass-edge: rgb(255 255 255 / 40%);
-  --glass-line: rgb(15 23 42 / 9%);
-  --glass-fill: rgb(255 255 255 / 55%);
-  --glass-hover: rgb(15 23 42 / 6%);
-  --glass-shadow:
-    0 12px 32px rgb(15 23 42 / 16%), 0 2px 6px rgb(15 23 42 / 8%),
-    inset 0 1px 1px var(--glass-rim), inset 0 -1px 1px var(--glass-edge),
-    inset 0 0 0 1px var(--glass-edge);
-
   position: absolute;
   top: 12px;
   left: 12px;
@@ -21,44 +7,8 @@
   width: min(392px, calc(100% - 80px));
   overflow: hidden;
   border-radius: 28px;
-  background:
-    linear-gradient(
-      135deg,
-      var(--glass-sheen),
-      transparent 38%,
-      transparent 72%,
-      var(--glass-edge)
-    ),
-    var(--glass-tint);
-  box-shadow: var(--glass-shadow);
   color: var(--mv-text);
   font-family: var(--mv-font);
-  transition: box-shadow 0.15s;
-  -webkit-backdrop-filter: blur(22px) saturate(1.8);
-  backdrop-filter: blur(22px) saturate(1.8);
-}
-
-:root[data-theme='dark'] .search {
-  --glass-tint: rgb(30 34 41 / 58%);
-  --glass-sheen: rgb(255 255 255 / 9%);
-  --glass-rim: rgb(255 255 255 / 22%);
-  --glass-edge: rgb(255 255 255 / 8%);
-  --glass-line: rgb(255 255 255 / 10%);
-  --glass-fill: rgb(255 255 255 / 7%);
-  --glass-hover: rgb(255 255 255 / 9%);
-  --glass-shadow:
-    0 12px 32px rgb(0 0 0 / 40%), 0 2px 6px rgb(0 0 0 / 25%),
-    inset 0 1px 1px var(--glass-rim), inset 0 -1px 1px var(--glass-edge),
-    inset 0 0 0 1px var(--glass-edge);
-}
-
-/* Without the blur, glass would only be a faint film over busy map */
-@supports not (
-  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
-) {
-  .search {
-    background: var(--mv-surface);
-  }
 }
 
 .search[hidden] {
@@ -68,11 +18,7 @@
 /* In use, the glass frosts over a little more instead of taking a ring,
    which also keeps the list easy to read over a busy map */
 .search:focus-within {
-  --glass-tint: rgb(255 255 255 / 74%);
-}
-
-:root[data-theme='dark'] .search:focus-within {
-  --glass-tint: rgb(30 34 41 / 76%);
+  --glass-tint: var(--glass-tint-strong);
 }
 
 .search-field {

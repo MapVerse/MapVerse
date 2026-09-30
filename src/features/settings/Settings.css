@@ -1,65 +1,8 @@
-.mv-settings {
-  position: relative;
-}
-
-/* Matches the other round map buttons */
-.mv-settings .mv-settings-toggle {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background-color: var(--mv-surface);
-  box-shadow: var(--mv-shadow);
-  color: var(--mv-text);
-  cursor: pointer;
-}
-
-.mv-settings .mv-settings-toggle:not(:disabled):hover {
-  background-color: var(--mv-hover);
-}
-
-.mv-settings .mv-settings-toggle[aria-expanded='true'] {
-  color: var(--mv-accent);
-}
-
-.mv-settings .mv-settings-toggle:focus-visible {
-  outline: none;
-  box-shadow:
-    var(--mv-shadow),
-    0 0 0 2px var(--mv-accent);
-}
-
-/* Opens to the left of the button */
-.mv-settings-panel {
-  position: absolute;
-  top: 0;
-  right: calc(100% + 10px);
-  box-sizing: border-box;
-  width: min(272px, calc(100vw - 88px));
-  padding: 16px;
-  border-radius: var(--mv-radius);
-  background: var(--mv-surface);
-  box-shadow: var(--mv-shadow);
-  color: var(--mv-text);
-  font-family: var(--mv-font);
-  font-size: 14px;
-  line-height: 1.4;
-  text-align: left;
-}
-
-.mv-settings-title {
-  margin: 0 0 14px;
-  font-size: 16px;
-  font-weight: 650;
-}
-
-.mv-settings-section + .mv-settings-section {
+/* Sections of the account menu, each under a thin line */
+.mv-settings-section {
   margin-top: 16px;
   padding-top: 14px;
-  border-top: 1px solid var(--mv-border);
+  border-top: 1px solid var(--glass-line);
 }
 
 .mv-settings-label {
@@ -76,10 +19,10 @@
   gap: 4px;
   padding: 4px;
   border-radius: 14px;
-  background: var(--mv-hover);
+  background: var(--glass-hover);
 }
 
-.mv-settings .mv-settings-panel button {
+.mv-account .mv-account-panel button {
   border: none;
   background: none;
   color: inherit;
@@ -87,12 +30,12 @@
   cursor: pointer;
 }
 
-.mv-settings .mv-settings-panel button:focus-visible {
+.mv-account .mv-account-panel button:focus-visible {
   outline: 2px solid var(--mv-accent);
   outline-offset: 1px;
 }
 
-.mv-settings .mv-settings-themes button {
+.mv-account .mv-settings-themes button {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -104,12 +47,12 @@
   font-weight: 600;
 }
 
-.mv-settings .mv-settings-themes button[aria-pressed='false']:hover {
+.mv-account .mv-settings-themes button[aria-pressed='false']:hover {
   background-color: transparent;
   color: var(--mv-text);
 }
 
-.mv-settings .mv-settings-themes button[aria-pressed='true'] {
+.mv-account .mv-settings-themes button[aria-pressed='true'] {
   background-color: var(--mv-raised);
   box-shadow: var(--mv-shadow-sm);
   color: var(--mv-accent);
@@ -121,7 +64,7 @@
   font-size: 12.5px;
 }
 
-.mv-settings .mv-settings-clear {
+.mv-account .mv-settings-clear {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -133,17 +76,17 @@
   text-align: left;
 }
 
-.mv-settings .mv-settings-clear:not(:disabled):hover {
+.mv-account .mv-settings-clear:not(:disabled):hover {
   background-color: color-mix(in srgb, var(--mv-danger) 10%, transparent);
 }
 
-.mv-settings .mv-settings-clear:disabled {
+.mv-account .mv-settings-clear:disabled {
   color: var(--mv-subtle);
   cursor: default;
 }
 
 /* An on/off row: icon, label with a note, and a sliding switch */
-.mv-settings .mv-settings-switch {
+.mv-account .mv-settings-switch {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -154,16 +97,16 @@
   text-align: left;
 }
 
-.mv-settings .mv-settings-switch:not(:disabled):hover {
-  background-color: var(--mv-hover);
+.mv-account .mv-settings-switch:not(:disabled):hover {
+  background-color: var(--glass-hover);
 }
 
-.mv-settings .mv-settings-switch > svg {
+.mv-account .mv-settings-switch > svg {
   flex: none;
   color: var(--mv-muted);
 }
 
-.mv-settings .mv-settings-switch[aria-checked='true'] > svg {
+.mv-account .mv-settings-switch[aria-checked='true'] > svg {
   color: var(--mv-accent);
 }
 

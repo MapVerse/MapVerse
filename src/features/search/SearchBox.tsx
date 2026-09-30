@@ -139,7 +139,7 @@ export default function SearchBox({
 
   return (
     <div
-      className="search"
+      className="search mv-glass"
       role="search"
       hidden={hidden}
       // Stay open while focus moves between the box's own controls

@@ -24,6 +24,21 @@
   --mv-shadow: 0 1px 2px rgb(15 23 42 / 6%), 0 6px 20px rgb(15 23 42 / 12%);
   --mv-shadow-sm: 0 1px 2px rgb(15 23 42 / 8%), 0 2px 8px rgb(15 23 42 / 8%);
 
+  /* Liquid glass, shared by the search box, map buttons and menus */
+  --glass-tint: rgb(255 255 255 / 58%);
+  /* frostier, for glass holding a list or a form */
+  --glass-tint-strong: rgb(255 255 255 / 76%);
+  --glass-sheen: rgb(255 255 255 / 45%);
+  --glass-rim: rgb(255 255 255 / 85%);
+  --glass-edge: rgb(255 255 255 / 40%);
+  --glass-line: rgb(15 23 42 / 9%);
+  --glass-fill: rgb(255 255 255 / 55%);
+  --glass-hover: rgb(15 23 42 / 6%);
+  --glass-shadow:
+    0 12px 32px rgb(15 23 42 / 16%), 0 2px 6px rgb(15 23 42 / 8%),
+    inset 0 1px 1px var(--glass-rim), inset 0 -1px 1px var(--glass-edge),
+    inset 0 0 0 1px var(--glass-edge);
+
   color-scheme: light;
   font-family: var(--mv-font);
   /* the map's land colour, so the page doesn't flash while tiles load */
@@ -50,6 +65,19 @@
   --mv-shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 6px 20px rgb(0 0 0 / 45%);
   --mv-shadow-sm: 0 1px 2px rgb(0 0 0 / 30%), 0 2px 8px rgb(0 0 0 / 30%);
 
+  --glass-tint: rgb(30 34 41 / 58%);
+  --glass-tint-strong: rgb(30 34 41 / 78%);
+  --glass-sheen: rgb(255 255 255 / 9%);
+  --glass-rim: rgb(255 255 255 / 22%);
+  --glass-edge: rgb(255 255 255 / 8%);
+  --glass-line: rgb(255 255 255 / 10%);
+  --glass-fill: rgb(255 255 255 / 7%);
+  --glass-hover: rgb(255 255 255 / 9%);
+  --glass-shadow:
+    0 12px 32px rgb(0 0 0 / 40%), 0 2px 6px rgb(0 0 0 / 25%),
+    inset 0 1px 1px var(--glass-rim), inset 0 -1px 1px var(--glass-edge),
+    inset 0 0 0 1px var(--glass-edge);
+
   color-scheme: dark;
   background: #1b1e24;
 }
@@ -59,4 +87,30 @@ body,
 #root {
   height: 100%;
   margin: 0;
+}
+
+/* The map shows through glass, blurred and a little more vivid, under a
+   sheen and a bright rim of light round the edge */
+.mv-glass {
+  background:
+    linear-gradient(
+      135deg,
+      var(--glass-sheen),
+      transparent 38%,
+      transparent 72%,
+      var(--glass-edge)
+    ),
+    var(--glass-tint);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(22px) saturate(1.8);
+  backdrop-filter: blur(22px) saturate(1.8);
+}
+
+/* Without the blur, glass would only be a faint film over a busy map */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .mv-glass {
+    background: var(--mv-surface);
+  }
 }

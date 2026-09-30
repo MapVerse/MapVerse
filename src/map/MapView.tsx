@@ -1,12 +1,11 @@
 import {
-  GeolocateControl,
   Map,
-  NavigationControl,
   ScaleControl,
   type MapLayerMouseEvent,
   type MapRef,
 } from '@vis.gl/react-maplibre'
 import { useState } from 'react'
+import AccountMenu from '../features/account/AccountMenu.tsx'
 import AreaNames from '../features/areas/AreaNames.tsx'
 import Directions from '../features/directions/Directions.tsx'
 import Boundary from '../features/place/Boundary.tsx'
@@ -22,14 +21,13 @@ import {
   useCategorySearch,
   type CategorySearch,
 } from '../features/search/useCategorySearch.ts'
-import Settings from '../features/settings/Settings.tsx'
 import { useTheme } from '../theme/theme.ts'
 import './controls.css'
+import MapControls from './MapControls.tsx'
 import { maplibre } from './maplibre.ts'
 import { resolvePoiImage } from './poiStyle.ts'
 import { mapStyle } from './style.ts'
 import { useTerrainEnabled } from './terrainSetting.ts'
-import TiltControl from './TiltControl.tsx'
 
 // Istanbul; the URL hash (#zoom/lat/lng) takes precedence when present.
 const INITIAL_VIEW = { longitude: 28.9784, latitude: 41.0082, zoom: 11 }
@@ -128,10 +126,8 @@ export default function MapView() {
       onMouseLeave={() => setHoveringPoi(false)}
       onClick={onMapClick}
     >
-      <NavigationControl position="top-right" visualizePitch />
-      <GeolocateControl position="top-right" trackUserLocation />
-      <TiltControl position="top-right" />
-      <Settings position="top-right" />
+      <AccountMenu position="top-right" />
+      <MapControls />
       <ScaleControl position="bottom-left" />
       {poiLayerIds.length > 0 && <AreaNames beforeId={poiLayerIds[0]} />}
       <SearchBox

@@ -8,47 +8,73 @@
   margin: 12px 12px 0 0;
 }
 
-/* Controls float as separate white round buttons */
-.maplibregl-ctrl-top-right .maplibregl-ctrl-group:not(:empty) {
+/* Buttons come in glass capsules, one per group (zoom, view, location).
+   Each control inside keeps its own element; `display: contents` lets its
+   buttons stack as if they were the capsule's own. */
+.maplibregl-ctrl-top-right .mv-group {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  overflow: visible;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
+  width: 44px;
+  overflow: hidden;
+  border-radius: 22px;
 }
 
-/* The :focus selector matches MapLibre's own focus rules, which would
-   otherwise square the button off and drop its shadow once clicked */
-.maplibregl-ctrl-top-right .maplibregl-ctrl-group button,
-.maplibregl-ctrl-top-right .maplibregl-ctrl-group button:focus {
-  width: 42px;
-  height: 42px;
-  border: none;
-  border-radius: 50%;
-  background-color: var(--mv-surface);
-  box-shadow: var(--mv-shadow);
+.mv-group > .maplibregl-ctrl {
+  display: contents;
 }
 
-.maplibregl-ctrl-top-right .maplibregl-ctrl-group button:not(:disabled):hover {
-  background-color: var(--mv-hover);
-}
-
-.maplibregl-ctrl-top-right .maplibregl-ctrl-group button:focus-visible {
-  box-shadow:
-    var(--mv-shadow),
-    0 0 0 2px var(--mv-accent);
-}
-
-.mv-tilt {
+/* The :focus selectors match MapLibre's own focus rules, which would
+   otherwise round or shadow a button once clicked */
+.maplibregl-ctrl-top-right .mv-group button,
+.maplibregl-ctrl-top-right .mv-group button:focus {
   display: grid;
   place-items: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
   color: var(--mv-text);
   cursor: pointer;
 }
 
-.mv-tilt[aria-pressed='true'] {
+/* A thin line between the buttons of a capsule */
+.maplibregl-ctrl-top-right .mv-group button + button,
+.maplibregl-ctrl-top-right
+  .mv-group
+  .maplibregl-ctrl
+  + .maplibregl-ctrl
+  button:first-child {
+  border-top: 1px solid var(--glass-line);
+}
+
+.maplibregl-ctrl-top-right .mv-group button:not(:disabled):hover {
+  background-color: var(--glass-hover);
+}
+
+.maplibregl-ctrl-top-right .mv-group button:focus-visible {
+  outline: 2px solid var(--mv-accent);
+  outline-offset: -4px;
+}
+
+/* 3D: a cube with its label under it */
+.maplibregl-ctrl-top-right .mv-group .mv-tilt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.mv-tilt-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.maplibregl-ctrl-top-right .mv-group .mv-tilt[aria-pressed='true'] {
   color: var(--mv-accent);
 }
 
