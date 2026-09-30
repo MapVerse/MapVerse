@@ -156,6 +156,16 @@ export function mix(from: string, to: string, t: number): string {
 const floodlit = (color: string, height: number) =>
   mix(color, FLOOD_COLOR, 0.45 * Math.max(0, 1 - height / FLOOD_REACH))
 
+/** Which way a ring winds: 1 anticlockwise, -1 clockwise. */
+function winding(ring: XY[]): number {
+  let area = 0
+  ring.forEach(([x0, y0], i) => {
+    const [x1, y1] = ring[(i + 1) % ring.length]
+    area += x0 * y1 - x1 * y0
+  })
+  return Math.sign(area)
+}
+
 function ring(center: [number, number], radius: number, sides: number) {
   const points: [number, number][] = []
   for (let i = 0; i <= sides; i++) {
@@ -223,7 +233,12 @@ export function landmarkExtrusions(
     }
     for (const part of parts) {
       if (part.kind === 'block') {
-        const rings = [part.footprint, ...(part.holes ?? [])].map(closed)
+        // Holes wound against the outline, or the map fills them in
+        const outline = winding(part.footprint)
+        const holes = (part.holes ?? []).map((hole) =>
+          winding(hole) === outline ? [...hole].reverse() : hole,
+        )
+        const rings = [part.footprint, ...holes].map(closed)
         add(rings, part.base, part.top, part.material)
         continue
       }

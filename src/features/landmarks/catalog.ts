@@ -19,15 +19,125 @@ import {
 
 const DEG = Math.PI / 180
 
-/** Ankara: a 125 m concrete shaft with a glass, tulip shaped head and a mast. */
+/**
+ * Ankara: Atakule, a 125 m concrete shaft with its glass lift up one side
+ * and a glass, tulip shaped head under a mast, rising from the curved,
+ * three cornered shopping centre at its foot, with a roof garden and a
+ * glass dome.
+ */
+const ATAKULE_MALL: XY[] = [
+  [-19.3, -62],
+  [74.1, 20.4],
+  [68.5, 26.2],
+  [47, 20.7],
+  [20.4, 14.8],
+  [-8.9, 16],
+  [-34.9, 27.3],
+  [-35.6, 31.3],
+  [-53.6, 44.7],
+  [-54.5, 45.6],
+  [-70.7, 60.9],
+  [-77.9, 55.9],
+  [-70.6, 14.2],
+  [-70.8, 4],
+  [-62.5, -29.3],
+  [-57.7, -45.8],
+  [-51.9, -56.7],
+  [-45.2, -64.1],
+  [-39.4, -67.1],
+  [-30.2, -67.3],
+]
+/** The shopping centre's own middle, to shape its bands round */
+const MALL_CENTER: XY = [-20.1, -7.1]
+const MALL_TOP = 12
+const ATAKULE_DOME: XY = [-22, -5]
+
 const ATAKULE: Landmark = {
   id: 'atakule',
-  lights: lightsRound(9, 6),
+  lights: lightsAlong(scaled(ATAKULE_MALL, 1.08, MALL_CENTER), 12),
   name: 'Atakule',
   near: [32.856137, 39.886135],
-  // The tower, not the shopping centre round its foot
-  hide: [{ within: 1, tallerThan: 30 }],
+  // The tower and the shopping centre round its foot
+  hide: [{ within: 1, tallerThan: 0 }],
   parts: [
+    // The shopping centre: shop windows below, a glass band above, and a
+    // parapet round the roof garden
+    {
+      kind: 'block',
+      material: 'concrete',
+      footprint: ATAKULE_MALL,
+      base: 0,
+      top: MALL_TOP,
+    },
+    {
+      kind: 'block',
+      material: 'windows',
+      footprint: scaled(ATAKULE_MALL, 1.006, MALL_CENTER),
+      base: 0.6,
+      top: 4.8,
+    },
+    {
+      kind: 'block',
+      material: 'glass',
+      footprint: scaled(ATAKULE_MALL, 1.006, MALL_CENTER),
+      base: 7,
+      top: 10,
+    },
+    {
+      kind: 'block',
+      material: 'concrete',
+      footprint: ATAKULE_MALL,
+      holes: [scaled(ATAKULE_MALL, 0.965, MALL_CENTER)],
+      base: MALL_TOP,
+      top: MALL_TOP + 1.1,
+    },
+    {
+      kind: 'block',
+      material: 'paving',
+      footprint: scaled(ATAKULE_MALL, 0.965, MALL_CENTER),
+      base: MALL_TOP,
+      top: MALL_TOP + 0.15,
+    },
+    ...(
+      [
+        [
+          [-62, -25],
+          [-46, -50],
+          [-32, -40],
+          [-40, -14],
+        ],
+        [
+          [-64, 8],
+          [-46, -6],
+          [-38, 16],
+          [-58, 40],
+        ],
+      ] as XY[][]
+    ).map((footprint): Part => ({
+      kind: 'block',
+      material: 'leaf',
+      footprint,
+      base: MALL_TOP + 0.15,
+      top: MALL_TOP + 0.4,
+    })),
+    {
+      kind: 'round',
+      material: 'concrete',
+      at: ATAKULE_DOME,
+      outline: [
+        [11.6, MALL_TOP],
+        [11.6, MALL_TOP + 1.5],
+      ],
+    },
+    ...dome(11, MALL_TOP + 1.5, 6.5, ATAKULE_DOME, 'glass'),
+    // The glass lift up the tower's side, facing the shopping centre
+    {
+      kind: 'block',
+      material: 'windows',
+      footprint: grid(Math.PI / 4).box(-6.4, -1.4, -4.4, 1.4),
+      base: 6,
+      top: 86,
+    },
     {
       kind: 'round',
       material: 'concrete',

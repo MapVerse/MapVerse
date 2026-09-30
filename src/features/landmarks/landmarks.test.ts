@@ -98,17 +98,18 @@ describe('landmarkExtrusions', () => {
   })
 
   it('floodlights its walls at night, brightest at their foot', () => {
-    const dark = landmarkExtrusions([landmark('atakule')], 'dark').features
-    const shaft = dark.filter(
-      ({ properties }) => properties!.base < 86 && properties!.height <= 86,
-    )
+    // Galata Kulesi's stone shaft
+    const shaft = landmarkExtrusions(
+      [landmark('galata')],
+      'dark',
+    ).features.filter(({ properties }) => properties!.height <= 43)
     const brightness = (color: string) =>
       [1, 3, 5].reduce((sum, i) => sum + parseInt(color.slice(i, i + 2), 16), 0)
     const [foot, top] = [shaft[0], shaft.at(-1)!].map(({ properties }) =>
       brightness(properties!.color),
     )
     expect(foot).toBeGreaterThan(top)
-    expect(shaft.at(-1)!.properties!.color).toBe(MATERIAL_COLORS.dark.concrete)
+    expect(shaft.at(-1)!.properties!.color).toBe(MATERIAL_COLORS.dark.stone)
   })
 })
 
@@ -159,8 +160,8 @@ describe('mosques', () => {
 
 describe('hideZones', () => {
   it('clears a landmark’s own building, not the lower ones round it', () => {
-    const [zone] = hideZones([landmark('atakule')])
-    expect(zone.center).toEqual(landmark('atakule').near)
+    const [zone] = hideZones([landmark('galata')])
+    expect(zone.center).toEqual(landmark('galata').near)
     expect(zone.tallerThan).toBe(30)
   })
 
