@@ -19,7 +19,10 @@
   box-shadow: none;
 }
 
-.maplibregl-ctrl-top-right .maplibregl-ctrl-group button {
+/* The :focus selector matches MapLibre's own focus rules, which would
+   otherwise square the button off and drop its shadow once clicked */
+.maplibregl-ctrl-top-right .maplibregl-ctrl-group button,
+.maplibregl-ctrl-top-right .maplibregl-ctrl-group button:focus {
   width: 42px;
   height: 42px;
   border: none;

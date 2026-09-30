@@ -23,6 +23,22 @@ import TiltControl from './TiltControl.tsx'
 // Istanbul; the URL hash (#zoom/lat/lng) takes precedence when present.
 const INITIAL_VIEW = { longitude: 28.9784, latitude: 41.0082, zoom: 11 }
 
+/** Turkish text for MapLibre's own buttons and labels. */
+const LOCALE = {
+  'AttributionControl.ToggleAttribution': 'Atıfları göster',
+  'AttributionControl.MapFeedback': 'Harita hatası bildir',
+  'GeolocateControl.FindMyLocation': 'Konumumu bul',
+  'GeolocateControl.LocationNotAvailable': 'Konum kullanılamıyor',
+  'Map.Title': 'Harita',
+  'Marker.Title': 'İşaret',
+  'NavigationControl.ResetBearing': 'Kuzeyi yukarı çevir',
+  'NavigationControl.ZoomIn': 'Yakınlaştır',
+  'NavigationControl.ZoomOut': 'Uzaklaştır',
+  'Popup.Close': 'Kapat',
+  'ScaleControl.Kilometers': 'km',
+  'ScaleControl.Meters': 'm',
+}
+
 /** POI badges are drawn the first time the map needs each one. */
 function installImageResolver(ref: MapRef | null) {
   const map = ref?.getMap()
@@ -64,6 +80,7 @@ export default function MapView() {
       initialViewState={INITIAL_VIEW}
       ref={installImageResolver}
       mapStyle={MAP_STYLE}
+      locale={LOCALE}
       hash
       // Drops the default MapLibre link but keeps the data attribution the
       // licenses require; it collapses to an ⓘ button once the map is moved.
