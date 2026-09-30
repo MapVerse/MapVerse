@@ -5,6 +5,7 @@ import type {
   RasterDEMSourceSpecification,
   StyleSpecification,
 } from 'maplibre-gl'
+import { hideLandmarkBuildings } from '../features/landmarks/landmarks.ts'
 import type { Theme } from '../theme/theme.ts'
 import { poiFilter, poiIconImage, poiLabelColor } from './poiStyle.ts'
 
@@ -602,7 +603,12 @@ function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
         source: 'openmaptiles',
         'source-layer': 'building',
         minzoom: 15,
-        filter: ['!=', ['get', 'hide_3d'], true],
+        // Landmarks stand in for their own buildings
+        filter: [
+          'all',
+          ['!=', ['get', 'hide_3d'], true],
+          hideLandmarkBuildings(),
+        ],
         paint: {
           'fill-extrusion-color': c.extrusion,
           'fill-extrusion-height': [

@@ -7,6 +7,7 @@ import {
 import { useState } from 'react'
 import AccountMenu from '../features/account/AccountMenu.tsx'
 import AreaNames from '../features/areas/AreaNames.tsx'
+import LandmarkExtrusions from '../features/landmarks/LandmarkExtrusions.tsx'
 import Directions from '../features/directions/Directions.tsx'
 import Boundary from '../features/place/Boundary.tsx'
 import PlaceCard from '../features/place/PlaceCard.tsx'
@@ -130,6 +131,7 @@ export default function MapView() {
       <MapControls />
       <ScaleControl position="bottom-left" />
       {poiLayerIds.length > 0 && <AreaNames beforeId={poiLayerIds[0]} />}
+      {labelLayerId && <LandmarkExtrusions beforeId={labelLayerId} />}
       <SearchBox
         hidden={!!directions}
         onSelect={(result) => setSelection({ place: result })}
