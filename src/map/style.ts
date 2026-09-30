@@ -44,6 +44,8 @@ const LIGHT = {
   labelSoft: '#4b5563',
   labelMuted: '#6b7280',
   labelSubtle: '#9ca3af',
+  // Names of estates and industrial areas, fetched outside the tiles
+  areaLabel: '#8a7d6f',
   halo: '#ffffff',
   lightColor: '#ffffff',
   lightIntensity: 0.22,
@@ -90,6 +92,7 @@ const DARK: Palette = {
   labelSoft: '#c3cad4',
   labelMuted: '#9aa4b2',
   labelSubtle: '#6f7a8a',
+  areaLabel: '#8a94a3',
   halo: '#1b1e24',
   lightColor: '#ffffff',
   lightIntensity: 0.2,
@@ -105,6 +108,11 @@ const PALETTES: Record<Theme, Palette> = { light: LIGHT, dark: DARK }
 /** Halo behind map labels, for layers added outside the style. */
 export function labelHalo(theme: Theme) {
   return PALETTES[theme].halo
+}
+
+/** Colour for the names of estates and industrial areas. */
+export function areaLabelColor(theme: Theme) {
+  return PALETTES[theme].areaLabel
 }
 
 const REGULAR = ['Noto Sans Regular']

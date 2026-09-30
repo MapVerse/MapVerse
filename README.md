@@ -11,6 +11,7 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 - OpenFreeMap vektör verisi üzerinde kendi harita stilimiz: sıcak açık zemin, mavi su, yeşil parklar, renkli semt tonları ve sarı otoyollar; API anahtarı gerekmez
 - Koyu mod: harita, mekân rozetleri, rotalar ve tüm arayüz koyu temaya geçer. Ayarlar düğmesinden Açık, Koyu ya da cihaza uyan Sistem seçilir ve seçim hatırlanır
 - Haritayı yatırıp binaları 3B gösteren düğme
+- Yakınlaşınca site ve sanayi sitesi adları: harita karolarında olmayan bu adlar görünen alan için OpenStreetMap'ten (Overpass) alınır ve saklanır
 - 3B arazi: dağlar ve tepeler yükseltisiyle, gölgeli kabartmayla görünür ([Terrain Tiles](https://registry.opendata.aws/terrain-tiles/), API anahtarı gerekmez). Ayarlar panelinden açılıp kapanır ve seçim hatırlanır
 - Yakınlaştırma, pusula/eğim, konumum ve ölçek kontrolleri
 - Yer ve adres arama ([Photon](https://photon.komoot.io)): ekrandaki alana göre öncelikli öneriler, uzaklık bilgisi, klavyeyle seçim ve son aramalar

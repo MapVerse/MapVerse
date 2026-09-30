@@ -7,6 +7,7 @@ import {
   type MapRef,
 } from '@vis.gl/react-maplibre'
 import { useState } from 'react'
+import AreaNames from '../features/areas/AreaNames.tsx'
 import Directions from '../features/directions/Directions.tsx'
 import Boundary from '../features/place/Boundary.tsx'
 import PlaceCard from '../features/place/PlaceCard.tsx'
@@ -132,6 +133,7 @@ export default function MapView() {
       <TiltControl position="top-right" />
       <Settings position="top-right" />
       <ScaleControl position="bottom-left" />
+      {poiLayerIds.length > 0 && <AreaNames beforeId={poiLayerIds[0]} />}
       <SearchBox
         hidden={!!directions}
         onSelect={(result) => setSelection({ place: result })}
