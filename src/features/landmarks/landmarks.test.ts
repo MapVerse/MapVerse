@@ -27,6 +27,15 @@ function reach(part: Part): number {
   return Math.hypot(x, y) + Math.max(...part.outline.map(([r]) => r))
 }
 
+/** Whether a point is inside an outline, by counting its crossings. */
+const within = ([x, y]: [number, number], outline: [number, number][]) =>
+  outline.reduce((inside, [x0, y0], i) => {
+    const [x1, y1] = outline[(i + 1) % outline.length]
+    const crosses =
+      y0 > y !== y1 > y && x < x0 + ((y - y0) * (x1 - x0)) / (y1 - y0)
+    return crosses ? !inside : inside
+  }, false)
+
 describe('the landmarks', () => {
   it('each have their own id', () => {
     const ids = LANDMARKS.map(({ id }) => id)
@@ -149,15 +158,6 @@ describe('Atlantis', () => {
   const blocks = atlantis.parts.filter((p) => p.kind === 'block')
   const [main] = blocks
 
-  /** Whether a point is inside an outline, by counting its crossings. */
-  const within = ([x, y]: [number, number], outline: [number, number][]) =>
-    outline.reduce((inside, [x0, y0], i) => {
-      const [x1, y1] = outline[(i + 1) % outline.length]
-      const crosses =
-        y0 > y !== y1 > y && x < x0 + ((y - y0) * (x1 - x0)) / (y1 - y0)
-      return crosses ? !inside : inside
-    }, false)
-
   /** How far a point is from the line through two corners. */
   const from = (
     [x, y]: [number, number],
@@ -190,6 +190,34 @@ describe('Atlantis', () => {
         const nearest = Math.min(...footprint.map((p) => from(p, a, b)))
         expect(nearest).toBeLessThan(5)
       }
+    }
+  })
+})
+
+describe('Atlantis’s platform', () => {
+  const blocks = landmark('atlantis').parts.filter((p) => p.kind === 'block')
+
+  it('lays its lawns, water and cafés on its terraces and bridge', () => {
+    // The two terraces and the bridge between them, all at one level
+    const decks = blocks.filter(
+      (p) => p.material === 'concrete' && p.top === 6.3,
+    )
+    expect(decks).toHaveLength(3)
+    const on = blocks.filter(
+      (p) =>
+        p.base > 6.3 &&
+        (p.material === 'leaf' ||
+          p.material === 'water' ||
+          (p.material === 'windows' && Math.abs(p.top - p.base - 3.6) < 1e-6)),
+    )
+    // Six lawns, the channel and a pool, and four cafés
+    expect(on).toHaveLength(12)
+    for (const { footprint } of on) {
+      const centre: [number, number] = [
+        footprint.reduce((sum, [x]) => sum + x, 0) / footprint.length,
+        footprint.reduce((sum, [, y]) => sum + y, 0) / footprint.length,
+      ]
+      expect(decks.some((deck) => within(centre, deck.footprint))).toBe(true)
     }
   })
 })

@@ -10,8 +10,8 @@ import { grown, lightsAlong } from './shapes.ts'
  *   the glass vault over its mall street, and a red canopy along its face
  *   on the car park, carried on over Başkent Bulvarı to
  * - the entertainment centre (the cinema) on the south island,
- * - the plaza on a bridge over the boulevard, with its pools and trees,
- *   joining the islands at the west, and a round pavilion.
+ * - the platform down the whole west side, over the boulevard and the
+ *   car parks, with its lawns, trees, water, cafés and round pavilion.
  * Heights are estimates, for the three floors its directory lists above
  * ground (0, 1 and 2).
  */
@@ -327,16 +327,375 @@ function overBoulevard(): Part[] {
 }
 
 /**
- * The plaza on its bridge: its deck on piers down the boulevard's middle,
- * landing on either side, glass balustrades along the road, a pool, a
- * round fountain and trees.
+ * The platform the whole west side stands on, from the round pavilion in
+ * the south to the cafés in the north: a terrace on each island, over
+ * their car parks, joined by its bridge over the boulevard. Its lawns,
+ * water channel and pool are OpenStreetMap's; its stairs come down to the
+ * pavements where OpenStreetMap has them.
  */
-function plaza(): Part[] {
+const NORTH_TERRACE: XY[] = [
+  [-101.2, -7],
+  [-74.3, -6.5],
+  [-68.9, -6.3],
+  [-60.9, -6],
+  [-56.3, -5.9],
+  [-49.3, -5.6],
+  [-47.6, -5.6],
+  [-33.8, -5.1],
+  [-25.5, -3.5],
+  [-13.9, 17.5],
+  [-29.2, 48.4],
+  [-41.1, 65],
+  [-43.2, 67.9],
+  [-57.1, 83.5],
+  [-73, 96.7],
+  [-73.5, 98.5],
+  [-93.8, 98.5],
+  [-100.3, 53.5],
+  [-100.4, 44.2],
+]
+const SOUTH_TERRACE: XY[] = [
+  [-60.9, -47.1],
+  [-56.1, -66.5],
+  [-52.5, -87.1],
+  [-49.8, -106.4],
+  [-47, -133.1],
+  [-46.6, -157.3],
+  [-22, -158.5],
+  [-4.7, -157.3],
+  ...ENTERTAINMENT.slice(1, 19).reverse(),
+  [-27.5, -63.3],
+  [-32.3, -45.2],
+  [-37, -45.5],
+  [-41.9, -45.8],
+  [-45.9, -46.1],
+  [-50.2, -46.4],
+  [-56, -46.7],
+]
+/** Its free edges, with glass balustrades along them */
+const EDGES: XY[][] = [
+  [
+    [-74.3, -6.5],
+    [-101.2, -7],
+    [-100.4, 44.2],
+    [-100.3, 53.5],
+    [-93.8, 98.5],
+    [-73.5, 98.5],
+  ],
+  [
+    [-73.9, -7],
+    [-70.6, -18.4],
+    [-62.7, -41.6],
+  ],
+  [
+    [-33.4, -15],
+    [-32.9, -25.1],
+    [-32.7, -41],
+  ],
+  [
+    [-60.9, -47.1],
+    [-56.1, -66.5],
+    [-52.5, -87.1],
+    [-49.8, -106.4],
+    [-47, -133.1],
+    [-46.6, -157.3],
+    [-22, -158.5],
+    [-4.7, -157.3],
+  ],
+  [
+    [20.9, -62.6],
+    [-27.5, -63.3],
+  ],
+]
+/** Its stairs, from the pavement up */
+const STAIRS: [XY, XY][] = [
+  [
+    [-24.1, -12.5],
+    [-24.9, -2],
+  ],
+  [
+    [-31.3, -49.9],
+    [-28.2, -62.3],
+  ],
+  [
+    [-0.7, -169.4],
+    [-3, -158.8],
+  ],
+]
+const LAWNS: XY[][] = [
+  [
+    [-50.5, 39.1],
+    [-49.4, 35.7],
+    [-48.7, 31.6],
+    [-48.4, 30.1],
+    [-47.8, 26.9],
+    [-47.7, 21.7],
+    [-47.8, 17.3],
+    [-48, 12.4],
+    [-48.3, 8],
+    [-48.6, 6.1],
+    [-45.8, 6.3],
+    [-42.5, 8.8],
+    [-36.6, 14.2],
+    [-33.7, 16.4],
+    [-30.1, 19.3],
+    [-26.6, 21.6],
+    [-34.3, 32.7],
+    [-42.9, 44.2],
+  ],
+  [
+    [-56, -46.7],
+    [-46.9, -81.1],
+    [-45.1, -84.2],
+    [-46.3, -76.9],
+    [-46.7, -70],
+    [-46.3, -66.1],
+    [-43.8, -64.9],
+    [-42, -65.3],
+    [-40.6, -66.6],
+    [-39.3, -67.6],
+    [-37.7, -65.1],
+    [-40, -59],
+    [-43.2, -53.6],
+    [-47.6, -48.9],
+    [-50.2, -46.4],
+  ],
+  [
+    [-37.7, -65.1],
+    [-39.3, -67.6],
+    [-40.6, -66.6],
+    [-42, -65.3],
+    [-43.8, -64.9],
+    [-46.3, -66.1],
+    [-46.7, -70],
+    [-46.3, -76.9],
+    [-45.1, -84.2],
+    [-42.1, -93.5],
+    [-38.1, -103.3],
+    [-37.7, -100.6],
+    [-38.3, -97.6],
+    [-38.7, -94.6],
+    [-38.6, -91.4],
+    [-38.2, -87],
+    [-37.8, -85.7],
+    [-36.9, -83],
+    [-36.1, -78.9],
+    [-35.7, -75.2],
+    [-35.6, -69.6],
+    [-36.4, -64.8],
+  ],
+  [
+    [-28.2, -118.4],
+    [-29.9, -112.8],
+    [-34.4, -109.2],
+    [-38.1, -103.3],
+    [-42.1, -93.5],
+    [-44.5, -95.9],
+    [-44, -105.5],
+    [-43.1, -112.9],
+    [-42.3, -112.9],
+    [-41.6, -116.8],
+    [-40.6, -122.2],
+    [-40.2, -122.9],
+    [-32.2, -119.9],
+  ],
+  [
+    [-28.9, -92.8],
+    [-30.2, -98.9],
+    [-30.7, -105.5],
+    [-30.5, -111.2],
+    [-29.9, -112.8],
+    [-28.2, -118.4],
+    [-22.1, -115.5],
+    [-22.8, -110.9],
+    [-24.3, -101.4],
+    [-24.1, -93.5],
+  ],
+  [
+    [-13, -71.4],
+    [-14.2, -73.4],
+    [-14.7, -75.4],
+    [-14.9, -78.7],
+    [-14.3, -82.2],
+    [-12.9, -84.7],
+    [-11.2, -86.2],
+    [-9.5, -87.1],
+    [-7.4, -87.9],
+    [-4.7, -87.7],
+    [-1.7, -87],
+    [-0.3, -86.2],
+    [-0.3, -84.7],
+    [-0.7, -83.1],
+    [-3.8, -77.9],
+    [-6.5, -74.2],
+    [-9.1, -71.7],
+    [-11.9, -71.2],
+  ],
+]
+/** The water channel winding down it from the bridge, and a pool */
+const WATER: XY[][] = [
+  [
+    [-33.5, -108.1],
+    [-33.2, -103.3],
+    [-32.5, -97.9],
+    [-31.2, -92.6],
+    [-31.2, -86.5],
+    [-31, -80.3],
+    [-31.9, -74.3],
+    [-33.1, -68.8],
+    [-35.2, -62.6],
+    [-37.6, -57.2],
+    [-42.2, -49.7],
+    [-45.8, -42.8],
+    [-47.3, -38.6],
+    [-48.9, -33.6],
+    [-50.1, -29.3],
+    [-51, -24],
+    [-51.4, -18.3],
+    [-51.5, -11.5],
+    [-59.4, -11.9],
+    [-59.5, -18.2],
+    [-59.5, -21.1],
+    [-58.8, -24.9],
+    [-57.2, -30.4],
+    [-55.8, -34.2],
+    [-52.3, -41.2],
+    [-49, -45.7],
+    [-44.3, -50.8],
+    [-41.6, -54.4],
+    [-38.5, -59.5],
+    [-36.4, -64.8],
+    [-35.6, -69.6],
+    [-35.7, -75.2],
+    [-36.1, -78.9],
+    [-36.9, -83],
+    [-37.8, -85.7],
+    [-38.2, -87],
+    [-38.6, -91.4],
+    [-38.7, -94.6],
+    [-38.3, -97.6],
+    [-37.7, -100.6],
+    [-36.4, -103.5],
+  ],
+  [
+    [-63.6, 49.4],
+    [-68.6, 53.6],
+    [-69.9, 52.8],
+    [-73.5, 50.4],
+    [-76.8, 50.2],
+    [-80, 49.9],
+    [-82.5, 47.5],
+    [-82.1, 47.3],
+    [-79.4, 46.5],
+    [-75, 45.6],
+    [-72.3, 44.6],
+    [-70.4, 43.6],
+  ],
+]
+/** The cafés on the north terrace, Saké, Pizza il Forno and Coffee Lab among them */
+const CAFES: XY[][] = [
+  [
+    [-49.7, 5.7],
+    [-56.6, 19.2],
+    [-65.9, 14.4],
+    [-59, 0.9],
+  ],
+  [
+    [-52.2, 27.4],
+    [-63.5, 41.9],
+    [-71.9, 35.4],
+    [-60.7, 20.9],
+  ],
+  [
+    [-58.4, 62.6],
+    [-75, 84.5],
+    [-83.4, 78.1],
+    [-66.8, 56.3],
+  ],
+  [
+    [-81.5, 97.4],
+    [-81.3, 90.4],
+    [-74.5, 90.6],
+    [-74.7, 97.6],
+  ],
+]
+const PAVILION: XY = [-28.1, -137.8]
+
+const middle = (footprint: XY[]): XY => [
+  footprint.reduce((sum, [x]) => sum + x, 0) / footprint.length,
+  footprint.reduce((sum, [, y]) => sum + y, 0) / footprint.length,
+]
+
+/** Whether a point is inside an outline, by counting its crossings. */
+const within = ([x, y]: XY, outline: XY[]) =>
+  outline.reduce((inside, [x0, y0], i) => {
+    const [x1, y1] = outline[(i + 1) % outline.length]
+    const crosses =
+      y0 > y !== y1 > y && x < x0 + ((y - y0) * (x1 - x0)) / (y1 - y0)
+    return crosses ? !inside : inside
+  }, false)
+
+/** How far a point is from the nearest edge of an outline. */
+const clearance = ([x, y]: XY, outline: XY[]) =>
+  Math.min(
+    ...outline.map(([x0, y0], i) => {
+      const [x1, y1] = outline[(i + 1) % outline.length]
+      const [dx, dy] = [x1 - x0, y1 - y0]
+      const t = Math.max(
+        0,
+        Math.min(1, ((x - x0) * dx + (y - y0) * dy) / (dx * dx + dy * dy)),
+      )
+      return Math.hypot(x - x0 - dx * t, y - y0 - dy * t)
+    }),
+  )
+
+/** Trees over a lawn, about `spacing` apart and clear of its edges. */
+function grove(lawn: XY[], spacing: number, base: number): Part[] {
+  const [xs, ys] = [lawn.map(([x]) => x), lawn.map(([, y]) => y)]
+  const parts: Part[] = []
+  for (let x = Math.min(...xs) + 1.5; x < Math.max(...xs); x += spacing) {
+    for (let y = Math.min(...ys) + 1.5; y < Math.max(...ys); y += spacing) {
+      if (within([x, y], lawn) && clearance([x, y], lawn) > 1.6) {
+        parts.push(...tree([x, y], base))
+      }
+    }
+  }
+  return parts
+}
+
+/** A flight of stairs up to the platform, from its foot to its head. */
+function stairs([[x0, y0], [x1, y1]]: [XY, XY]): Part[] {
+  const steps = 14
+  const length = Math.hypot(x1 - x0, y1 - y0)
+  const [tx, ty] = [(x1 - x0) / length, (y1 - y0) / length]
+  const [nx, ny] = [-ty * 1.8, tx * 1.8]
+  return Array.from({ length: steps }, (_, i) => {
+    const [s0, s1] = [i / steps, (i + 1) / steps].map((t) => t * length)
+    return block(
+      [
+        [x0 + tx * s0 + nx, y0 + ty * s0 + ny],
+        [x0 + tx * s1 + nx, y0 + ty * s1 + ny],
+        [x0 + tx * s1 - nx, y0 + ty * s1 - ny],
+        [x0 + tx * s0 - nx, y0 + ty * s0 - ny],
+      ],
+      0,
+      (DECK * (i + 1)) / steps,
+      'paving',
+    )
+  })
+}
+
+function platform(): Part[] {
   const top = DECK + 0.1
   return [
+    // The terraces, over the car parks, and the bridge between them
+    ...[NORTH_TERRACE, SOUTH_TERRACE].flatMap((terrace) => [
+      block(terrace, 0, DECK, 'concrete'),
+      block(grown(terrace, -0.3), DECK, top, 'paving'),
+    ]),
     block(PLAZA, DECK - 1.1, DECK, 'concrete'),
     block(grown(PLAZA, -0.3), DECK, top, 'paving'),
-    // Landings, where the plaza meets the ground either side of the road
+    // Landings under the bridge's ends, either side of the road
     block(
       [
         [-33.8, -5.1],
@@ -382,33 +741,18 @@ function plaza(): Part[] {
         [0.9, DECK - 1.1],
       ],
     })),
-    ...[
-      [
-        [-73.9, -7],
-        [-70.6, -18.4],
-        [-62.7, -41.6],
-      ] as XY[],
-      [
-        [-33.4, -15],
-        [-32.9, -25.1],
-        [-32.7, -41],
-      ] as XY[],
-    ].flatMap((line) =>
+    ...EDGES.flatMap((line) =>
       along(line, 0.3).map((footprint) =>
         block(footprint, DECK, top + 1.1, 'glass'),
       ),
     ),
-    block(
-      [
-        [-57, -9],
-        [-52, -9],
-        [-52, -38],
-        [-56, -38],
-      ],
-      top,
-      top + 0.15,
-      'water',
-    ),
+    ...STAIRS.flatMap(stairs),
+    // Its lawns and trees, its water, and a round fountain on the bridge
+    ...LAWNS.flatMap((lawn) => [
+      block(lawn, top, top + 0.1, 'leaf'),
+      ...grove(lawn, 6, top + 0.1),
+    ]),
+    ...WATER.map((water) => block(water, top, top + 0.15, 'water')),
     {
       kind: 'round',
       material: 'stone',
@@ -431,36 +775,44 @@ function plaza(): Part[] {
     },
     ...(
       [
+        [-42, -40],
         [-44.5, -11],
-        [-44.5, -40],
         [-66.5, -11],
         [-66, -21],
         [-63.5, -31],
         [-37.5, -11],
       ] as XY[]
     ).flatMap((at) => tree(at, top)),
+    // The cafés, glass under white roofs
+    ...CAFES.flatMap((cafe) => [
+      block(cafe, top, top + 3.6, 'windows'),
+      block(grown(cafe, 0.8), top + 3.6, top + 4.2, 'whitewash'),
+    ]),
+    // The round pavilion, glass under a white roof
+    ...(
+      [
+        [12.8, 0, 4.5, 'windows'],
+        [13.2, 4.5, 5.2, 'whitewash'],
+        [12.4, 5.2, 8.5, 'glass'],
+        [13.6, 8.5, 9.2, 'whitewash'],
+        [6, 9.2, 10.4, 'glass'],
+      ] as const
+    ).map(([radius, base, height, material]): Part => ({
+      kind: 'round',
+      material,
+      sides: 32,
+      at: PAVILION,
+      outline: [
+        [radius, top + base],
+        [radius, top + height],
+      ],
+    })),
+    // The shops' fronts on the platform
+    ...[MAIN.slice(18), ENTERTAINMENT.slice(1, 4), ENTERTAINMENT.slice(13, 20)]
+      .flatMap((face) => along(face, 0.5))
+      .map((footprint) => block(footprint, top, top + 4.6, 'windows')),
   ]
 }
-
-/** The round pavilion south of the plaza, glass under a white roof. */
-const PAVILION: Part[] = (
-  [
-    [12.8, 0, 4.5, 'windows'],
-    [13.2, 4.5, 5.2, 'whitewash'],
-    [12.4, 5.2, 8.5, 'glass'],
-    [13.6, 8.5, 9.2, 'whitewash'],
-    [6, 9.2, 10.4, 'glass'],
-  ] as const
-).map(([radius, base, top, material]): Part => ({
-  kind: 'round',
-  material,
-  sides: 32,
-  at: [-28.1, -137.8],
-  outline: [
-    [radius, base],
-    [radius, top],
-  ],
-}))
 
 export const ATLANTIS: Landmark = {
   id: 'atlantis',
@@ -470,13 +822,20 @@ export const ATLANTIS: Landmark = {
     { at: [0, 80], within: 1, tallerThan: 0 },
     { at: [40, -100], within: 1, tallerThan: 0 },
     { at: [65, -30], within: 1, tallerThan: 0 },
-    { at: [-28.1, -137.8], within: 1, tallerThan: 0 },
+    // The platform's pavilion and cafés, drawn on it here
+    ...[PAVILION, ...CAFES.map(middle)].map((at) => ({
+      at,
+      within: 1,
+      tallerThan: 0,
+    })),
   ],
   lights: [
     ...lightsAlong(grown(MAIN, 10), 14),
     ...lightsAlong(grown(ENTERTAINMENT, 7), 14),
     ...lightsAlong(CANOPY, 12),
-    ...lightsAlong(grown(PLAZA, -3), 10),
+    ...[NORTH_TERRACE, PLAZA, SOUTH_TERRACE].flatMap((deck) =>
+      lightsAlong(grown(deck, -3), 12),
+    ),
   ],
   parts: [
     ...mainBuilding(),
@@ -507,15 +866,20 @@ export const ATLANTIS: Landmark = {
         'steel',
       ),
     ),
-    ...plaza(),
-    ...PAVILION,
-    // A pool in the garden, south of the plaza
+    ...platform(),
+    // A pool east of the entertainment centre
     block(
       [
-        [-27, -70],
-        [-22.5, -76],
-        [-13, -92],
-        [-26, -98],
+        [132.7, -80],
+        [139.8, -85.5],
+        [147.2, -80.5],
+        [149.3, -83.3],
+        [154.7, -83.3],
+        [160.6, -77.5],
+        [153.2, -69.3],
+        [152, -65.4],
+        [137.5, -66.5],
+        [137.9, -70.3],
       ],
       0,
       0.2,
@@ -648,11 +1012,6 @@ const LOBBY = 4.2
 const STOREY = 3
 const FLOORS = 24
 const ROOFS = LOBBY + (FLOORS - 1) * STOREY
-
-const middle = (footprint: XY[]): XY => [
-  footprint.reduce((sum, [x]) => sum + x, 0) / footprint.length,
-  footprint.reduce((sum, [, y]) => sum + y, 0) / footprint.length,
-]
 
 /** Whether a window is lit at night: about half, scattered. */
 const lit = (n: number) => (Math.imul(n + 1, 2654435761) >>> 0) % 100 < 55
