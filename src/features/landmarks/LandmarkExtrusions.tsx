@@ -1,71 +1,20 @@
-import { Layer, Source, useMap } from '@vis.gl/react-maplibre'
-import { useEffect, useMemo } from 'react'
+import { Layer, Source } from '@vis.gl/react-maplibre'
+import { useMemo } from 'react'
 import { useTheme } from '../../theme/theme.ts'
-import {
-  LANDMARKS,
-  fallbackFor,
-  findBuilding,
-  landmarkExtrusions,
-  type TileBuilding,
-} from './landmarks.ts'
-import { isPlaced, placeLandmark, usePlacedLandmarks } from './placement.ts'
-
-/** Buildings are in the tiles from this zoom. */
-const FIND_ZOOM = 13
+import { LANDMARKS } from './catalog.ts'
+import { landmarkExtrusions } from './landmarks.ts'
 
 /**
- * Landmarks drawn with the map's own 3D extrusions. Each is placed on its
- * building in the tiles, found once it comes into view.
+ * Landmarks drawn with the map's own 3D extrusions, each where it stands,
+ * in place of the map's plain buildings for it.
  */
 export default function LandmarkExtrusions({
   beforeId,
 }: {
   beforeId?: string
 }) {
-  const { current: ref } = useMap()
   const theme = useTheme()
-  const placed = usePlacedLandmarks()
-
-  useEffect(() => {
-    const map = ref?.getMap()
-    if (!map) return
-    const look = () => {
-      if (map.getZoom() < FIND_ZOOM) return
-      const view = map.getBounds()
-      const pending = LANDMARKS.filter(
-        (landmark) => !isPlaced(landmark.id) && view.contains(landmark.near),
-      )
-      if (pending.length === 0) return
-      const buildings = map.querySourceFeatures('openmaptiles', {
-        sourceLayer: 'building',
-      }) as TileBuilding[]
-      for (const landmark of pending) {
-        const found = findBuilding(landmark, buildings)
-        if (found) placeLandmark(landmark, found)
-        // Only give up on the tiles once they are all in, close up
-        else if (map.getZoom() >= 14 && map.areTilesLoaded()) {
-          placeLandmark(landmark, fallbackFor(landmark))
-        }
-      }
-    }
-    look()
-    map.on('idle', look)
-    return () => {
-      map.off('idle', look)
-    }
-  }, [ref])
-
-  const data = useMemo(
-    () =>
-      landmarkExtrusions(
-        LANDMARKS.filter(({ id }) => placed[id]).map((landmark) => ({
-          landmark,
-          found: placed[landmark.id],
-        })),
-        theme,
-      ),
-    [placed, theme],
-  )
+  const data = useMemo(() => landmarkExtrusions(LANDMARKS, theme), [theme])
 
   return (
     <Source id="landmarks" type="geojson" data={data}>
@@ -73,7 +22,7 @@ export default function LandmarkExtrusions({
         id="landmarks-3d"
         type="fill-extrusion"
         beforeId={beforeId}
-        minzoom={FIND_ZOOM}
+        minzoom={13}
         paint={{
           'fill-extrusion-color': ['get', 'color'],
           'fill-extrusion-base': ['get', 'base'],

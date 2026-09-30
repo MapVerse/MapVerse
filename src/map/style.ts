@@ -5,10 +5,8 @@ import type {
   RasterDEMSourceSpecification,
   StyleSpecification,
 } from 'maplibre-gl'
-import {
-  hideBuildings,
-  type HideZone,
-} from '../features/landmarks/landmarks.ts'
+import { LANDMARKS } from '../features/landmarks/catalog.ts'
+import { hideBuildings, hideZones } from '../features/landmarks/landmarks.ts'
 import type { Theme } from '../theme/theme.ts'
 import { poiFilter, poiIconImage, poiLabelColor } from './poiStyle.ts'
 
@@ -374,11 +372,10 @@ function hillshade(c: Palette): LayerSpecification {
   }
 }
 
-function buildStyle(
-  theme: Theme,
-  terrain: boolean,
-  zones: readonly HideZone[],
-): StyleSpecification {
+/** The map's own buildings that the landmarks are drawn in place of. */
+const LANDMARK_ZONES = hideZones(LANDMARKS)
+
+function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
   const c = PALETTES[theme]
   return {
     version: 8,
@@ -614,7 +611,7 @@ function buildStyle(
         filter: [
           'all',
           ['!=', ['get', 'hide_3d'], true],
-          hideBuildings([...zones]),
+          hideBuildings(LANDMARK_ZONES),
         ],
         paint: {
           'fill-extrusion-color': c.extrusion,
@@ -811,20 +808,13 @@ function buildStyle(
 
 const styles = new Map<string, StyleSpecification>()
 
-/**
- * The map style for a theme, with or without 3D terrain, leaving out the
- * buildings that landmarks stand in for.
- */
-export function mapStyle(
-  theme: Theme,
-  terrain: boolean,
-  zones: readonly HideZone[] = [],
-): StyleSpecification {
+/** The map style for a theme, with or without 3D terrain. */
+export function mapStyle(theme: Theme, terrain: boolean): StyleSpecification {
   // The same object each time, so the map only restyles on a real change
-  const key = `${theme}:${terrain}:${JSON.stringify(zones)}`
+  const key = `${theme}:${terrain}`
   let style = styles.get(key)
   if (!style) {
-    style = buildStyle(theme, terrain, zones)
+    style = buildStyle(theme, terrain)
     styles.set(key, style)
   }
   return style

@@ -8,7 +8,6 @@ import { useState } from 'react'
 import AccountMenu from '../features/account/AccountMenu.tsx'
 import AreaNames from '../features/areas/AreaNames.tsx'
 import LandmarkExtrusions from '../features/landmarks/LandmarkExtrusions.tsx'
-import { useHideZones } from '../features/landmarks/placement.ts'
 import Directions from '../features/directions/Directions.tsx'
 import Boundary from '../features/place/Boundary.tsx'
 import PlaceCard from '../features/place/PlaceCard.tsx'
@@ -62,7 +61,6 @@ type Selection = { place: Place; poi?: PoiMatch }
 export default function MapView() {
   const theme = useTheme()
   const terrain = useTerrainEnabled()
-  const landmarkZones = useHideZones()
   const [poiLayerIds, setPoiLayerIds] = useState<string[]>([])
   const [hoveringPoi, setHoveringPoi] = useState(false)
   const [selection, setSelection] = useState<Selection | null>(null)
@@ -110,7 +108,7 @@ export default function MapView() {
       mapLib={maplibre}
       initialViewState={INITIAL_VIEW}
       ref={installImageResolver}
-      mapStyle={mapStyle(theme, terrain, landmarkZones)}
+      mapStyle={mapStyle(theme, terrain)}
       locale={LOCALE}
       hash
       // Drops the default MapLibre link but keeps the data attribution the
