@@ -295,11 +295,13 @@ function mainBuilding(): Part[] {
         'windows',
       ),
     ),
-    ...doors(SOUTH_END, 5 * DEG),
-    ...doors(NORTH_END, 70 * DEG),
+    // On the end walls themselves, which bow out a little past the ends
+    ...doors([MAIN[1], MAIN[2]], 5 * DEG),
+    ...doors([MAIN[15], MAIN[16]], 70 * DEG),
   )
-  // The red canopy along its face on the car park, on posts
-  parts.push(block(band(OUTER + 0.3, OUTER + 9, 1), EAVES, EAVES + 0.8, 'red'))
+  // The red canopy along its face on the car park, on posts, from just
+  // inside the face, whose straight walls fall a little short of the arc
+  parts.push(block(band(OUTER - 1, OUTER + 9, 1), EAVES, EAVES + 0.8, 'red'))
   const posts = across(OUTER + 8.3, 3)
   for (let i = 0; i < posts.length; i += 2) parts.push(post(posts[i], EAVES))
   return parts
@@ -393,7 +395,7 @@ function plaza(): Part[] {
       ] as XY[],
     ].flatMap((line) =>
       along(line, 0.3).map((footprint) =>
-        block(footprint, top, top + 1.1, 'glass'),
+        block(footprint, DECK, top + 1.1, 'glass'),
       ),
     ),
     block(
