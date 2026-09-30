@@ -98,7 +98,7 @@ export default function SearchBox({
       <div className="search-field">
         <img
           className="search-logo"
-          src={`${import.meta.env.BASE_URL}favicon.svg`}
+          src={`${import.meta.env.BASE_URL}icon.svg`}
           alt=""
           width={28}
           height={28}

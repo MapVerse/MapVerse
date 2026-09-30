@@ -99,11 +99,13 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='1.7' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='6.3'/%3E%3Cpath d='M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6M6 18 18 6'/%3E%3C/svg%3E");
 }
 
-/* The user's location: a blue puck with a thick white rim */
+/* The user's location, sized like the ends of a route: a 12px dot under
+   MapLibre's white ::after ring. The ring is border-box, so 20px wide and
+   pulled back 4px on each side keeps it centred on the dot. */
 .maplibregl-user-location-dot,
 .maplibregl-user-location-dot::before {
-  width: 18px;
-  height: 18px;
+  width: 12px;
+  height: 12px;
   background-color: var(--mv-accent);
 }
 
@@ -112,8 +114,16 @@
   left: -4px;
   width: 20px;
   height: 20px;
-  border-width: 3px;
-  box-shadow: 0 2px 6px rgb(15 23 42 / 30%);
+  border-width: 4px;
+  box-shadow: 0 2px 6px rgb(15 23 42 / 28%);
+}
+
+.maplibregl-user-location-dot-stale {
+  background-color: var(--mv-subtle);
+}
+
+.maplibregl-user-location-accuracy-circle {
+  background-color: rgb(37 99 235 / 12%);
 }
 
 .maplibregl-ctrl-bottom-left .maplibregl-ctrl-scale {
