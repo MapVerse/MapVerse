@@ -8,10 +8,20 @@
   margin: 12px 12px 0 0;
 }
 
+/* The profile corner: its menu opens over the buttons below */
+.maplibregl-ctrl-top-right {
+  z-index: 3;
+}
+
+/* The map buttons sit in the bottom corner, above the attribution */
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl.mv-group {
+  margin: 0 12px 12px 0;
+}
+
 /* Buttons come in glass capsules, one per group (zoom, view, location).
    Each control inside keeps its own element; `display: contents` lets its
    buttons stack as if they were the capsule's own. */
-.maplibregl-ctrl-top-right .mv-group {
+.maplibregl-ctrl.mv-group {
   display: flex;
   flex-direction: column;
   width: 44px;
@@ -25,8 +35,8 @@
 
 /* The :focus selectors match MapLibre's own focus rules, which would
    otherwise round or shadow a button once clicked */
-.maplibregl-ctrl-top-right .mv-group button,
-.maplibregl-ctrl-top-right .mv-group button:focus {
+.maplibregl-ctrl.mv-group button,
+.maplibregl-ctrl.mv-group button:focus {
   display: grid;
   place-items: center;
   width: 44px;
@@ -40,28 +50,27 @@
 }
 
 /* A thin line between the buttons of a capsule */
-.maplibregl-ctrl-top-right .mv-group button + button,
-.maplibregl-ctrl-top-right
-  .mv-group
+.maplibregl-ctrl.mv-group button + button,
+.maplibregl-ctrl.mv-group
   .maplibregl-ctrl
   + .maplibregl-ctrl
   button:first-child {
   border-top: 1px solid var(--glass-line);
 }
 
-.maplibregl-ctrl-top-right .mv-group button:not(:disabled):hover {
+.maplibregl-ctrl.mv-group button:not(:disabled):hover {
   background-color: var(--glass-hover);
 }
 
-.maplibregl-ctrl-top-right .mv-group button:focus-visible {
+.maplibregl-ctrl.mv-group button:focus-visible {
   outline: 2px solid var(--mv-accent);
   outline-offset: -4px;
 }
 
 /* 2D/3D: a cube with the view's name close under it, also once clicked
    (the button rules above set a grid on :focus) */
-.maplibregl-ctrl-top-right .mv-group .mv-tilt,
-.maplibregl-ctrl-top-right .mv-group .mv-tilt:focus {
+.maplibregl-ctrl.mv-group .mv-tilt,
+.maplibregl-ctrl.mv-group .mv-tilt:focus {
   display: flex;
   flex-direction: column;
   align-items: center;
