@@ -19,6 +19,13 @@ import {
 
 const DEG = Math.PI / 180
 
+const rectangle = (x0: number, y0: number, x1: number, y1: number): XY[] => [
+  [x0, y0],
+  [x1, y0],
+  [x1, y1],
+  [x0, y1],
+]
+
 /**
  * Ankara: Atakule, a 125 m concrete shaft with its glass lift up one side
  * and a glass, tulip shaped head under a mast, rising from the curved,
@@ -262,6 +269,200 @@ const ANKARA_KALESI: Landmark = {
       base: AKKALE_TOP + 6.5,
       top: AKKALE_TOP + 9,
     },
+  ],
+}
+
+/**
+ * Ankara: AŞTİ, the intercity bus terminal: the long, three storey
+ * terminal with glass skylights along its roof and a canopy over its
+ * doors, and at either end a wing of bus platforms under white canopies,
+ * with buses at their bays. From its outline in OpenStreetMap.
+ */
+const ASTI_HALL: XY[] = [
+  [-6.3, -98.6],
+  [36, -100.4],
+  [45.1, -100.8],
+  [44.7, -7.7],
+  [44.6, 98.8],
+  [34.9, 99],
+  [-6.7, 98.2],
+]
+const ASTI_TOP = 14
+const astiHall = grid(Math.PI / 2 + 0.002)
+
+/**
+ * A wing of bus platforms: from a corner, `length` metres one way and
+ * `width` the other, as rows of canopies with bus lanes between them.
+ */
+function busPlatforms(corner: XY, along: XY, across: XY): Part[] {
+  const [length, width] = [Math.hypot(...along), Math.hypot(...across)]
+  const eu: XY = [along[0] / length, along[1] / length]
+  const ev: XY = [across[0] / width, across[1] / width]
+  const at = (u: number, v: number): XY => [
+    corner[0] + eu[0] * u + ev[0] * v,
+    corner[1] + eu[1] * u + ev[1] * v,
+  ]
+  const box = (u0: number, v0: number, u1: number, v1: number): XY[] => [
+    at(u0, v0),
+    at(u1, v0),
+    at(u1, v1),
+    at(u0, v1),
+  ]
+  const parts: Part[] = []
+  const rows = 4
+  const pitch = width / rows
+  for (let r = 0; r < rows; r++) {
+    // A platform island under its canopy, on a row of columns
+    const [v0, v1] = [r * pitch + 1.5, r * pitch + pitch * 0.55]
+    parts.push(
+      {
+        kind: 'block',
+        material: 'paving',
+        footprint: box(2, v0, length - 2, v1),
+        base: 0,
+        top: 0.3,
+      },
+      {
+        kind: 'block',
+        material: 'whitewash',
+        footprint: box(1, v0 - 1, length - 1, v1 + 1),
+        base: 6.6,
+        top: 7.4,
+      },
+    )
+    for (let u = 6; u < length - 4; u += 12) {
+      parts.push({
+        kind: 'round',
+        material: 'steel',
+        sides: 8,
+        at: at(u, (v0 + v1) / 2),
+        outline: [
+          [0.35, 0],
+          [0.35, 6.6],
+        ],
+      })
+    }
+    // Buses at the bays beside it, in the lane
+    const lane = r * pitch + pitch * 0.55 + 2.6
+    for (let u = 8 + (r % 2) * 6; u < length - 14; u += 17) {
+      parts.push(
+        {
+          kind: 'block',
+          material: 'whitewash',
+          footprint: box(u, lane - 1.3, u + 12, lane + 1.3),
+          base: 0.3,
+          top: 3.4,
+        },
+        {
+          kind: 'block',
+          material: 'windows',
+          footprint: box(u + 0.3, lane - 1.35, u + 11.7, lane + 1.35),
+          base: 1.6,
+          top: 2.7,
+        },
+      )
+    }
+  }
+  return parts
+}
+
+const ASTI: Landmark = {
+  id: 'asti',
+  name: 'AŞTİ',
+  near: [32.812556, 39.918203],
+  hide: [{ at: [19, 0], within: 1, tallerThan: 0 }],
+  lights: [
+    ...lightsAlong(scaled(ASTI_HALL, 1.12, [19, 0]), 14),
+    ...lightsAlong(
+      [
+        [-6.7, 98.2],
+        [32.2, 131.8],
+        [-37.8, 202],
+        [-75.5, 165.4],
+      ],
+      16,
+    ),
+    ...lightsAlong(
+      [
+        [-6.3, -98.6],
+        [-74.3, -166],
+        [-38.4, -202.9],
+        [31.4, -132.6],
+      ],
+      16,
+    ),
+  ],
+  parts: [
+    // The terminal: glass doors and shops below, glass bands above, and
+    // a parapet round its roof
+    {
+      kind: 'block',
+      material: 'concrete',
+      footprint: ASTI_HALL,
+      base: 0,
+      top: ASTI_TOP,
+    },
+    {
+      kind: 'block',
+      material: 'windows',
+      footprint: scaled(ASTI_HALL, 1.005, [19, 0]),
+      base: 0.5,
+      top: 4.3,
+    },
+    ...[
+      [6, 9],
+      [10.3, 13],
+    ].map(([base, top]): Part => ({
+      kind: 'block',
+      material: 'glass',
+      footprint: scaled(ASTI_HALL, 1.005, [19, 0]),
+      base,
+      top,
+    })),
+    {
+      kind: 'block',
+      material: 'concrete',
+      footprint: ASTI_HALL,
+      holes: [scaled(ASTI_HALL, 0.96, [19, 0])],
+      base: ASTI_TOP,
+      top: ASTI_TOP + 1,
+    },
+    // Glass skylights down the middle of the roof
+    ...Array.from({ length: 7 }, (_, i) =>
+      [0, 1, 2, 3].map((j): Part => ({
+        kind: 'block',
+        material: 'glass',
+        footprint: astiHall.box(
+          -88 + i * 26 + j * 2.2,
+          -26 + j * 2.4,
+          -68 + i * 26 - j * 2.2,
+          -12 - j * 2.4,
+        ),
+        base: ASTI_TOP + j * 1.2,
+        top: ASTI_TOP + (j + 1) * 1.2,
+      })),
+    ).flat(),
+    // The canopy over the doors on the city side
+    {
+      kind: 'block',
+      material: 'whitewash',
+      footprint: rectangle(44.7, -32, 53, 32),
+      base: 4.6,
+      top: 5.3,
+    },
+    ...[-28, -14, 0, 14, 28].map((y): Part => ({
+      kind: 'round',
+      material: 'steel',
+      sides: 8,
+      at: [51.8, y],
+      outline: [
+        [0.3, 0],
+        [0.3, 4.6],
+      ],
+    })),
+    // The bus platforms, north-west and south-west
+    ...busPlatforms([-6.7, 98.2], [-68.8, 67.2], [38.9, 33.6]),
+    ...busPlatforms([-6.3, -98.6], [-68, -67.4], [37.7, -34]),
   ],
 }
 
@@ -1300,6 +1501,7 @@ export const LANDMARKS: Landmark[] = [
   ATAKULE,
   ANITKABIR,
   ANKARA_KALESI,
+  ASTI,
   KOCATEPE,
   GALATA,
   KIZ_KULESI,
