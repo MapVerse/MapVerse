@@ -1,6 +1,15 @@
 import { ANITKABIR } from './anitkabir.ts'
 import type { Landmark, Material, Part, XY } from './landmarks.ts'
-import { dome, ellipse, grid, minaret, mosque, scaled } from './shapes.ts'
+import {
+  dome,
+  ellipse,
+  grid,
+  lightsAlong,
+  lightsRound,
+  minaret,
+  mosque,
+  scaled,
+} from './shapes.ts'
 
 /*
  * The landmarks, each where OpenStreetMap has it, and drawn from its own
@@ -12,6 +21,7 @@ const DEG = Math.PI / 180
 /** Ankara: a 125 m concrete shaft with a glass, tulip shaped head and a mast. */
 const ATAKULE: Landmark = {
   id: 'atakule',
+  lights: lightsRound(9, 6),
   name: 'Atakule',
   near: [32.856137, 39.886135],
   // The tower, not the shopping centre round its foot
@@ -73,6 +83,7 @@ const ATAKULE: Landmark = {
 /** Istanbul: a stone tower with a gallery and a conical lead roof. */
 const GALATA: Landmark = {
   id: 'galata',
+  lights: lightsRound(11, 8),
   name: 'Galata Kulesi',
   near: [28.974213, 41.025634],
   hide: [{ within: 1, tallerThan: 30 }],
@@ -111,6 +122,7 @@ const GALATA: Landmark = {
 /** Istanbul: a white tower and the buildings round it on a rock in the Bosphorus. */
 const KIZ_KULESI: Landmark = {
   id: 'kiz-kulesi',
+  lights: lightsRound(16, 8, [-1, 6]),
   name: 'Kız Kulesi',
   near: [29.00409, 41.02106],
   // Everything on the rock
@@ -214,6 +226,7 @@ const KIZ_KULESI: Landmark = {
  */
 const CAMLICA: Landmark = {
   id: 'camlica',
+  lights: lightsRound(17, 8),
   name: 'Çamlıca Kulesi',
   near: [29.065541, 41.016372],
   hide: [{ within: 1, tallerThan: 0 }],
@@ -297,14 +310,15 @@ function sabanciTower(outline: XY[], core: XY[], center: XY): Part[] {
     })
   }
   return [
+    // Dark glass, its offices lit behind it at night
     {
       kind: 'block',
-      material: 'windows',
+      material: 'tint',
       footprint: outline,
       base: 0,
       top: wings,
     },
-    { kind: 'block', material: 'windows', footprint: core, base: wings, top },
+    { kind: 'block', material: 'tint', footprint: core, base: wings, top },
     ...bands,
     {
       kind: 'block',
@@ -315,7 +329,7 @@ function sabanciTower(outline: XY[], core: XY[], center: XY): Part[] {
     },
     {
       kind: 'block',
-      material: 'whitewash',
+      material: 'windows',
       footprint: scaled(core, 0.9, center),
       base: top,
       top: top + 4,
@@ -325,6 +339,10 @@ function sabanciTower(outline: XY[], core: XY[], center: XY): Part[] {
 
 const SABANCI: Landmark = {
   id: 'sabanci',
+  lights: [
+    ...lightsRound(24, 6, [16, -28.2]),
+    ...lightsRound(24, 6, [-16.2, 28.2]),
+  ],
   name: 'Sabancı Center',
   near: [29.010287, 41.084958],
   // The two towers, not the podium between them
@@ -412,6 +430,7 @@ const SAPPHIRE_OUTLINE: XY[] = [
 
 const SAPPHIRE: Landmark = {
   id: 'sapphire',
+  lights: lightsRound(22, 6),
   name: 'İstanbul Sapphire',
   near: [29.006984, 41.084966],
   hide: [{ within: 1, tallerThan: 0 }],
@@ -460,6 +479,7 @@ const SAPPHIRE: Landmark = {
 /** Istanbul: the stone fire tower in Beyazıt, with a watch room on top. */
 const BEYAZIT: Landmark = {
   id: 'beyazit-kulesi',
+  lights: lightsRound(9, 6),
   name: 'Beyazıt Kulesi',
   near: [28.964896, 41.012786],
   hide: [{ within: 1, tallerThan: 0 }],
@@ -514,6 +534,7 @@ const dolmabahce = grid(31.3 * DEG).box
 
 const DOLMABAHCE: Landmark = {
   id: 'dolmabahce-saat',
+  lights: lightsRound(9, 4),
   name: 'Dolmabahçe Saat Kulesi',
   near: [28.996363, 41.037658],
   hide: [{ within: 1, tallerThan: 0 }],
@@ -551,6 +572,7 @@ const DOLMABAHCE: Landmark = {
 /** İzmir: the Ottoman clock tower in Konak, octagonal, over four fountains. */
 const KONAK: Landmark = {
   id: 'konak-saat',
+  lights: lightsRound(7, 6),
   name: 'Konak Saat Kulesi',
   near: [27.128718, 38.418885],
   hide: [{ within: 3, tallerThan: 0 }],
@@ -626,8 +648,73 @@ const KONAK: Landmark = {
  * Istanbul: Rumeli Hisarı, its curtain walls up the hill from the shore
  * and three great towers.
  */
+/** Its curtain walls, outside, as OpenStreetMap has them */
+const RUMELI_WALLS: XY[] = [
+  [58, -26],
+  [53, -12],
+  [55, 0],
+  [66, 1],
+  [68, 6],
+  [68, 12],
+  [63, 17],
+  [53, 15],
+  [45, 21],
+  [47, 26],
+  [44, 31],
+  [36, 28],
+  [25, 46],
+  [32, 110],
+  [25, 112],
+  [19, 107],
+  [9, 121],
+  [-11, 122],
+  [-10, 130],
+  [-15, 136],
+  [-22, 138],
+  [-29, 135],
+  [-32, 124],
+  [-25, 115],
+  [-19, 87],
+  [-24, 80],
+  [-20, 75],
+  [-21, 52],
+  [-26, 51],
+  [-29, 47],
+  [-28, 43],
+  [-23, 41],
+  [-26, 20],
+  [-30, 15],
+  [-27, 9],
+  [-27, -6],
+  [-32, -11],
+  [-27, -17],
+  [-23, -40],
+  [-24, -44],
+  [-30, -48],
+  [-27, -55],
+  [-42, -85],
+  [-53, -92],
+  [-54, -97],
+  [-52, -104],
+  [-45, -110],
+  [-38, -109],
+  [-32, -105],
+  [-24, -92],
+  [-11, -89],
+  [15, -97],
+  [61, -105],
+  [63, -98],
+  [56, -95],
+  [57, -73],
+  [62, -67],
+  [57, -62],
+  [58, -37],
+  [63, -31],
+]
+
 const RUMELI: Landmark = {
   id: 'rumeli-hisari',
+  lights: RUMELI_WALLS.filter((_, i) => i % 2 === 0),
   name: 'Rumeli Hisarı',
   near: [29.056009, 41.084788],
   // A point on its walls
@@ -636,68 +723,7 @@ const RUMELI: Landmark = {
     {
       kind: 'block',
       material: 'stone',
-      footprint: [
-        [58, -26],
-        [53, -12],
-        [55, 0],
-        [66, 1],
-        [68, 6],
-        [68, 12],
-        [63, 17],
-        [53, 15],
-        [45, 21],
-        [47, 26],
-        [44, 31],
-        [36, 28],
-        [25, 46],
-        [32, 110],
-        [25, 112],
-        [19, 107],
-        [9, 121],
-        [-11, 122],
-        [-10, 130],
-        [-15, 136],
-        [-22, 138],
-        [-29, 135],
-        [-32, 124],
-        [-25, 115],
-        [-19, 87],
-        [-24, 80],
-        [-20, 75],
-        [-21, 52],
-        [-26, 51],
-        [-29, 47],
-        [-28, 43],
-        [-23, 41],
-        [-26, 20],
-        [-30, 15],
-        [-27, 9],
-        [-27, -6],
-        [-32, -11],
-        [-27, -17],
-        [-23, -40],
-        [-24, -44],
-        [-30, -48],
-        [-27, -55],
-        [-42, -85],
-        [-53, -92],
-        [-54, -97],
-        [-52, -104],
-        [-45, -110],
-        [-38, -109],
-        [-32, -105],
-        [-24, -92],
-        [-11, -89],
-        [15, -97],
-        [61, -105],
-        [63, -98],
-        [56, -95],
-        [57, -73],
-        [62, -67],
-        [57, -62],
-        [58, -37],
-        [63, -31],
-      ],
+      footprint: RUMELI_WALLS,
       holes: [
         [
           [-40, -84],
@@ -771,6 +797,7 @@ const AYASOFYA_MINARETS: [number, number][] = [
 
 const AYASOFYA: Landmark = {
   id: 'ayasofya',
+  lights: lightsAlong(ayasofya.box(-56, -40, 42, 40), 12),
   name: 'Ayasofya',
   near: [28.980049, 41.008526],
   hide: [
@@ -824,6 +851,7 @@ const sultanahmet = grid(-43.5 * DEG)
 
 const SULTANAHMET: Landmark = {
   id: 'sultanahmet',
+  lights: lightsAlong(sultanahmet.box(-86, -35, 32, 34), 12),
   name: 'Sultanahmet Camii',
   near: [28.976879, 41.005253],
   hide: [
@@ -865,8 +893,11 @@ const SULTANAHMET: Landmark = {
 }
 
 /** Ankara: Kocatepe Camii, in the classical style, with four tall minarets. */
+const kocatepe = grid(-70.5 * DEG)
+
 const KOCATEPE: Landmark = {
   id: 'kocatepe',
+  lights: lightsAlong(kocatepe.box(-70, -34, 24, 31), 12),
   name: 'Kocatepe Camii',
   near: [32.86078, 39.91655],
   hide: [],
@@ -894,8 +925,11 @@ const KOCATEPE: Landmark = {
 }
 
 /** Edirne: Selimiye, Sinan's great dome on its octagon, and four slim minarets. */
+const selimiye = grid(-50.3 * DEG)
+
 const SELIMIYE: Landmark = {
   id: 'selimiye',
+  lights: lightsAlong(selimiye.box(-70, -33, 31, 34), 12),
   name: 'Selimiye Camii',
   near: [26.55936, 41.67795],
   hide: [{ within: 1, tallerThan: 0 }],
@@ -974,6 +1008,9 @@ function bridgeParts(): Part[] {
     block([start, -0.4, end, 0.4], DECK, DECK + 0.9, 'concrete'),
     block([start, -16.5, end, -15.9], DECK - 0.3, DECK + 1.2),
     block([start, 15.9, end, 16.5], DECK - 0.3, DECK + 1.2),
+    // Lamps along both edges
+    block([start, -16.4, end, -16], DECK + 1.2, DECK + 1.5, 'lamp'),
+    block([start, 16, end, 16.4], DECK + 1.2, DECK + 1.5, 'lamp'),
   )
 
   for (const u of [-MAIN, MAIN]) {
@@ -1020,6 +1057,7 @@ function bridgeParts(): Part[] {
           [u, v - 0.5, u + step, v + 0.5],
           Math.min(h0, h1) - 0.9,
           Math.max(h0, h1),
+          'cable',
         ),
       )
     }
@@ -1029,7 +1067,12 @@ function bridgeParts(): Part[] {
     for (const side of [-1, 1]) {
       const v = side * CABLE
       parts.push(
-        block([u - 0.2, v - 0.2, u + 0.2, v + 0.2], DECK, cableHeight(u)),
+        block(
+          [u - 0.2, v - 0.2, u + 0.2, v + 0.2],
+          DECK,
+          cableHeight(u),
+          'cable',
+        ),
       )
     }
   }
@@ -1050,8 +1093,19 @@ function bridgeParts(): Part[] {
   return parts
 }
 
+/** Its lights on the water below, and at the towers' feet. */
+function bridgeLights(): XY[] {
+  const lights: XY[] = []
+  for (let u = -MAIN; u <= MAIN; u += 38) lights.push(bridge.at(u, 0))
+  for (const u of [-MAIN, MAIN]) {
+    for (const v of [-LEG, LEG]) lights.push(bridge.at(u, v))
+  }
+  return lights
+}
+
 const BRIDGE: Landmark = {
   id: '15-temmuz-koprusu',
+  lights: bridgeLights(),
   name: '15 Temmuz Şehitler Köprüsü',
   near: [29.034368, 41.045537],
   hide: [],

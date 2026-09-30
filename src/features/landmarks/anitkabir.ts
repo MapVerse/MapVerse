@@ -1,5 +1,5 @@
-import type { Landmark, Material, Part } from './landmarks.ts'
-import { grid, hipRoof } from './shapes.ts'
+import type { Landmark, Material, Part, XY } from './landmarks.ts'
+import { grid, hipRoof, lightsAlong } from './shapes.ts'
 
 /*
  * Ankara: Anıtkabir, Atatürk's mausoleum, as a whole: the Hall of Honour
@@ -181,6 +181,20 @@ const ROAD = -13.6
 const ROAD_START = 62.8
 const ROAD_END = 309
 
+/** The lions, 12 down each side, and the lamps between them. */
+const LIONS = [-1, 1].flatMap((side) =>
+  Array.from({ length: 12 }, (_, i): [number, number] => [
+    ROAD + side * 9.6,
+    78 + i * 19.2,
+  ]),
+)
+const LAMPS = [-1, 1].flatMap((side) =>
+  Array.from({ length: 11 }, (_, i): [number, number] => [
+    ROAD + side * 7.6,
+    87.6 + i * 19.2,
+  ]),
+)
+
 function roadOfLions(): Part[] {
   const parts: Part[] = [
     block([ROAD - 8, ROAD_START, ROAD + 8, ROAD_END], 0, 0.2, 'paving'),
@@ -191,9 +205,7 @@ function roadOfLions(): Part[] {
     parts.push(block([wall - 0.4, 66, wall + 0.4, 306], 0, 0.9, 'stone'))
     // 12 lions down each side, in pairs, lying on their plinths and
     // looking across the road at each other
-    for (let i = 0; i < 12; i++) {
-      const u = ROAD + side * 9.6
-      const v = 78 + i * 19.2
+    for (const [u, v] of LIONS.filter(([u]) => Math.sign(u - ROAD) === side)) {
       // From `back` to `front` of a lion, measured towards the road
       const piece = (
         back: number,
@@ -247,6 +259,22 @@ function roadOfLions(): Part[] {
         },
       )
     }
+  }
+  // Lamps down each side, between the lions
+  for (const [u, v] of LAMPS) {
+    parts.push(
+      {
+        kind: 'round',
+        material: 'steel',
+        sides: 6,
+        at: at(u, v),
+        outline: [
+          [0.14, 0],
+          [0.1, 4.2],
+        ],
+      },
+      block(square(u, v, 0.6), 4.2, 4.8, 'lamp'),
+    )
   }
   // İstiklal and Hürriyet, the towers at its head
   parts.push(
@@ -304,5 +332,26 @@ export const ANITKABIR: Landmark = {
     ...TOWERS.flatMap(([u, v]) => tower(square(u, v))),
     ...hall(),
     ...roadOfLions(),
+  ],
+  lights: [
+    // Floodlights all round the Hall of Honour and at the foot of its steps
+    ...lightsAlong(box(...grow(HALL, 7)), 9),
+    ...[-4, 4, 12, 20].map((v) => at(42, v)),
+    // Along the galleries, out on the plaza
+    ...ARCADES.flatMap(([[u0, v0, u1, v1], open]): XY[] => {
+      const along = open === 'v0' || open === 'v1'
+      const [a0, a1] = along ? [u0, u1] : [v0, v1]
+      const face = { u0: u0 - 3, u1: u1 + 3, v0: v0 - 3, v1: v1 + 3 }[open]
+      const count = Math.max(1, Math.round((a1 - a0) / 11))
+      return Array.from({ length: count + 1 }, (_, i) => {
+        const a = a0 + ((a1 - a0) * i) / count
+        return along ? at(a, face) : at(face, a)
+      })
+    }),
+    at(-9.7, -38.8),
+    // The lions and lamps down the Road of Lions, and the towers at its head
+    ...[...LIONS, ...LAMPS].map(([u, v]) => at(u, v)),
+    at(-33.9, 305),
+    at(6, 305),
   ],
 }

@@ -6,6 +6,8 @@ import {
   hideBuildings,
   hideZones,
   landmarkExtrusions,
+  landmarkLights,
+  mix,
   type Landmark,
   type Part,
 } from './landmarks.ts'
@@ -94,9 +96,18 @@ describe('landmarkExtrusions', () => {
     expect(walls.geometry.coordinates).toHaveLength(2)
   })
 
-  it('follows the theme', () => {
+  it('floodlights its walls at night, brightest at their foot', () => {
     const dark = landmarkExtrusions([landmark('atakule')], 'dark').features
-    expect(dark[0].properties!.color).toBe(MATERIAL_COLORS.dark.concrete)
+    const shaft = dark.filter(
+      ({ properties }) => properties!.base < 86 && properties!.height <= 86,
+    )
+    const brightness = (color: string) =>
+      [1, 3, 5].reduce((sum, i) => sum + parseInt(color.slice(i, i + 2), 16), 0)
+    const [foot, top] = [shaft[0], shaft.at(-1)!].map(({ properties }) =>
+      brightness(properties!.color),
+    )
+    expect(foot).toBeGreaterThan(top)
+    expect(shaft.at(-1)!.properties!.color).toBe(MATERIAL_COLORS.dark.concrete)
   })
 })
 
@@ -165,5 +176,18 @@ describe('hideZones', () => {
     const filter = hideBuildings(hideZones(LANDMARKS)) as unknown[]
     expect(filter[0]).toBe('all')
     expect(filter.length).toBe(2 + hideZones(LANDMARKS).length)
+  })
+})
+
+describe('night lights', () => {
+  it('puts a glow at every light of every landmark', () => {
+    const count = LANDMARKS.reduce((n, l) => n + (l.lights?.length ?? 0), 0)
+    expect(count).toBeGreaterThan(200)
+    expect(landmarkLights(LANDMARKS).features).toHaveLength(count)
+  })
+
+  it('mixes colours part way', () => {
+    expect(mix('#000000', '#ffffff', 0.5)).toBe('#808080')
+    expect(mix('#102030', '#102030', 0.7)).toBe('#102030')
   })
 })

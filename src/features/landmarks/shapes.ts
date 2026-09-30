@@ -267,3 +267,27 @@ export function mosque(options: {
   }
   return parts
 }
+
+/** Points round a circle, e.g. floodlights round a tower's foot. */
+export const lightsRound = (
+  radius: number,
+  count: number,
+  [cx, cy]: XY = [0, 0],
+): XY[] =>
+  Array.from({ length: count }, (_, i) => {
+    const a = (i / count) * 2 * Math.PI
+    return [cx + radius * Math.cos(a), cy + radius * Math.sin(a)]
+  })
+
+/** Points every `spacing` metres round a footprint, e.g. along its walls. */
+export function lightsAlong(footprint: XY[], spacing: number): XY[] {
+  const points: XY[] = []
+  footprint.forEach(([x0, y0], i) => {
+    const [x1, y1] = footprint[(i + 1) % footprint.length]
+    const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / spacing))
+    for (let j = 0; j < n; j++) {
+      points.push([x0 + ((x1 - x0) * j) / n, y0 + ((y1 - y0) * j) / n])
+    }
+  })
+  return points
+}

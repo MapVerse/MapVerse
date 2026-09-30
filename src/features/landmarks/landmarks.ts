@@ -1,4 +1,4 @@
-import type { FeatureCollection, Polygon } from 'geojson'
+import type { FeatureCollection, Point, Polygon } from 'geojson'
 import type { ExpressionSpecification } from 'maplibre-gl'
 import type { Theme } from '../../theme/theme.ts'
 import { offset, type XY } from './geometry.ts'
@@ -16,6 +16,7 @@ export type Material =
   | 'whitewash'
   | 'steel'
   | 'glass'
+  | 'tint'
   | 'windows'
   | 'lead'
   | 'roof'
@@ -24,6 +25,8 @@ export type Material =
   | 'asphalt'
   | 'leaf'
   | 'flag'
+  | 'lamp'
+  | 'cable'
 
 /**
  * A piece of a landmark, in metres round its centre: either turned round
@@ -66,6 +69,8 @@ export type Landmark = {
    */
   hide: { at?: XY; within: number; tallerThan: number }[]
   parts: Part[]
+  /** Where its floodlights and lamps light the ground, at night */
+  lights?: XY[]
 }
 
 export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
@@ -77,6 +82,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
     whitewash: '#f3f0ea',
     steel: '#d3d8dd',
     glass: '#7fa2bf',
+    tint: '#56758f',
     windows: '#56758f',
     lead: '#7c8993',
     roof: '#a3abb3',
@@ -85,25 +91,60 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
     asphalt: '#9ba1a8',
     leaf: '#8dbb77',
     flag: '#e30a17',
+    lamp: '#ece8dc',
+    cable: '#c4cad1',
   },
+  // At night: stone and plaster floodlit in warm light, windows lit from
+  // inside, lamps and the bridge's cables glowing
   dark: {
-    concrete: '#474e59',
-    stone: '#5d5649',
-    shade: '#433d34',
-    ochre: '#6a5245',
-    whitewash: '#5f646c',
-    steel: '#59616b',
-    glass: '#4b6a85',
-    windows: '#2f455a',
-    lead: '#3d464f',
-    roof: '#4a525c',
-    rock: '#403e3a',
-    paving: '#464a50',
+    concrete: '#8f8c86',
+    stone: '#9c8360',
+    shade: '#4a3d2e',
+    ochre: '#9a6e55',
+    whitewash: '#b8b3a8',
+    steel: '#7d8896',
+    glass: '#34506c',
+    tint: '#2c4258',
+    windows: '#d7ad5f',
+    lead: '#56606c',
+    roof: '#4b525c',
+    rock: '#3d3a35',
+    paving: '#4f4c47',
     asphalt: '#2c3137',
-    leaf: '#2f4d3b',
-    flag: '#b5121b',
+    leaf: '#2c4a38',
+    flag: '#c8141f',
+    lamp: '#ffd98a',
+    cable: '#b8d3ff',
   },
 }
+
+/** Materials lit by floodlights from the ground at night. */
+const FLOODLIT: ReadonlySet<Material> = new Set([
+  'concrete',
+  'stone',
+  'ochre',
+  'whitewash',
+])
+/** How high floodlights reach before the light fades, in metres. */
+const FLOOD_REACH = 24
+const FLOOD_COLOR = '#ffe7bf'
+
+/** A colour part way (`t`, from 0 to 1) towards another. */
+export function mix(from: string, to: string, t: number): string {
+  const channel = (hex: string, i: number) =>
+    parseInt(hex.slice(1 + 2 * i, 3 + 2 * i), 16)
+  return `#${[0, 1, 2]
+    .map((i) =>
+      Math.round(channel(from, i) + (channel(to, i) - channel(from, i)) * t)
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`
+}
+
+/** A floodlit wall's colour at a height: brightest at its foot. */
+const floodlit = (color: string, height: number) =>
+  mix(color, FLOOD_COLOR, 0.45 * Math.max(0, 1 - height / FLOOD_REACH))
 
 function ring(center: [number, number], radius: number, sides: number) {
   const points: [number, number][] = []
@@ -125,17 +166,42 @@ export function landmarkExtrusions(
 ): FeatureCollection<Polygon> {
   const colors = MATERIAL_COLORS[theme]
   const features: FeatureCollection<Polygon>['features'] = []
+  const push = (
+    rings: [number, number][][],
+    base: number,
+    height: number,
+    color: string,
+  ) =>
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'Polygon', coordinates: rings },
+      properties: { base, height, color },
+    })
   const add = (
     rings: [number, number][][],
     base: number,
     height: number,
     material: Material,
-  ) =>
-    features.push({
-      type: 'Feature',
-      geometry: { type: 'Polygon', coordinates: rings },
-      properties: { base, height, color: colors[material] },
-    })
+  ) => {
+    const color = colors[material]
+    if (theme === 'light' || !FLOODLIT.has(material)) {
+      return push(rings, base, height, color)
+    }
+    // Floodlit from the ground: in bands, brighter towards the foot
+    const top = Math.min(height, FLOOD_REACH)
+    const bands = Math.max(1, Math.ceil((top - base) / 3))
+    for (let i = 0; i < bands && base < top; i++) {
+      const [b, t] = [
+        base + ((top - base) * i) / bands,
+        base + ((top - base) * (i + 1)) / bands,
+      ]
+      push(rings, b, t, floodlit(color, (b + t) / 2))
+    }
+    if (height > Math.max(base, FLOOD_REACH)) {
+      const b = Math.max(base, FLOOD_REACH)
+      push(rings, b, height, floodlit(color, (b + height) / 2))
+    }
+  }
   for (const { near, parts } of landmarks) {
     const closed = (footprint: XY[]) => {
       const points = footprint.map((p) => offset(near, p))
@@ -169,6 +235,22 @@ export function landmarkExtrusions(
     }
   }
   return { type: 'FeatureCollection', features }
+}
+
+/** The spots the landmarks light at night, for a glow on the ground. */
+export function landmarkLights(
+  landmarks: Landmark[],
+): FeatureCollection<Point> {
+  return {
+    type: 'FeatureCollection',
+    features: landmarks.flatMap(({ near, lights = [] }) =>
+      lights.map((at) => ({
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: offset(near, at) },
+        properties: {},
+      })),
+    ),
+  }
 }
 
 /** Where the map's own buildings make way for a landmark. */
