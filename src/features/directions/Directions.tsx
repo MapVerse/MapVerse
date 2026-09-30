@@ -1,18 +1,20 @@
 import { Layer, Marker, Source, useMap } from '@vis.gl/react-maplibre'
 import type { FeatureCollection, LineString } from 'geojson'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Icon } from '../../icons/Icon.tsx'
+import type { StrokeName } from '../../icons/strokes.ts'
 import { formatDistance, type Place } from '../place/place.ts'
-import { formatDuration, maneuverArrow } from './directions.ts'
+import { formatDuration, maneuverIcon } from './directions.ts'
 import { useRoutes } from './useRoutes.ts'
 import type { TravelMode } from './valhalla.ts'
 import './Directions.css'
 
 type Origin = { name: string; lngLat: [number, number] }
 
-const MODES: { mode: TravelMode; label: string }[] = [
-  { mode: 'auto', label: 'Araba' },
-  { mode: 'pedestrian', label: 'Yürüyüş' },
-  { mode: 'bicycle', label: 'Bisiklet' },
+const MODES: { mode: TravelMode; label: string; icon: StrokeName }[] = [
+  { mode: 'auto', label: 'Araba', icon: 'car' },
+  { mode: 'pedestrian', label: 'Yürüyüş', icon: 'walk' },
+  { mode: 'bicycle', label: 'Bisiklet', icon: 'bike' },
 ]
 
 type Props = {
@@ -24,6 +26,7 @@ type Props = {
 
 export default function Directions({ to, beforeId, onClose }: Props) {
   const { current: map } = useMap()
+  const panelRef = useRef<HTMLElement>(null)
   const [mode, setMode] = useState<TravelMode>('auto')
   const [origin, setOrigin] = useState<Origin | null>(null)
   const [locating, setLocating] = useState<'pending' | 'failed' | 'done'>(() =>
@@ -85,17 +88,29 @@ export default function Directions({ to, beforeId, onClose }: Props) {
     if (!map || !route) return
     const lngs = route.shape.map(([lng]) => lng)
     const lats = route.shape.map(([, lat]) => lat)
+    const panel = panelRef.current?.getBoundingClientRect()
     map.fitBounds(
       [
         [Math.min(...lngs), Math.min(...lats)],
         [Math.max(...lngs), Math.max(...lats)],
       ],
       {
-        // keep the route clear of the panel
+        // Keep the route clear of the panel: beside it on wide screens,
+        // below it on phones
         padding:
           window.innerWidth > 640
-            ? { top: 60, right: 60, bottom: 60, left: 420 }
-            : { top: 320, right: 30, bottom: 40, left: 30 },
+            ? {
+                top: 60,
+                right: 70,
+                bottom: 60,
+                left: (panel?.right ?? 400) + 40,
+              }
+            : {
+                top: (panel?.bottom ?? 320) + 30,
+                right: 40,
+                bottom: 50,
+                left: 40,
+              },
         duration: 800,
       },
     )
@@ -124,55 +139,72 @@ export default function Directions({ to, beforeId, onClose }: Props) {
 
   return (
     <>
-      <section className="directions" aria-label="Yol tarifi">
+      <section ref={panelRef} className="directions" aria-label="Yol tarifi">
         <header className="directions-header">
           <button
             type="button"
-            className="directions-back"
+            className="directions-icon-button"
             aria-label="Yol tarifini kapat"
             onClick={onClose}
           >
-            ←
+            <Icon name="back" size={20} />
           </button>
-          <div className="directions-modes" role="tablist">
-            {MODES.map((m) => (
-              <button
-                key={m.mode}
-                type="button"
-                role="tab"
-                aria-selected={m.mode === mode}
-                onClick={() => {
-                  setMode(m.mode)
-                  setSelected(0)
-                }}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
+          <h2 className="directions-title">Yol tarifi</h2>
         </header>
+
+        <div className="directions-modes" role="tablist">
+          {MODES.map((m) => (
+            <button
+              key={m.mode}
+              type="button"
+              role="tab"
+              aria-selected={m.mode === mode}
+              onClick={() => {
+                setMode(m.mode)
+                setSelected(0)
+              }}
+            >
+              <Icon name={m.icon} size={20} />
+              {m.label}
+            </button>
+          ))}
+        </div>
 
         <div className="directions-points">
           <div className="directions-point">
             <span className="directions-dot directions-dot-origin" />
-            <span className="directions-point-name">
-              {origin?.name ??
-                (locating === 'pending'
-                  ? 'Konum alınıyor…'
-                  : 'Başlangıç noktası seç')}
-            </span>
+            <div className="directions-point-text">
+              <span className="directions-point-label">Başlangıç</span>
+              <span className="directions-point-name">
+                {origin?.name ??
+                  (locating === 'pending'
+                    ? 'Konum alınıyor…'
+                    : 'Başlangıç noktası seç')}
+              </span>
+            </div>
+          </div>
+          <div className="directions-chips">
             {origin?.name !== 'Konumum' && locating !== 'pending' && (
               <button type="button" onClick={locate}>
+                <Icon name="locate" size={16} />
                 Konumum
               </button>
             )}
-            <button type="button" onClick={() => setPicking((p) => !p)}>
+            <button
+              type="button"
+              aria-pressed={picking}
+              onClick={() => setPicking((p) => !p)}
+            >
+              <Icon name={picking ? 'close' : 'pin'} size={16} />
               {picking ? 'Vazgeç' : 'Haritadan seç'}
             </button>
           </div>
           <div className="directions-point">
             <span className="directions-dot directions-dot-destination" />
-            <span className="directions-point-name">{to.name}</span>
+            <div className="directions-point-text">
+              <span className="directions-point-label">Varış</span>
+              <span className="directions-point-name">{to.name}</span>
+            </div>
           </div>
         </div>
 
@@ -188,8 +220,12 @@ export default function Directions({ to, beforeId, onClose }: Props) {
                     aria-pressed={r === route}
                     onClick={() => setSelected(i)}
                   >
-                    <strong>{formatDuration(r.seconds)}</strong>
-                    <span>{formatDistance(r.meters)}</span>
+                    <span className="directions-route-time">
+                      {formatDuration(r.seconds)}
+                    </span>
+                    <span className="directions-route-distance">
+                      {formatDistance(r.meters)}
+                    </span>
                     {i === 0 && routes.length > 1 && (
                       <span className="directions-tag">Önerilen</span>
                     )}
@@ -200,8 +236,8 @@ export default function Directions({ to, beforeId, onClose }: Props) {
             <ol className="directions-steps" aria-label="Adım adım tarif">
               {route.maneuvers.map((step, i) => (
                 <li key={i}>
-                  <span className="directions-arrow" aria-hidden="true">
-                    {maneuverArrow(step.type)}
+                  <span className="directions-step-icon">
+                    <Icon name={maneuverIcon(step.type)} size={18} />
                   </span>
                   <span className="directions-instruction">
                     {step.instruction}
@@ -233,7 +269,7 @@ export default function Directions({ to, beforeId, onClose }: Props) {
           beforeId={beforeId}
           filter={['get', 'selected']}
           layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-          paint={{ 'line-color': '#1d4ed8', 'line-width': 8 }}
+          paint={{ 'line-color': '#1e40af', 'line-width': 8 }}
         />
         <Layer
           id="routes-selected"
@@ -241,7 +277,7 @@ export default function Directions({ to, beforeId, onClose }: Props) {
           beforeId={beforeId}
           filter={['get', 'selected']}
           layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-          paint={{ 'line-color': '#3b82f6', 'line-width': 5 }}
+          paint={{ 'line-color': '#3b82f6', 'line-width': 5.5 }}
         />
       </Source>
       {origin && (

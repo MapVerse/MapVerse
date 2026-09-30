@@ -1,3 +1,5 @@
+import type { StrokeName } from '../../icons/strokes.ts'
+
 /** Decodes a Valhalla (precision 6) encoded polyline into [lng, lat] pairs. */
 export function decodePolyline6(encoded: string): [number, number][] {
   const points: [number, number][] = []
@@ -33,33 +35,33 @@ export function formatDuration(seconds: number): string {
 }
 
 // Valhalla maneuver types: https://valhalla.github.io/valhalla/api/turn-by-turn/api-reference/
-const ARROWS: Record<number, string> = {
-  1: '●',
-  2: '●',
-  3: '●',
-  4: '⚑',
-  5: '⚑',
-  6: '⚑',
-  9: '↗',
-  10: '→',
-  11: '↘',
-  12: '↷',
-  13: '↶',
-  14: '↙',
-  15: '←',
-  16: '↖',
-  18: '↗',
-  19: '↖',
-  20: '↗',
-  21: '↖',
-  23: '↗',
-  24: '↖',
-  26: '⟳',
-  27: '⟳',
-  28: '⛴',
-  29: '⛴',
+const MANEUVER_ICONS: Partial<Record<number, StrokeName>> = {
+  1: 'start',
+  2: 'start',
+  3: 'start',
+  4: 'flag',
+  5: 'flag',
+  6: 'flag',
+  9: 'slightRight',
+  10: 'right',
+  11: 'sharpRight',
+  12: 'uturnRight',
+  13: 'uturnLeft',
+  14: 'sharpLeft',
+  15: 'left',
+  16: 'slightLeft',
+  18: 'slightRight',
+  19: 'slightLeft',
+  20: 'slightRight',
+  21: 'slightLeft',
+  23: 'slightRight',
+  24: 'slightLeft',
+  26: 'roundabout',
+  27: 'roundabout',
+  28: 'ferry',
+  29: 'ferry',
 }
 
-export function maneuverArrow(type: number): string {
-  return ARROWS[type] ?? '↑'
+export function maneuverIcon(type: number): StrokeName {
+  return MANEUVER_ICONS[type] ?? 'straight'
 }

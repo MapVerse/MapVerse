@@ -1,0 +1,8 @@
+.category-badge {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  border-radius: 32%;
+  background: color-mix(in srgb, var(--badge-color) 13%, white);
+  color: var(--badge-color);
+}

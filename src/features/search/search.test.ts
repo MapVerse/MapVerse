@@ -25,6 +25,7 @@ describe('toSearchResult', () => {
       name: 'Kahve Durağı',
       detail: 'Galip Dede Caddesi 5, Beyoğlu, İstanbul, Türkiye',
       category: 'Kafe',
+      categoryKey: 'cafe',
       address: 'Galip Dede Caddesi 5, Beyoğlu, İstanbul',
       lngLat: [28.9741, 41.0256],
       osm: { type: 'N', id: 42 },

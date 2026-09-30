@@ -13,7 +13,9 @@ import type { Place } from '../features/place/place.ts'
 import { findPoiLayerIds, toPoi } from '../features/place/poi.ts'
 import SelectedPoi, { type PoiMatch } from '../features/place/SelectedPoi.tsx'
 import SearchBox from '../features/search/SearchBox.tsx'
+import './controls.css'
 import { maplibre } from './maplibre.ts'
+import { applyPoiStyle } from './poiStyle.ts'
 import { LIBERTY_STYLE_URL } from './styles.ts'
 
 // Istanbul; the URL hash (#zoom/lat/lng) takes precedence when present.
@@ -61,7 +63,9 @@ export default function MapView() {
       cursor={hoveringPoi ? 'pointer' : undefined}
       onLoad={(event) => {
         const style = event.target.getStyle()
-        setPoiLayerIds(findPoiLayerIds(style))
+        const poiLayers = findPoiLayerIds(style)
+        applyPoiStyle(event.target, poiLayers)
+        setPoiLayerIds(poiLayers)
         setLabelLayerId(style.layers.find((l) => l.type === 'symbol')?.id)
       }}
       onMouseEnter={() => setHoveringPoi(true)}

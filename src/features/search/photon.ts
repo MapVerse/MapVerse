@@ -1,4 +1,4 @@
-import { categoryLabel } from '../place/categories.ts'
+import { categoryInfo, categoryLabel } from '../place/categories.ts'
 import type { Place } from '../place/place.ts'
 
 export type SearchResult = Place & { detail: string }
@@ -97,6 +97,7 @@ export function toSearchResult({
     name,
     detail,
     category: categoryLabel(p.osm_value, p.type),
+    categoryKey: categoryInfo(p.osm_value, p.type)?.key,
     address: formatAddress(p, name) ?? (detail || null),
     lngLat: geometry.coordinates,
     osm,

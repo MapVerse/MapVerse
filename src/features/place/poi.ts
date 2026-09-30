@@ -1,5 +1,5 @@
 import type { MapGeoJSONFeature, StyleSpecification } from 'maplibre-gl'
-import { categoryLabel } from './categories.ts'
+import { categoryInfo, categoryLabel } from './categories.ts'
 import type { Place } from './place.ts'
 
 /** Ids of the style layers drawn from the OpenMapTiles `poi` source layer. */
@@ -33,6 +33,7 @@ export function toPoi(
     key: `poi:${lngLat.join(',')}`,
     name: p['name:tr'] || p.name || category || 'Yer',
     category,
+    categoryKey: categoryInfo(p.subclass, p.class)?.key,
     lngLat,
     icon: icon ? String(icon) : undefined,
     iconColor: iconColor ? String(iconColor) : undefined,

@@ -4,6 +4,8 @@ export type Place = {
   key: string
   name: string
   category?: string
+  /** Key into the category table, for the badge glyph and colour */
+  categoryKey?: string
   /** undefined: not known yet, so look it up; null: there is none */
   address?: string | null
   lngLat: [number, number]

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { categoryLabel } from './categories.ts'
+import { categoryInfo, categoryLabel, labelColor } from './categories.ts'
 import { distanceMeters, formatDistance } from './place.ts'
 import { findPoiLayerIds } from './poi.ts'
 
@@ -27,6 +27,22 @@ describe('categoryLabel', () => {
     expect(categoryLabel('water_park')).toBe('Water park')
     expect(categoryLabel('constructor')).toBe('Constructor')
     expect(categoryLabel('yes', undefined)).toBeUndefined()
+  })
+})
+
+describe('categoryInfo', () => {
+  it('gives the glyph and group colour of the first known key', () => {
+    expect(categoryInfo('bicycle', 'shop')).toMatchObject({
+      key: 'shop',
+      label: 'Mağaza',
+      glyph: 'bag',
+      color: '#3b82f6',
+    })
+    expect(categoryInfo('water_park')).toBeUndefined()
+  })
+
+  it('darkens colours for map labels', () => {
+    expect(labelColor('#3b82f6')).toBe('rgb(42 94 177)')
   })
 })
 

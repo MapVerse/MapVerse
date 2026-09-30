@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { decodePolyline6, formatDuration, maneuverArrow } from './directions.ts'
+import { decodePolyline6, formatDuration, maneuverIcon } from './directions.ts'
 import { parseRoutes } from './valhalla.ts'
 
 // Reference encoder, to build fixtures
@@ -87,10 +87,11 @@ describe('formatDuration', () => {
   })
 })
 
-describe('maneuverArrow', () => {
-  it('maps turns to arrows and falls back to straight ahead', () => {
-    expect(maneuverArrow(10)).toBe('→')
-    expect(maneuverArrow(15)).toBe('←')
-    expect(maneuverArrow(8)).toBe('↑')
+describe('maneuverIcon', () => {
+  it('maps turns to icons and falls back to straight ahead', () => {
+    expect(maneuverIcon(10)).toBe('right')
+    expect(maneuverIcon(15)).toBe('left')
+    expect(maneuverIcon(26)).toBe('roundabout')
+    expect(maneuverIcon(8)).toBe('straight')
   })
 })

@@ -1,5 +1,7 @@
 import { useMap } from '@vis.gl/react-maplibre'
 import { useId, useRef, useState, type KeyboardEvent } from 'react'
+import { Icon } from '../../icons/Icon.tsx'
+import CategoryBadge from '../place/CategoryBadge.tsx'
 import { distanceMeters, formatDistance } from '../place/place.ts'
 import { findMatch } from './match.ts'
 import type { SearchResult } from './photon.ts'
@@ -77,6 +79,9 @@ export default function SearchBox({ hidden, onSelect, onClear }: Props) {
   return (
     <div className="search" role="search" hidden={hidden}>
       <div className="search-field">
+        <span className="search-icon">
+          <Icon name="search" size={20} />
+        </span>
         <input
           ref={inputRef}
           type="search"
@@ -109,7 +114,7 @@ export default function SearchBox({ hidden, onSelect, onClear }: Props) {
             aria-label="Aramayı temizle"
             onClick={clear}
           >
-            ×
+            <Icon name="close" size={18} />
           </button>
         )}
       </div>
@@ -134,6 +139,13 @@ export default function SearchBox({ hidden, onSelect, onClear }: Props) {
                 aria-selected={i === active}
                 onClick={() => select(item)}
               >
+                {showRecent ? (
+                  <span className="search-recent-icon">
+                    <Icon name="clock" size={18} />
+                  </span>
+                ) : (
+                  <CategoryBadge categoryKey={item.categoryKey} size={36} />
+                )}
                 <span className="search-text">
                   <span className="search-name">
                     <Highlight
