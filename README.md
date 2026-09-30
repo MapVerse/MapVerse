@@ -11,7 +11,7 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 - OpenFreeMap vektör verisi üzerinde kendi harita stilimiz: sıcak açık zemin, mavi su, yeşil parklar, renkli semt tonları ve sarı otoyollar; API anahtarı gerekmez
 - Koyu mod: harita, mekân rozetleri, rotalar ve tüm arayüz koyu temaya geçer. Sağ üstteki profil menüsünden Açık, Koyu ya da cihaza uyan Sistem seçilir ve seçim hatırlanır
 - Haritayı yatırıp binaları 3B gösteren 2D/3D düğmesi
-- Simge yapıların 3B modelleri: Atakule, Galata Kulesi ve Kız Kulesi, haritanın kendi 3B binalarının yerine gövde, cam, taş ve kurşun çatı gibi parçalarıyla çizilir
+- Simge yapıların 3B modelleri: Atakule, Anıtkabir, Galata Kulesi, Kız Kulesi, Çamlıca Kulesi ve Sabancı Center. Her biri harita verisindeki kendi binası bulunup onun yerine, gövde, cam, taş ve kurşun çatı gibi parçalarıyla çizilir
 - Yakınlaşınca site ve sanayi sitesi adları: harita karolarında olmayan bu adlar görünen alan için OpenStreetMap'ten (Overpass) alınır ve saklanır
 - 3B arazi: dağlar ve tepeler yükseltisiyle, gölgeli kabartmayla görünür ([Terrain Tiles](https://registry.opendata.aws/terrain-tiles/), API anahtarı gerekmez). Profil menüsünden açılıp kapanır ve seçim hatırlanır
 - Yakınlaştırma, pusula/eğim, konumum ve ölçek kontrolleri

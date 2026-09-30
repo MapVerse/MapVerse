@@ -5,7 +5,10 @@ import type {
   RasterDEMSourceSpecification,
   StyleSpecification,
 } from 'maplibre-gl'
-import { hideLandmarkBuildings } from '../features/landmarks/landmarks.ts'
+import {
+  hideBuildings,
+  type HideZone,
+} from '../features/landmarks/landmarks.ts'
 import type { Theme } from '../theme/theme.ts'
 import { poiFilter, poiIconImage, poiLabelColor } from './poiStyle.ts'
 
@@ -371,7 +374,11 @@ function hillshade(c: Palette): LayerSpecification {
   }
 }
 
-function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
+function buildStyle(
+  theme: Theme,
+  terrain: boolean,
+  zones: readonly HideZone[],
+): StyleSpecification {
   const c = PALETTES[theme]
   return {
     version: 8,
@@ -607,7 +614,7 @@ function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
         filter: [
           'all',
           ['!=', ['get', 'hide_3d'], true],
-          hideLandmarkBuildings(),
+          hideBuildings([...zones]),
         ],
         paint: {
           'fill-extrusion-color': c.extrusion,
@@ -804,13 +811,20 @@ function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
 
 const styles = new Map<string, StyleSpecification>()
 
-/** The map style for a theme, with or without 3D terrain. */
-export function mapStyle(theme: Theme, terrain: boolean): StyleSpecification {
+/**
+ * The map style for a theme, with or without 3D terrain, leaving out the
+ * buildings that landmarks stand in for.
+ */
+export function mapStyle(
+  theme: Theme,
+  terrain: boolean,
+  zones: readonly HideZone[] = [],
+): StyleSpecification {
   // The same object each time, so the map only restyles on a real change
-  const key = `${theme}:${terrain}`
+  const key = `${theme}:${terrain}:${JSON.stringify(zones)}`
   let style = styles.get(key)
   if (!style) {
-    style = buildStyle(theme, terrain)
+    style = buildStyle(theme, terrain, zones)
     styles.set(key, style)
   }
   return style
