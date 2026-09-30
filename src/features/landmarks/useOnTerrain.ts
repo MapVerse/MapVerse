@@ -1,12 +1,14 @@
 import { useMap } from '@vis.gl/react-maplibre'
 import type { FeatureCollection, Polygon } from 'geojson'
+import type { MapSourceDataEvent } from 'maplibre-gl'
 import { useEffect, useState } from 'react'
 import { useTerrainEnabled } from '../../map/terrainSetting.ts'
 import { onTerrain } from './landmarks.ts'
 
 /**
  * Landmark pieces set on the 3D terrain when it is on (see `onTerrain`),
- * once the ground's height has loaded, and again as finer heights come in.
+ * once the ground's height has loaded, and again as finer heights come in:
+ * only then, as settling them all takes a while.
  */
 export function useOnTerrain(
   pieces: FeatureCollection<Polygon>,
@@ -21,8 +23,10 @@ export function useOnTerrain(
   useEffect(() => {
     const map = ref?.getMap()
     if (!map || !terrain) return
+    let stale = true
     const settle = () => {
-      if (!map.terrain) return
+      if (!stale || !map.terrain) return
+      stale = false
       const heights: number[] = []
       const data = onTerrain(pieces, (at) => {
         const h = map.queryTerrainElevation(at) ?? 0
@@ -36,9 +40,16 @@ export function useOnTerrain(
           : { from: pieces, data, key },
       )
     }
+    // New heights for the ground, for the pieces to settle on when the map
+    // is next still
+    const heights = ({ sourceId, tile }: MapSourceDataEvent) => {
+      if (tile && sourceId === map.getTerrain()?.source) stale = true
+    }
     settle()
+    map.on('sourcedata', heights)
     map.on('idle', settle)
     return () => {
+      map.off('sourcedata', heights)
       map.off('idle', settle)
     }
   }, [ref, terrain, pieces])

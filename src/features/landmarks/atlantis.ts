@@ -1016,16 +1016,33 @@ const ROOFS = LOBBY + (FLOORS - 1) * STOREY
 /** Whether a window is lit at night: about half, scattered. */
 const lit = (n: number) => (Math.imul(n + 1, 2654435761) >>> 0) % 100 < 55
 
+/** The height of a floor's window sills. */
+const sill = (floor: number) => LOBBY + (floor - 1) * STOREY + 0.9
+const PANE = 1.5
+/** The top of its highest windows, a floor under its roof */
+const PANES_TOP = sill(FLOORS - 1) + PANE
+
 /**
- * A block of flats: in light plaster, a glass lobby at its foot, its
- * windows floor by floor, a parapet round the roof, and the lift's room
- * on top.
+ * A block of flats: dark glass behind light plaster, with a band round it
+ * between each floor's windows and piers between them, a glass lobby at
+ * its foot, a parapet round the roof and the lift's room on top. At night
+ * about half its windows are lit, those lit one over another drawn as
+ * one, behind the bands, so the whole block takes a few hundred pieces.
  */
 function flats(footprint: XY[], index: number): Part[] {
+  const around = grown(footprint, 0.15)
   const parts: Part[] = [
-    block(footprint, 0, ROOFS, 'plaster'),
-    block(grown(footprint, 0.15), 0.4, 3.8, 'windows'),
-    block(footprint, ROOFS, ROOFS + 1.2, 'plaster', [grown(footprint, -0.4)]),
+    block(footprint, 0, ROOFS, 'tint'),
+    block(around, 0, 0.4, 'plaster'),
+    block(around, 0.4, 3.8, 'windows'),
+    block(around, 3.8, sill(1), 'plaster'),
+    ...Array.from({ length: FLOORS - 2 }, (_, i) =>
+      block(around, sill(i + 1) + PANE, sill(i + 2), 'plaster'),
+    ),
+    block(around, PANES_TOP, ROOFS + 0.1, 'plaster'),
+    block(footprint, ROOFS + 0.1, ROOFS + 1.2, 'plaster', [
+      grown(footprint, -0.4),
+    ]),
   ]
   // Along its long faces, as the step out in the middle of one runs
   const [cx, cy] = middle(footprint)
@@ -1039,12 +1056,12 @@ function flats(footprint: XY[], index: number): Part[] {
   parts.push(
     block(
       [room(-5, -3.5), room(5, -3.5), room(5, 3.5), room(-5, 3.5)],
-      ROOFS,
+      ROOFS + 0.1,
       ROOFS + 4.5,
       'plaster',
     ),
   )
-  // Windows in each wall, about every 4.5 m, each lit or not
+  // Each wall's windows, about every 4.5 m, with piers between them
   let area = 0
   footprint.forEach(([ax, ay], i) => {
     const [bx, by] = footprint[(i + 1) % footprint.length]
@@ -1054,31 +1071,49 @@ function flats(footprint: XY[], index: number): Part[] {
   footprint.forEach(([ax, ay], wall) => {
     const [bx, by] = footprint[(wall + 1) % footprint.length]
     const span = Math.hypot(bx - ax, by - ay)
-    if (span < 3) return
     const [tx, ty] = [(bx - ax) / span, (by - ay) / span]
     // Out of the wall
     const [nx, ny] = [side * ty, -side * tx]
-    const units = Math.round(span / 4.5)
-    const pane = (s: number, out: number): XY => [
-      ax + tx * s + nx * out,
-      ay + ty * s + ny * out,
-    ]
-    for (let floor = 1; floor < FLOORS; floor++) {
-      const base = LOBBY + (floor - 1) * STOREY + 0.9
-      for (let unit = 0; unit < units; unit++) {
-        const [s0, s1] = [(unit + 0.2) / units, (unit + 0.8) / units].map(
-          (t) => t * span,
-        )
-        parts.push(
-          block(
-            [pane(s0, -0.05), pane(s1, -0.05), pane(s1, 0.15), pane(s0, 0.15)],
-            base,
-            base + 1.5,
-            lit(((index * 16 + wall) * 32 + floor) * 8 + unit)
-              ? 'windows'
-              : 'tint',
-          ),
-        )
+    const strip = (s0: number, s1: number, out: number): XY[] =>
+      (
+        [
+          [s0, -0.05],
+          [s1, -0.05],
+          [s1, out],
+          [s0, out],
+        ] as const
+      ).map(([s, o]): XY => [
+        ax + tx * s * span + nx * o,
+        ay + ty * s * span + ny * o,
+      ])
+    const units = span < 3 ? 0 : Math.round(span / 4.5)
+    if (!units) {
+      parts.push(block(strip(0, 1, 0.15), 3.8, PANES_TOP, 'plaster'))
+      return
+    }
+    for (let pier = 0; pier <= units; pier++) {
+      const [s0, s1] = [(pier - 0.2) / units, (pier + 0.2) / units]
+      parts.push(
+        block(
+          strip(Math.max(0, s0), Math.min(1, s1), 0.15),
+          3.8,
+          PANES_TOP,
+          'plaster',
+        ),
+      )
+    }
+    // The lit windows, a run of them one over another at a time
+    for (let unit = 0; unit < units; unit++) {
+      const pane = strip((unit + 0.2) / units, (unit + 0.8) / units, 0.08)
+      let from = 0
+      for (let floor = 1; floor <= FLOORS; floor++) {
+        const on =
+          floor < FLOORS && lit(((index * 16 + wall) * 32 + floor) * 8 + unit)
+        if (on && !from) from = floor
+        if (!on && from) {
+          parts.push(block(pane, sill(from), sill(floor - 1) + PANE, 'windows'))
+          from = 0
+        }
       }
     }
   })

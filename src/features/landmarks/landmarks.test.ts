@@ -226,20 +226,39 @@ describe('Atlantis City', () => {
   const blocks = landmark('atlantis-city').parts.filter(
     (p) => p.kind === 'block',
   )
+  const bodies = blocks.filter((p) => p.base === 0 && p.material === 'tint')
 
   it('has its eight blocks of flats, with 24 floors each', () => {
-    expect(
-      blocks.filter((p) => p.material === 'plaster' && p.base === 0),
-    ).toHaveLength(8)
-    // Windows on each floor over the lobby, about half of them lit
-    const windows = blocks.filter(
-      (p) => (p.material === 'windows' || p.material === 'tint') && p.base > 4,
+    expect(bodies).toHaveLength(8)
+    // A band round each between its floors' windows, and one over them
+    const bands = blocks.filter(
+      (p) =>
+        p.material === 'plaster' &&
+        p.base > 4 &&
+        !p.holes &&
+        p.footprint.length === bodies[0].footprint.length,
     )
-    expect(new Set(windows.map((p) => p.base)).size).toBe(23)
-    const lit =
-      windows.filter((p) => p.material === 'windows').length / windows.length
-    expect(lit).toBeGreaterThan(0.4)
-    expect(lit).toBeLessThan(0.7)
+    expect(bands).toHaveLength(8 * 23)
+  })
+
+  it('lights about half its windows at night', () => {
+    // Its windows: a floor of them about every 4.5 m of wall
+    const perFloor = bodies.reduce(
+      (sum, { footprint }) =>
+        sum +
+        footprint.reduce((n, [x0, y0], i) => {
+          const [x1, y1] = footprint[(i + 1) % footprint.length]
+          const span = Math.hypot(x1 - x0, y1 - y0)
+          return n + (span < 3 ? 0 : Math.round(span / 4.5))
+        }, 0),
+      0,
+    )
+    // Lit ones one over another are drawn as one
+    const lit = blocks
+      .filter((p) => p.material === 'windows' && p.base > 4)
+      .reduce((n, p) => n + Math.round((p.top - p.base - 1.5) / 3) + 1, 0)
+    expect(lit / (perFloor * 23)).toBeGreaterThan(0.4)
+    expect(lit / (perFloor * 23)).toBeLessThan(0.7)
   })
 })
 
