@@ -65,10 +65,14 @@
   display: none;
 }
 
+/* In use, the glass frosts over a little more instead of taking a ring,
+   which also keeps the list easy to read over a busy map */
 .search:focus-within {
-  box-shadow:
-    var(--glass-shadow),
-    0 0 0 2px var(--mv-search-ring);
+  --glass-tint: rgb(255 255 255 / 74%);
+}
+
+:root[data-theme='dark'] .search:focus-within {
+  --glass-tint: rgb(30 34 41 / 76%);
 }
 
 .search-field {
