@@ -5,6 +5,7 @@ import {
   dome,
   ellipse,
   grid,
+  grown,
   lightsAlong,
   lightsRound,
   minaret,
@@ -273,276 +274,114 @@ const ANKARA_KALESI: Landmark = {
 }
 
 /**
- * Ankara: AŞTİ, the intercity bus terminal: the long, three storey
- * terminal with glass skylights along its roof and a canopy over its
- * doors, and at either end a wing of bus platforms under white canopies,
- * with buses at their bays. From its outline in OpenStreetMap.
+ * Ankara: AŞTİ, the intercity bus terminal, as OpenStreetMap has it: one
+ * long building bent round the east side of its bus yard, the yard's
+ * ring roads running round inside it. Along the building's inner face,
+ * the platforms: buses nose in at their bays under a canopy the length
+ * of it. On the city side, its doors under a canopy and a glass corridor
+ * to the Ankaray station; in the middle of the yard, an island under a
+ * canopy.
  */
-const ASTI_HALL: XY[] = [
+const ASTI_OUTLINE: XY[] = [
+  [32.2, 131.8],
+  [-37.8, 202],
+  [-75.5, 165.4],
+  [-6.7, 98.2],
   [-6.3, -98.6],
+  [-74.3, -166],
+  [-38.4, -202.9],
+  [31.4, -132.6],
+  [25.2, -126.5],
+  [35.9, -117.1],
   [36, -100.4],
   [45.1, -100.8],
   [44.7, -7.7],
+  [44.9, -3.4],
+  [44.7, 4.1],
   [44.6, 98.8],
   [34.9, 99],
-  [-6.7, 98.2],
+  [34.9, 113.5],
+  [25.6, 124.5],
 ]
-const ASTI_TOP = 14
-const astiHall = grid(Math.PI / 2 + 0.002)
+/** Its face on the yard, from the north-west wing round to the south-west */
+const ASTI_PLATFORMS: XY[] = [
+  [-75.5, 165.4],
+  [-6.7, 98.2],
+  [-6.3, -98.6],
+  [-74.3, -166],
+]
+const ASTI_TOP = 13
 
-/**
- * A wing of bus platforms: from a corner, `length` metres one way and
- * `width` the other, as rows of canopies with bus lanes between them.
- */
-function busPlatforms(corner: XY, along: XY, across: XY): Part[] {
-  const [length, width] = [Math.hypot(...along), Math.hypot(...across)]
-  const eu: XY = [along[0] / length, along[1] / length]
-  const ev: XY = [across[0] / width, across[1] / width]
-  const at = (u: number, v: number): XY => [
-    corner[0] + eu[0] * u + ev[0] * v,
-    corner[1] + eu[1] * u + ev[1] * v,
-  ]
-  const box = (u0: number, v0: number, u1: number, v1: number): XY[] => [
-    at(u0, v0),
-    at(u1, v0),
-    at(u1, v1),
-    at(u0, v1),
-  ]
+/** The bays along the building's face on the yard, as a canopy and buses. */
+function busBays(): Part[] {
   const parts: Part[] = []
-  const rows = 4
-  const pitch = width / rows
-  for (let r = 0; r < rows; r++) {
-    // A platform island under its canopy, on a row of columns
-    const [v0, v1] = [r * pitch + 1.5, r * pitch + pitch * 0.55]
-    parts.push(
-      {
-        kind: 'block',
-        material: 'paving',
-        footprint: box(2, v0, length - 2, v1),
-        base: 0,
-        top: 0.3,
-      },
-      {
-        kind: 'block',
-        material: 'whitewash',
-        footprint: box(1, v0 - 1, length - 1, v1 + 1),
-        base: 6.6,
-        top: 7.4,
-      },
-    )
-    for (let u = 6; u < length - 4; u += 12) {
+  let bay = 0
+  for (let i = 0; i < ASTI_PLATFORMS.length - 1; i++) {
+    const [[x0, y0], [x1, y1]] = [ASTI_PLATFORMS[i], ASTI_PLATFORMS[i + 1]]
+    const length = Math.hypot(x1 - x0, y1 - y0)
+    const d: XY = [(x1 - x0) / length, (y1 - y0) / length]
+    // Out from the building, into the yard
+    const r: XY = [d[1], -d[0]]
+    const at = (s: number, t: number): XY => [
+      x0 + d[0] * s + r[0] * t,
+      y0 + d[1] * s + r[1] * t,
+    ]
+    parts.push({
+      kind: 'block',
+      material: 'whitewash',
+      footprint: [at(0, 0), at(length, 0), at(length, 9), at(0, 9)],
+      base: 5.4,
+      top: 6.1,
+    })
+    for (let s = 5; s < length - 3; s += 9) {
       parts.push({
         kind: 'round',
         material: 'steel',
         sides: 8,
-        at: at(u, (v0 + v1) / 2),
+        at: at(s, 8.2),
         outline: [
-          [0.35, 0],
-          [0.35, 6.6],
+          [0.3, 0],
+          [0.3, 5.4],
         ],
       })
     }
-    // Buses at the bays beside it, in the lane
-    const lane = r * pitch + pitch * 0.55 + 2.6
-    for (let u = 8 + (r % 2) * 6; u < length - 14; u += 17) {
+    // Buses nosed in at a slant, most bays taken
+    const a: XY = [
+      r[0] * Math.cos(Math.PI / 6) + d[0] * Math.sin(Math.PI / 6),
+      r[1] * Math.cos(Math.PI / 6) + d[1] * Math.sin(Math.PI / 6),
+    ]
+    const b: XY = [-a[1], a[0]]
+    for (let s = 4; s < length - 6; s += 4.8) {
+      bay++
+      if ((bay * 7) % 10 >= 7) continue
+      const [cx, cy] = at(s, 7.5)
+      const bus = (grow: number): XY[] =>
+        [
+          [6 + grow, 1.28 + grow],
+          [-6 - grow, 1.28 + grow],
+          [-6 - grow, -1.28 - grow],
+          [6 + grow, -1.28 - grow],
+        ].map(([u, v]): XY => [
+          cx + a[0] * u + b[0] * v,
+          cy + a[1] * u + b[1] * v,
+        ])
       parts.push(
         {
           kind: 'block',
           material: 'whitewash',
-          footprint: box(u, lane - 1.3, u + 12, lane + 1.3),
+          footprint: bus(0),
           base: 0.3,
           top: 3.4,
         },
         {
           kind: 'block',
           material: 'windows',
-          footprint: box(u + 0.3, lane - 1.35, u + 11.7, lane + 1.35),
+          footprint: bus(0.05),
           base: 1.6,
           top: 2.7,
         },
       )
     }
-  }
-  return parts
-}
-
-/** Letters of a small block font, 5 wide, a row above and below the 7 of a capital. */
-const GLYPHS: Record<string, string[]> = {
-  A: ['', ' ### ', '#   #', '#   #', '#####', '#   #', '#   #', '#   #', ''],
-  Ş: [
-    '',
-    ' ####',
-    '#    ',
-    '#    ',
-    ' ### ',
-    '    #',
-    '    #',
-    '#### ',
-    '  #  ',
-  ],
-  T: ['', '#####', '  #  ', '  #  ', '  #  ', '  #  ', '  #  ', '  #  ', ''],
-  İ: [
-    '  #  ',
-    ' ### ',
-    '  #  ',
-    '  #  ',
-    '  #  ',
-    '  #  ',
-    '  #  ',
-    ' ### ',
-    '',
-  ],
-}
-
-/**
- * A word laid on a roof in block letters, to be read from the east: its
- * rows run from west to east, its letters from south to north.
- */
-function roofSign(
-  word: string,
-  [west, south]: XY,
-  pixel: number,
-  base: number,
-): Part[] {
-  const parts: Part[] = []
-  ;[...word].forEach((letter, i) => {
-    GLYPHS[letter].forEach((row, r) => {
-      // Runs of filled pixels in the row, as single blocks
-      for (const match of row.matchAll(/#+/g)) {
-        const c0 = i * 6 + match.index
-        const c1 = c0 + match[0].length
-        parts.push({
-          kind: 'block',
-          material: 'sign',
-          footprint: rectangle(
-            west + r * pixel,
-            south + c0 * pixel,
-            west + (r + 1) * pixel,
-            south + c1 * pixel,
-          ),
-          base,
-          top: base + 0.8,
-        })
-      }
-    })
-  })
-  return parts
-}
-
-/** AŞTİ's facades, roof, west platforms and east plaza. */
-function astiDetails(): Part[] {
-  const parts: Part[] = []
-  // Floor slabs between the glass bands, and fins down the long sides
-  for (const [base, top] of [
-    [4.3, 6],
-    [9, 10.3],
-  ]) {
-    parts.push({
-      kind: 'block',
-      material: 'whitewash',
-      footprint: scaled(ASTI_HALL, 1.008, [19, 0]),
-      base,
-      top,
-    })
-  }
-  for (let y = -96; y <= 96; y += 8) {
-    for (const x of [-7.1, 45]) {
-      parts.push({
-        kind: 'block',
-        material: 'whitewash',
-        footprint: rectangle(x - 0.4, y - 0.3, x + 0.4, y + 0.3),
-        base: 0,
-        top: ASTI_TOP + 0.6,
-      })
-    }
-  }
-  // Plant on the roof, and its name, to be read from the city side
-  for (const [x, y] of [
-    [4, -70],
-    [4, -35],
-    [4, 30],
-    [4, 65],
-    [36, -80],
-    [36, 75],
-  ]) {
-    parts.push({
-      kind: 'block',
-      material: 'steel',
-      footprint: rectangle(x - 2.5, y - 4, x + 2.5, y + 4),
-      base: ASTI_TOP,
-      top: ASTI_TOP + 2.2,
-    })
-  }
-  parts.push(...roofSign('AŞTİ', [28, -15], 1.3, ASTI_TOP))
-  // The departure platforms down the west side: a canopy, and buses at
-  // their bays, nose in
-  parts.push({
-    kind: 'block',
-    material: 'whitewash',
-    footprint: rectangle(-17, -94, -6.5, 94),
-    base: 6,
-    top: 6.8,
-  })
-  for (let y = -88; y <= 88; y += 10) {
-    parts.push({
-      kind: 'round',
-      material: 'steel',
-      sides: 8,
-      at: [-15.5, y],
-      outline: [
-        [0.3, 0],
-        [0.3, 6],
-      ],
-    })
-  }
-  for (let y = -90; y <= 90; y += 7.5) {
-    parts.push(
-      {
-        kind: 'block',
-        material: 'whitewash',
-        footprint: rectangle(-21.5, y - 1.3, -9.5, y + 1.3),
-        base: 0,
-        top: 3.4,
-      },
-      {
-        kind: 'block',
-        material: 'windows',
-        footprint: rectangle(-21.2, y - 1.35, -9.8, y + 1.35),
-        base: 1.6,
-        top: 2.7,
-      },
-    )
-  }
-  // Trees down the plaza on the city side
-  for (let y = -92; y <= 92; y += 12) {
-    if (Math.abs(y) < 12) continue
-    const at: XY = [60, y]
-    parts.push(
-      {
-        kind: 'round',
-        material: 'rock',
-        sides: 6,
-        at,
-        outline: [
-          [0.3, 0],
-          [0.3, 2.2],
-        ],
-      },
-      {
-        kind: 'round',
-        material: 'leaf',
-        sides: 10,
-        at,
-        outline: [
-          [1.6, 2.2],
-          [2.6, 3.3],
-          [2.8, 4.6],
-          [2.2, 6],
-          [1.1, 7],
-          [0.2, 7.4],
-        ],
-      },
-    )
   }
   return parts
 }
@@ -553,82 +392,80 @@ const ASTI: Landmark = {
   near: [32.812556, 39.918203],
   hide: [
     { at: [19, 0], within: 1, tallerThan: 0 },
-    // The corridor to the Ankaray station, drawn here in glass
+    // The corridor to the Ankaray station and the yard's island, drawn
+    // here instead
     { at: [90, -1.6], within: 1, tallerThan: 0 },
+    { at: [-74, 0], within: 1, tallerThan: 0 },
   ],
   lights: [
-    ...lightsAlong(scaled(ASTI_HALL, 1.12, [19, 0]), 14),
+    ...lightsAlong(grown(ASTI_OUTLINE, 8), 14),
     ...lightsAlong(
-      [
-        [-6.7, 98.2],
-        [32.2, 131.8],
-        [-37.8, 202],
-        [-75.5, 165.4],
-      ],
-      16,
-    ),
-    ...lightsAlong(
-      [
-        [-6.3, -98.6],
-        [-74.3, -166],
-        [-38.4, -202.9],
-        [31.4, -132.6],
-      ],
-      16,
+      ASTI_PLATFORMS.map(([x, y]) => [x - 12, y] as XY),
+      14,
     ),
   ],
   parts: [
-    // The terminal: glass doors and shops below, glass bands above, and
-    // a parapet round its roof
+    // The terminal: glass doors and shops below, two glass bands above,
+    // white floor slabs between, and a parapet round the roof
     {
       kind: 'block',
       material: 'concrete',
-      footprint: ASTI_HALL,
+      footprint: ASTI_OUTLINE,
       base: 0,
       top: ASTI_TOP,
     },
     {
       kind: 'block',
       material: 'windows',
-      footprint: scaled(ASTI_HALL, 1.005, [19, 0]),
+      footprint: grown(ASTI_OUTLINE, 0.2),
       base: 0.5,
       top: 4.3,
     },
     ...[
-      [6, 9],
-      [10.3, 13],
+      [5.2, 8.6],
+      [9.4, 12.2],
     ].map(([base, top]): Part => ({
       kind: 'block',
       material: 'glass',
-      footprint: scaled(ASTI_HALL, 1.005, [19, 0]),
+      footprint: grown(ASTI_OUTLINE, 0.2),
+      base,
+      top,
+    })),
+    ...[
+      [4.3, 5.2],
+      [8.6, 9.4],
+    ].map(([base, top]): Part => ({
+      kind: 'block',
+      material: 'whitewash',
+      footprint: grown(ASTI_OUTLINE, 0.35),
       base,
       top,
     })),
     {
       kind: 'block',
       material: 'concrete',
-      footprint: ASTI_HALL,
-      holes: [scaled(ASTI_HALL, 0.96, [19, 0])],
+      footprint: ASTI_OUTLINE,
+      holes: [grown(ASTI_OUTLINE, -1.2)],
       base: ASTI_TOP,
-      top: ASTI_TOP + 1,
+      top: ASTI_TOP + 0.9,
     },
-    // Glass skylights down the middle of the roof
-    ...Array.from({ length: 7 }, (_, i) =>
-      [0, 1, 2, 3].map((j): Part => ({
-        kind: 'block',
-        material: 'glass',
-        footprint: astiHall.box(
-          -88 + i * 26 + j * 2.2,
-          -26 + j * 2.4,
-          -68 + i * 26 - j * 2.2,
-          -12 - j * 2.4,
-        ),
-        base: ASTI_TOP + j * 1.2,
-        top: ASTI_TOP + (j + 1) * 1.2,
-      })),
-    ).flat(),
-    // The canopy over the doors on the city side, either side of the
-    // glass corridor to the Ankaray station
+    // Plant on the roof
+    ...(
+      [
+        [18, -60],
+        [18, -20],
+        [18, 25],
+        [18, 65],
+      ] as XY[]
+    ).map(([x, y]): Part => ({
+      kind: 'block',
+      material: 'steel',
+      footprint: rectangle(x - 3, y - 5, x + 3, y + 5),
+      base: ASTI_TOP,
+      top: ASTI_TOP + 2.2,
+    })),
+    // The doors on the city side under a canopy, either side of the glass
+    // corridor to the Ankaray station
     ...[
       [-32, -8.5],
       [5.5, 32],
@@ -638,6 +475,16 @@ const ASTI: Landmark = {
       footprint: rectangle(44.7, y0, 53, y1),
       base: 4.6,
       top: 5.3,
+    })),
+    ...[-28, -14, 14, 28].map((y): Part => ({
+      kind: 'round',
+      material: 'steel',
+      sides: 8,
+      at: [51.8, y],
+      outline: [
+        [0.3, 0],
+        [0.3, 4.6],
+      ],
     })),
     {
       kind: 'block',
@@ -653,20 +500,30 @@ const ASTI: Landmark = {
       base: 5,
       top: 5.8,
     },
-    ...astiDetails(),
-    ...[-28, -14, 0, 14, 28].map((y): Part => ({
+    // The platforms, and the island in the middle of the yard
+    ...busBays(),
+    {
+      kind: 'block',
+      material: 'whitewash',
+      footprint: [
+        [-68.2, 49.6],
+        [-78.6, 49.7],
+        [-79.9, -49.2],
+        [-69.5, -49.3],
+      ],
+      base: 4.6,
+      top: 5.3,
+    },
+    ...[-44, -33, -22, -11, 0, 11, 22, 33, 44].map((y): Part => ({
       kind: 'round',
       material: 'steel',
       sides: 8,
-      at: [51.8, y],
+      at: [-74, y],
       outline: [
         [0.3, 0],
         [0.3, 4.6],
       ],
     })),
-    // The bus platforms, north-west and south-west
-    ...busPlatforms([-6.7, 98.2], [-68.8, 67.2], [38.9, 33.6]),
-    ...busPlatforms([-6.3, -98.6], [-68, -67.4], [37.7, -34]),
   ],
 }
 

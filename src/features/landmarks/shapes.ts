@@ -291,3 +291,30 @@ export function lightsAlong(footprint: XY[], spacing: number): XY[] {
   })
   return points
 }
+
+/**
+ * A footprint grown outwards (or, by a negative amount, shrunk) by a few
+ * metres all round, its walls kept parallel, as for a band round a
+ * building's facades.
+ */
+export function grown(footprint: XY[], by: number): XY[] {
+  let area = 0
+  footprint.forEach(([x0, y0], i) => {
+    const [x1, y1] = footprint[(i + 1) % footprint.length]
+    area += x0 * y1 - x1 * y0
+  })
+  const side = area > 0 ? 1 : -1
+  // Each wall's outward normal
+  const normals = footprint.map(([x0, y0], i): XY => {
+    const [x1, y1] = footprint[(i + 1) % footprint.length]
+    const length = Math.hypot(x1 - x0, y1 - y0) || 1
+    return [(side * (y1 - y0)) / length, (side * -(x1 - x0)) / length]
+  })
+  return footprint.map(([x, y], i) => {
+    const [ax, ay] = normals[(i - 1 + footprint.length) % footprint.length]
+    const [bx, by_] = normals[i]
+    // Where the two moved walls meet, kept in check at sharp corners
+    const scale = by / Math.max(0.2, 1 + ax * bx + ay * by_)
+    return [x + (ax + bx) * scale, y + (ay + by_) * scale]
+  })
+}
