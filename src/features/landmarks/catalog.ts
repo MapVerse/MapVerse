@@ -1,5 +1,5 @@
 import { ANITKABIR } from './anitkabir.ts'
-import type { Landmark, Part, XY } from './landmarks.ts'
+import type { Landmark, Material, Part, XY } from './landmarks.ts'
 import { dome, ellipse, grid, minaret, mosque, scaled } from './shapes.ts'
 
 /*
@@ -761,6 +761,13 @@ const RUMELI: Landmark = {
 
 /** Istanbul: Ayasofya, its great dome on half domes, buttresses and minarets. */
 const ayasofya = grid(-32.6 * DEG)
+/** At its four corners, as OpenStreetMap has them */
+const AYASOFYA_MINARETS: [number, number][] = [
+  [-53.1, 40],
+  [-53.5, -32.5],
+  [43.1, -33.4],
+  [53, 39.1],
+]
 
 const AYASOFYA: Landmark = {
   id: 'ayasofya',
@@ -768,8 +775,13 @@ const AYASOFYA: Landmark = {
   near: [28.980049, 41.008526],
   hide: [
     { within: 44, tallerThan: 20 },
-    { at: ayasofya.at(-53.1, 40), within: 5, tallerThan: 0 },
-    { at: ayasofya.at(43.1, -33.4), within: 5, tallerThan: 0 },
+    // Its outline, a low block round the whole of it
+    { within: 1, tallerThan: 0 },
+    ...AYASOFYA_MINARETS.map(([u, v]) => ({
+      at: ayasofya.at(u, v),
+      within: 5,
+      tallerThan: 0,
+    })),
   ],
   parts: [
     ...(
@@ -803,23 +815,25 @@ const AYASOFYA: Landmark = {
       ],
     },
     ...dome(16.2, 45, 11),
-    ...(
-      [
-        [-53.1, 40],
-        [-53.1, -40],
-        [43.1, -33.4],
-        [40, 37],
-      ] as const
-    ).flatMap(([u, v]) => minaret(ayasofya.at(u, v), 60, 2)),
+    ...AYASOFYA_MINARETS.flatMap(([u, v]) => minaret(ayasofya.at(u, v), 60, 2)),
   ],
 }
 
 /** Istanbul: Sultanahmet, its cascade of domes and six minarets. */
+const sultanahmet = grid(-43.5 * DEG)
+
 const SULTANAHMET: Landmark = {
   id: 'sultanahmet',
   name: 'Sultanahmet Camii',
   near: [28.976879, 41.005253],
-  hide: [{ within: 42, tallerThan: 20 }],
+  hide: [
+    // The hall, and the platform it stands on
+    { within: 1, tallerThan: 0 },
+    { within: 42, tallerThan: 20 },
+    // Everything in and round the courtyard: its domed arcades, gate,
+    // fountain and two minarets
+    { at: sultanahmet.at(-55, 0), within: 41, tallerThan: 0 },
+  ],
   parts: mosque({
     angle: -43.5 * DEG,
     hall: [-24, -28.5, 28, 28.5],
@@ -884,7 +898,7 @@ const SELIMIYE: Landmark = {
   id: 'selimiye',
   name: 'Selimiye Camii',
   near: [26.55936, 41.67795],
-  hide: [],
+  hide: [{ within: 1, tallerThan: 0 }],
   parts: mosque({
     angle: -50.3 * DEG,
     hall: [-28.9, -28.5, 26.5, 29.2],
@@ -908,14 +922,33 @@ const SELIMIYE: Landmark = {
 }
 
 /**
- * Istanbul: the towers, main cables and deck of the 15 Temmuz Şehitler
- * Köprüsü, over the road the map draws on the water.
+ * Istanbul: the 15 Temmuz Şehitler Köprüsü as built: steel towers 165 m
+ * over the water on either shore, the 33 m wide box girder deck 64 m up,
+ * hung over the 1074 m main span from two main cables and carried over
+ * the side spans on piers, and the cables running on down to their
+ * anchorages. `u` runs along it from Europe to Asia.
  */
 const bridge = grid(-51.8 * DEG)
-const TOWER = 532
-const TOWER_TOP = 165
+/** Half the main span, to each tower */
+const MAIN = 532
+/** The side spans, European and Asian */
+const SIDE = [231, 255] as const
 const DECK = 64
-const ANCHOR = 240
+const TOWER_TOP = 165
+/** The towers' legs and the cables, out from the centre line */
+const LEG = 19
+const CABLE = 17.5
+
+/** The main cables' height along the bridge. */
+function cableHeight(u: number): number {
+  const saddle = TOWER_TOP + 1.5
+  if (Math.abs(u) <= MAIN) {
+    return DECK + 2.5 + (saddle - DECK - 2.5) * (u / MAIN) ** 2
+  }
+  // Back down, straight, to the anchorage under the end of the deck
+  const side = u < 0 ? SIDE[0] : SIDE[1]
+  return saddle - ((saddle - DECK + 3) * (Math.abs(u) - MAIN)) / side
+}
 
 function bridgeParts(): Part[] {
   const parts: Part[] = []
@@ -923,47 +956,97 @@ function bridgeParts(): Part[] {
     rect: [number, number, number, number],
     base: number,
     top: number,
+    material: Material = 'steel',
   ): Part => ({
     kind: 'block',
-    material: 'steel',
+    material,
     footprint: bridge.box(...rect),
     base,
     top,
   })
-  for (const u of [-TOWER, TOWER]) {
-    for (const v of [-16.5, 16.5]) {
-      parts.push(block([u - 2.5, v - 3.2, u + 2.5, v + 3.2], 0, TOWER_TOP))
+  const [start, end] = [-MAIN - SIDE[0], MAIN + SIDE[1]]
+
+  // The deck: the steel girder, its road, and the barriers down the
+  // middle and along each edge
+  parts.push(
+    block([start, -16.7, end, 16.7], DECK - 3, DECK - 0.3),
+    block([start, -14.8, end, 14.8], DECK - 0.3, DECK, 'asphalt'),
+    block([start, -0.4, end, 0.4], DECK, DECK + 0.9, 'concrete'),
+    block([start, -16.5, end, -15.9], DECK - 0.3, DECK + 1.2),
+    block([start, 15.9, end, 16.5], DECK - 0.3, DECK + 1.2),
+  )
+
+  for (const u of [-MAIN, MAIN]) {
+    parts.push(block([u - 9, -LEG - 7, u + 9, LEG + 7], 0, 6, 'concrete'))
+    for (const side of [-1, 1]) {
+      // Each leg a steel box, narrowing as it rises
+      const segments = 6
+      for (let i = 0; i < segments; i++) {
+        const along = (7 - (2.4 * (i + 0.5)) / segments) / 2
+        const across = (5.4 - (1.8 * (i + 0.5)) / segments) / 2
+        const v = side * LEG
+        parts.push(
+          block(
+            [u - along, v - across, u + along, v + across],
+            6 + ((TOWER_TOP - 6) * i) / segments,
+            6 + ((TOWER_TOP - 6) * (i + 1)) / segments,
+          ),
+        )
+      }
+      // The saddle the cable rests on
+      const v = side * CABLE
+      parts.push(
+        block([u - 3, v - 1.6, u + 3, v + 1.6], TOWER_TOP, TOWER_TOP + 2.5),
+      )
     }
-    // The portals between its legs
+    // Portal beams: under the deck, two thirds of the way up, and on top
     for (const [base, top] of [
-      [DECK - 4, DECK],
-      [110, 114],
-      [TOWER_TOP - 5, TOWER_TOP],
+      [DECK - 9, DECK - 4],
+      [112, 118],
+      [TOWER_TOP - 7, TOWER_TOP],
     ]) {
-      parts.push(block([u - 2, -16.5, u + 2, 16.5], base, top))
+      parts.push(block([u - 2.2, -LEG, u + 2.2, LEG], base, top))
     }
   }
-  // The deck, between the towers
-  parts.push(block([-TOWER, -16.5, TOWER, 16.5], DECK - 3, DECK))
-  // The main cables, sagging to the deck mid-span, and back to the shore
-  const cable = (u: number) =>
-    Math.abs(u) <= TOWER
-      ? DECK + 3 + (TOWER_TOP - DECK - 5) * (u / TOWER) ** 2
-      : TOWER_TOP - 2 - ((TOWER_TOP - 40) * (Math.abs(u) - TOWER)) / ANCHOR
-  const step = 12
-  for (let u = -TOWER - ANCHOR; u < TOWER + ANCHOR; u += step) {
-    // Deep enough to meet the next step where the cable is steep
-    const [h0, h1] = [cable(u), cable(u + step)]
-    for (const v of [-16.5, 16.5]) {
+
+  // The main cables, in short straight pieces
+  const step = 4
+  for (let u = start; u < end; u += step) {
+    const [h0, h1] = [cableHeight(u), cableHeight(u + step)]
+    for (const side of [-1, 1]) {
+      const v = side * CABLE
       parts.push(
         block(
-          [u, v - 0.7, u + step, v + 0.7],
-          Math.min(h0, h1) - 1.4,
+          [u, v - 0.5, u + step, v + 0.5],
+          Math.min(h0, h1) - 0.9,
           Math.max(h0, h1),
         ),
       )
     }
   }
+  // Hangers from the cables down to the deck, over the main span
+  for (let u = -MAIN + 18; u < MAIN - 9; u += 18) {
+    for (const side of [-1, 1]) {
+      const v = side * CABLE
+      parts.push(
+        block([u - 0.2, v - 0.2, u + 0.2, v + 0.2], DECK, cableHeight(u)),
+      )
+    }
+  }
+  // Piers under the side spans
+  for (const [from, to, dir] of [
+    [-MAIN, start, -1],
+    [MAIN, end, 1],
+  ]) {
+    for (let u = from + dir * 42; dir * (to - u) > 12; u += dir * 42) {
+      parts.push(block([u - 2, -11, u + 2, 11], 0, DECK - 3, 'concrete'))
+    }
+  }
+  // The anchorages, where the cables go into the ground
+  parts.push(
+    block([start - 26, -24, start + 4, 24], 0, DECK - 3, 'concrete'),
+    block([end - 4, -24, end + 26, 24], 0, DECK - 3, 'concrete'),
+  )
   return parts
 }
 

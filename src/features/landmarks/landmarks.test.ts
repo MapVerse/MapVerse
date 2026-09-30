@@ -41,8 +41,8 @@ describe('the landmarks', () => {
 
   it('are drawn round their own centres, not somewhere else', () => {
     for (const { id, parts, hide } of LANDMARKS) {
-      // The bridge is the widest, at 1.5 km end to end
-      const limit = id === '15-temmuz-koprusu' ? 800 : 350
+      // The bridge is the widest, at 1.6 km end to end
+      const limit = id === '15-temmuz-koprusu' ? 850 : 350
       for (const part of parts) expect(reach(part)).toBeLessThan(limit)
       for (const { at = [0, 0] } of hide) {
         expect(Math.hypot(...at)).toBeLessThan(limit)

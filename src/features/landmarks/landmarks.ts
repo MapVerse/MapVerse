@@ -21,6 +21,7 @@ export type Material =
   | 'roof'
   | 'rock'
   | 'paving'
+  | 'asphalt'
   | 'leaf'
   | 'flag'
 
@@ -81,6 +82,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
     roof: '#a3abb3',
     rock: '#c8c0b1',
     paving: '#e6e1d7',
+    asphalt: '#9ba1a8',
     leaf: '#8dbb77',
     flag: '#e30a17',
   },
@@ -97,6 +99,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
     roof: '#4a525c',
     rock: '#403e3a',
     paving: '#464a50',
+    asphalt: '#2c3137',
     leaf: '#2f4d3b',
     flag: '#b5121b',
   },
