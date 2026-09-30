@@ -1,6 +1,7 @@
 import type { FeatureCollection, Point, Polygon } from 'geojson'
 import type { ExpressionSpecification } from 'maplibre-gl'
 import type { Theme } from '../../theme/theme.ts'
+import type { Deck } from './decks.ts'
 import { offset, type XY } from './geometry.ts'
 
 export type { XY } from './geometry.ts'
@@ -78,6 +79,8 @@ export type Landmark = {
    * measured from the sea (a bridge)
    */
   terrain?: 'level' | 'follow' | 'sea'
+  /** A road raised across it, for routes to run on */
+  deck?: Deck
 }
 
 export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {

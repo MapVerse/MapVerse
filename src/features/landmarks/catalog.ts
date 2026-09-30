@@ -1285,6 +1285,13 @@ const BRIDGE: Landmark = {
   name: '15 Temmuz Şehitler Köprüsü',
   near: [29.034368, 41.045537],
   terrain: 'sea',
+  deck: {
+    angle: -51.8 * DEG,
+    from: -MAIN - SIDE[0],
+    to: MAIN + SIDE[1],
+    halfWidth: 16.7,
+    height: DECK,
+  },
   hide: [],
   parts: bridgeParts(),
 }

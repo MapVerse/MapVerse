@@ -1,9 +1,13 @@
 import { Layer, Marker, Source, useMap } from '@vis.gl/react-maplibre'
 import type { FeatureCollection, LineString } from 'geojson'
-import { useEffect, useRef, useState } from 'react'
+import type { ExpressionSpecification } from 'maplibre-gl'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '../../icons/Icon.tsx'
 import type { StrokeName } from '../../icons/strokes.ts'
 import { useTheme, type Theme } from '../../theme/theme.ts'
+import { LANDMARKS } from '../landmarks/catalog.ts'
+import { routesOnDecks } from '../landmarks/decks.ts'
+import { useOnTerrain } from '../landmarks/useOnTerrain.ts'
 import { formatDistance, type Place } from '../place/place.ts'
 import { formatArrival, formatDuration, maneuverIcon } from './directions.ts'
 import { useRoutes } from './useRoutes.ts'
@@ -28,6 +32,18 @@ const ROUTE_COLORS: Record<
   light: { casing: '#ffffff', alternate: '#a3b4cc', selected: '#2f7bf5' },
   dark: { casing: '#11151b', alternate: '#56657b', selected: '#4c8df6' },
 }
+
+/** From this zoom the landmarks, bridges' decks among them, are drawn. */
+const DECKS_ZOOM = 13
+
+/** Routes on the ground, but not along a deck once the deck is drawn. */
+const ON_GROUND: ExpressionSpecification = [
+  'step',
+  ['zoom'],
+  1,
+  DECKS_ZOOM,
+  ['case', ['get', 'onDeck'], 0, 1],
+]
 
 type Props = {
   /** Where to go; when missing, the destination is picked on the map */
@@ -160,14 +176,19 @@ export default function Directions({ to, beforeId, onClose }: Props) {
               ? 'Rota şu anda hesaplanamıyor.'
               : null
 
-  const lines: FeatureCollection<LineString, { selected: boolean }> = {
-    type: 'FeatureCollection',
-    features: routes.map((r) => ({
-      type: 'Feature',
-      geometry: { type: 'LineString', coordinates: r.shape },
-      properties: { selected: r === route },
-    })),
-  }
+  // Along a bridge, routes run on its deck rather than the water below
+  const { ground, decks } = useMemo(() => {
+    const lines: FeatureCollection<LineString, { selected: boolean }> = {
+      type: 'FeatureCollection',
+      features: routes.map((r) => ({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: r.shape },
+        properties: { selected: r === route },
+      })),
+    }
+    return routesOnDecks(lines, LANDMARKS)
+  }, [routes, route])
+  const raised = useOnTerrain(decks)
 
   return (
     <>
@@ -312,13 +333,17 @@ export default function Directions({ to, beforeId, onClose }: Props) {
         )}
       </section>
 
-      <Source id="routes" type="geojson" data={lines}>
+      <Source id="routes" type="geojson" data={ground}>
         <Layer
           id="routes-casing"
           type="line"
           beforeId={beforeId}
           layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-          paint={{ 'line-color': colors.casing, 'line-width': 11 }}
+          paint={{
+            'line-color': colors.casing,
+            'line-width': 11,
+            'line-opacity': ON_GROUND,
+          }}
         />
         <Layer
           id="routes-alternate"
@@ -326,7 +351,11 @@ export default function Directions({ to, beforeId, onClose }: Props) {
           beforeId={beforeId}
           filter={['!', ['get', 'selected']]}
           layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-          paint={{ 'line-color': colors.alternate, 'line-width': 6 }}
+          paint={{
+            'line-color': colors.alternate,
+            'line-width': 6,
+            'line-opacity': ON_GROUND,
+          }}
         />
         <Layer
           id="routes-selected"
@@ -334,7 +363,32 @@ export default function Directions({ to, beforeId, onClose }: Props) {
           beforeId={beforeId}
           filter={['get', 'selected']}
           layout={{ 'line-join': 'round', 'line-cap': 'round' }}
-          paint={{ 'line-color': colors.selected, 'line-width': 7 }}
+          paint={{
+            'line-color': colors.selected,
+            'line-width': 7,
+            'line-opacity': ON_GROUND,
+          }}
+        />
+      </Source>
+      <Source id="route-decks" type="geojson" data={raised}>
+        <Layer
+          id="routes-on-decks"
+          type="fill-extrusion"
+          beforeId={beforeId}
+          minzoom={DECKS_ZOOM}
+          paint={{
+            'fill-extrusion-color': [
+              'case',
+              ['==', ['get', 'part'], 'casing'],
+              colors.casing,
+              ['get', 'selected'],
+              colors.selected,
+              colors.alternate,
+            ],
+            'fill-extrusion-base': ['get', 'base'],
+            'fill-extrusion-height': ['get', 'height'],
+            'fill-extrusion-vertical-gradient': false,
+          }}
         />
       </Source>
       {origin && (
