@@ -202,7 +202,9 @@ function roadOfLions(): Part[] {
   for (const side of [-1, 1]) {
     // Low walls along the lawns
     const wall = ROAD + side * 24
-    parts.push(block([wall - 0.4, 66, wall + 0.4, 306], 0, 0.9, 'stone'))
+    for (let v = 66; v < 306; v += 20) {
+      parts.push(block([wall - 0.4, v, wall + 0.4, v + 20], 0, 0.9, 'stone'))
+    }
     // 12 lions down each side, in pairs, lying on their plinths and
     // looking across the road at each other
     for (const [u, v] of LIONS.filter(([u]) => Math.sign(u - ROAD) === side)) {

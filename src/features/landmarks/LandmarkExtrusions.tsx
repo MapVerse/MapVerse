@@ -1,9 +1,10 @@
-import { Layer, Source } from '@vis.gl/react-maplibre'
+import { Layer, Source, useMap } from '@vis.gl/react-maplibre'
 import type { FeatureCollection, Polygon } from 'geojson'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useTerrainEnabled } from '../../map/terrainSetting.ts'
 import { useTheme } from '../../theme/theme.ts'
 import { LANDMARKS } from './catalog.ts'
-import { landmarkExtrusions, landmarkLights } from './landmarks.ts'
+import { landmarkExtrusions, landmarkLights, onTerrain } from './landmarks.ts'
 
 const LIGHTS = landmarkLights(LANDMARKS)
 
@@ -20,7 +21,9 @@ export default function LandmarkExtrusions({
 }: {
   beforeId?: string
 }) {
+  const { current: ref } = useMap()
   const theme = useTheme()
+  const terrain = useTerrainEnabled()
   const [ground, raised] = useMemo(() => {
     const { features } = landmarkExtrusions(LANDMARKS, theme)
     const collection = (
@@ -31,6 +34,39 @@ export default function LandmarkExtrusions({
     })
     return [collection((h) => h <= FLAT), collection((h) => h > FLAT)]
   }, [theme])
+
+  // On the 3D terrain, set level on the ground's height, once that has
+  // loaded, and again as finer heights come in
+  const [settled, setSettled] = useState<{
+    from: FeatureCollection<Polygon>
+    data: FeatureCollection<Polygon>
+    key: string
+  }>()
+  useEffect(() => {
+    const map = ref?.getMap()
+    if (!map || !terrain) return
+    const settle = () => {
+      if (!map.terrain) return
+      const heights: number[] = []
+      const data = onTerrain(raised, (at) => {
+        const h = map.queryTerrainElevation(at) ?? 0
+        heights.push(Math.round(h * 2))
+        return h
+      })
+      const key = heights.join()
+      setSettled((last) =>
+        last?.from === raised && last.key === key
+          ? last
+          : { from: raised, data, key },
+      )
+    }
+    settle()
+    map.on('idle', settle)
+    return () => {
+      map.off('idle', settle)
+    }
+  }, [ref, terrain, raised])
+  const data = terrain && settled?.from === raised ? settled.data : raised
 
   return (
     <>
@@ -90,7 +126,7 @@ export default function LandmarkExtrusions({
           />
         </Source>
       )}
-      <Source id="landmarks" type="geojson" data={raised}>
+      <Source id="landmarks" type="geojson" data={data} maxzoom={16}>
         <Layer
           id="landmarks-3d"
           type="fill-extrusion"

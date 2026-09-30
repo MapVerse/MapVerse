@@ -11,6 +11,7 @@ export type ProfilePoint = [radius: number, height: number]
 export type Material =
   | 'concrete'
   | 'stone'
+  | 'andesite'
   | 'shade'
   | 'ochre'
   | 'whitewash'
@@ -71,12 +72,19 @@ export type Landmark = {
   parts: Part[]
   /** Where its floodlights and lamps light the ground, at night */
   lights?: XY[]
+  /**
+   * How it sits on the 3D terrain: level on the ground at its centre (by
+   * default), each piece on the ground under it (walls up a hill), or
+   * measured from the sea (a bridge)
+   */
+  terrain?: 'level' | 'follow' | 'sea'
 }
 
 export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
   light: {
     concrete: '#e4e0d9',
     stone: '#d6c7ab',
+    andesite: '#b9ad9c',
     shade: '#b9a98c',
     ochre: '#d9b99d',
     whitewash: '#f3f0ea',
@@ -99,6 +107,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
   dark: {
     concrete: '#8f8c86',
     stone: '#9c8360',
+    andesite: '#8a7862',
     shade: '#4a3d2e',
     ochre: '#9a6e55',
     whitewash: '#b8b3a8',
@@ -122,6 +131,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
 const FLOODLIT: ReadonlySet<Material> = new Set([
   'concrete',
   'stone',
+  'andesite',
   'ochre',
   'whitewash',
 ])
@@ -166,6 +176,9 @@ export function landmarkExtrusions(
 ): FeatureCollection<Polygon> {
   const colors = MATERIAL_COLORS[theme]
   const features: FeatureCollection<Polygon>['features'] = []
+  // How the landmark being drawn sits on the terrain: level on the ground
+  // at this point, level on the sea (null), or following the ground
+  let ground: [number, number] | null | 'follow' = null
   const push = (
     rings: [number, number][][],
     base: number,
@@ -175,7 +188,7 @@ export function landmarkExtrusions(
     features.push({
       type: 'Feature',
       geometry: { type: 'Polygon', coordinates: rings },
-      properties: { base, height, color },
+      properties: { base, height, color, ground },
     })
   const add = (
     rings: [number, number][][],
@@ -202,7 +215,8 @@ export function landmarkExtrusions(
       push(rings, b, height, floodlit(color, (b + height) / 2))
     }
   }
-  for (const { near, parts } of landmarks) {
+  for (const { near, parts, terrain = 'level' } of landmarks) {
+    ground = { level: near, sea: null, follow: 'follow' as const }[terrain]
     const closed = (footprint: XY[]) => {
       const points = footprint.map((p) => offset(near, p))
       return [...points, points[0]]
@@ -235,6 +249,49 @@ export function landmarkExtrusions(
     }
   }
   return { type: 'FeatureCollection', features }
+}
+
+/**
+ * Landmarks' pieces set on the 3D terrain. The map raises each piece by
+ * the ground's height at the piece's own centre, which on a slope would
+ * leave the pieces of a landmark at odds with each other. This takes the
+ * difference back off, so each landmark stands level on the ground at its
+ * centre (a bridge on the sea), while the pieces that reach down to the
+ * ground still reach it wherever they stand.
+ */
+export function onTerrain(
+  { features }: FeatureCollection<Polygon>,
+  elevation: (at: [number, number]) => number,
+): FeatureCollection<Polygon> {
+  const grounds = new Map<string, number>()
+  const groundAt = (at: [number, number] | null) => {
+    if (!at) return 0
+    const key = at.join()
+    if (!grounds.has(key)) grounds.set(key, elevation(at))
+    return grounds.get(key)!
+  }
+  return {
+    type: 'FeatureCollection',
+    features: features.map((feature) => {
+      const { base, height, ground } = feature.properties!
+      if (ground === 'follow') return feature
+      const ring = feature.geometry.coordinates[0].slice(0, -1)
+      const center: [number, number] = [
+        ring.reduce((sum, [lng]) => sum + lng, 0) / ring.length,
+        ring.reduce((sum, [, lat]) => sum + lat, 0) / ring.length,
+      ]
+      const lift = elevation(center) - groundAt(ground)
+      return {
+        ...feature,
+        properties: {
+          ...feature.properties,
+          // Where the ground rises over a piece, it is left underground
+          base: base > 0 ? Math.max(0, base - lift) : 0,
+          height: Math.max(0, height - lift),
+        },
+      }
+    }),
+  }
 }
 
 /** The spots the landmarks light at night, for a glow on the ground. */

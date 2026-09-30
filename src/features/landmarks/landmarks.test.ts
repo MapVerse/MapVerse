@@ -8,6 +8,7 @@ import {
   landmarkExtrusions,
   landmarkLights,
   mix,
+  onTerrain,
   type Landmark,
   type Part,
 } from './landmarks.ts'
@@ -88,12 +89,12 @@ describe('landmarkExtrusions', () => {
     }
   })
 
-  it('leaves a courtyard open inside walls', () => {
-    const [walls] = landmarkExtrusions(
-      [landmark('rumeli-hisari')],
-      'light',
-    ).features
-    expect(walls.geometry.coordinates).toHaveLength(2)
+  it('leaves an opening inside a ring', () => {
+    // The stone edge round Anıtkabir's ceremonial field
+    const edged = landmarkExtrusions([landmark('anitkabir')], 'light').features
+    expect(
+      edged.some(({ geometry }) => geometry.coordinates.length === 2),
+    ).toBe(true)
   })
 
   it('floodlights its walls at night, brightest at their foot', () => {
@@ -189,5 +190,67 @@ describe('night lights', () => {
   it('mixes colours part way', () => {
     expect(mix('#000000', '#ffffff', 0.5)).toBe('#808080')
     expect(mix('#102030', '#102030', 0.7)).toBe('#102030')
+  })
+})
+
+describe('onTerrain', () => {
+  const near: [number, number] = [32.8, 39.9]
+  const piece = (at: [number, number], base: number, height: number) => ({
+    type: 'Feature' as const,
+    geometry: {
+      type: 'Polygon' as const,
+      coordinates: [[at, [at[0] + 1e-5, at[1]], [at[0], at[1] + 1e-5], at]],
+    },
+    properties: { base, height, color: '#000000', ground: near },
+  })
+  // Ground rising 10 m for each 0.001° east
+  const slope = ([lng]: [number, number]) => (lng - 32.8) * 10_000
+
+  it('stands a landmark level on the ground at its centre', () => {
+    const { features } = onTerrain(
+      {
+        type: 'FeatureCollection',
+        features: [piece([32.799, 39.9], 5, 20), piece([32.801, 39.9], 5, 20)],
+      },
+      slope,
+    )
+    // Each is raised by the ground under it, so these even that out
+    const tops = features.map(
+      ({ geometry, properties }) =>
+        slope(geometry.coordinates[0][0] as [number, number]) +
+        properties!.height,
+    )
+    expect(tops[0]).toBeCloseTo(tops[1], 0)
+    expect(tops[0]).toBeCloseTo(20, 0)
+  })
+
+  it('lets pieces on the ground reach down to it wherever they stand', () => {
+    const [low] = onTerrain(
+      { type: 'FeatureCollection', features: [piece([32.799, 39.9], 0, 8)] },
+      slope,
+    ).features
+    expect(low.properties!.base).toBe(0)
+    expect(low.properties!.height).toBeCloseTo(18, 0)
+  })
+
+  it('leaves a piece underground where the ground rises over it', () => {
+    const [buried] = onTerrain(
+      { type: 'FeatureCollection', features: [piece([32.802, 39.9], 0, 8)] },
+      slope,
+    ).features
+    expect(buried.properties!.height).toBe(0)
+  })
+
+  it('measures a bridge from the sea', () => {
+    const bridge = landmarkExtrusions([landmark('15-temmuz-koprusu')], 'light')
+    expect(bridge.features.every(({ properties }) => !properties!.ground)).toBe(
+      true,
+    )
+    const [first] = onTerrain(bridge, () => 30).features
+    const [original] = bridge.features
+    expect(first.properties!.height).toBeCloseTo(
+      original.properties!.height - 30,
+      5,
+    )
   })
 })

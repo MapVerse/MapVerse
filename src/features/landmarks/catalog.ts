@@ -1,4 +1,5 @@
 import { ANITKABIR } from './anitkabir.ts'
+import { AKKALE, WALLS } from './ankaraKalesiWalls.ts'
 import type { Landmark, Material, Part, XY } from './landmarks.ts'
 import {
   dome,
@@ -76,6 +77,80 @@ const ATAKULE: Landmark = {
         [0.8, 113],
         [0.3, 125],
       ],
+    },
+  ],
+}
+
+/**
+ * Ankara: the castle on its hill, its walls of grey andesite following the
+ * ground: the inner citadel with its row of pentagonal towers, the outer
+ * walls, and Akkale, the white tower, with the flag on top.
+ */
+function castleWalls(): Part[] {
+  const parts: Part[] = []
+  for (const line of WALLS) {
+    for (let i = 0; i < line.length - 1; i++) {
+      const [[x0, y0], [x1, y1]] = [line[i], line[i + 1]]
+      const length = Math.hypot(x1 - x0, y1 - y0)
+      const [nx, ny] = [(-(y1 - y0) / length) * 1.6, ((x1 - x0) / length) * 1.6]
+      // The short turns of the wall are its towers, standing higher
+      const top = length < 7 ? 15 : 12
+      parts.push({
+        kind: 'block',
+        material: 'andesite',
+        footprint: [
+          [x0 - nx, y0 - ny],
+          [x1 - nx, y1 - ny],
+          [x1 + nx, y1 + ny],
+          [x0 + nx, y0 + ny],
+        ],
+        base: 0,
+        top,
+      })
+    }
+  }
+  return parts
+}
+
+const AKKALE_TOP = 17
+
+const ANKARA_KALESI: Landmark = {
+  id: 'ankara-kalesi',
+  name: 'Ankara Kalesi',
+  near: [32.8638, 39.9406],
+  terrain: 'follow',
+  hide: [{ at: [157, 116], within: 1, tallerThan: 0 }],
+  lights: WALLS.flatMap((line) => line.filter((_, i) => i % 3 === 0)),
+  parts: [
+    ...castleWalls(),
+    {
+      kind: 'block',
+      material: 'whitewash',
+      footprint: AKKALE,
+      base: 0,
+      top: AKKALE_TOP,
+    },
+    {
+      kind: 'round',
+      material: 'steel',
+      sides: 8,
+      at: [157, 116],
+      outline: [
+        [0.15, AKKALE_TOP],
+        [0.1, AKKALE_TOP + 9],
+      ],
+    },
+    {
+      kind: 'block',
+      material: 'flag',
+      footprint: [
+        [157.1, 115.95],
+        [161, 115.95],
+        [161, 116.05],
+        [157.1, 116.05],
+      ],
+      base: AKKALE_TOP + 6.5,
+      top: AKKALE_TOP + 9,
     },
   ],
 }
@@ -714,46 +789,33 @@ const RUMELI_WALLS: XY[] = [
 
 const RUMELI: Landmark = {
   id: 'rumeli-hisari',
+  terrain: 'follow',
   lights: RUMELI_WALLS.filter((_, i) => i % 2 === 0),
   name: 'Rumeli Hisarı',
   near: [29.056009, 41.084788],
   // A point on its walls
   hide: [{ at: [58, -26], within: 1, tallerThan: 0 }],
   parts: [
-    {
-      kind: 'block',
-      material: 'stone',
-      footprint: RUMELI_WALLS,
-      holes: [
-        [
-          [-40, -84],
-          [-24, -51],
-          [-21, -40],
-          [-26, -1],
-          [-17, 87],
-          [-23, 115],
-          [-2, 121],
-          [8, 119],
-          [19, 104],
-          [23, 110],
-          [30, 109],
-          [30, 93],
-          [24, 45],
-          [35, 27],
-          [55, 12],
-          [51, -13],
-          [56, -31],
-          [55, -103],
-          [16, -96],
-          [-5, -88],
-          [-19, -88],
-          [-28, -94],
-          [-33, -87],
+    // Its walls, in lengths that climb the hill with the ground
+    ...RUMELI_WALLS.map((from, i): Part => {
+      const to = RUMELI_WALLS[(i + 1) % RUMELI_WALLS.length]
+      const [dx, dy] = [to[0] - from[0], to[1] - from[1]]
+      const length = Math.hypot(dx, dy)
+      // Inwards, as the walls go round anticlockwise
+      const [nx, ny] = [(-dy / length) * 4, (dx / length) * 4]
+      return {
+        kind: 'block',
+        material: 'stone',
+        footprint: [
+          from,
+          to,
+          [to[0] + nx, to[1] + ny],
+          [from[0] + nx, from[1] + ny],
         ],
-      ],
-      base: 0,
-      top: 11,
-    },
+        base: 0,
+        top: 11,
+      }
+    }),
     ...(
       [
         [[-20, 128], 10.5, 26],
@@ -1001,17 +1063,21 @@ function bridgeParts(): Part[] {
   const [start, end] = [-MAIN - SIDE[0], MAIN + SIDE[1]]
 
   // The deck: the steel girder, its road, and the barriers down the
-  // middle and along each edge
-  parts.push(
-    block([start, -16.7, end, 16.7], DECK - 3, DECK - 0.3),
-    block([start, -14.8, end, 14.8], DECK - 0.3, DECK, 'asphalt'),
-    block([start, -0.4, end, 0.4], DECK, DECK + 0.9, 'concrete'),
-    block([start, -16.5, end, -15.9], DECK - 0.3, DECK + 1.2),
-    block([start, 15.9, end, 16.5], DECK - 0.3, DECK + 1.2),
-    // Lamps along both edges
-    block([start, -16.4, end, -16], DECK + 1.2, DECK + 1.5, 'lamp'),
-    block([start, 16, end, 16.4], DECK + 1.2, DECK + 1.5, 'lamp'),
-  )
+  // middle and along each edge, with lamps on them. In short lengths, so
+  // each sits true over the ground below it on the 3D terrain.
+  const length = (end - start) / 65
+  for (let u0 = start; u0 < end - 1; u0 += length) {
+    const u1 = u0 + length
+    parts.push(
+      block([u0, -16.7, u1, 16.7], DECK - 3, DECK - 0.3),
+      block([u0, -14.8, u1, 14.8], DECK - 0.3, DECK, 'asphalt'),
+      block([u0, -0.4, u1, 0.4], DECK, DECK + 0.9, 'concrete'),
+      block([u0, -16.5, u1, -15.9], DECK - 0.3, DECK + 1.2),
+      block([u0, 15.9, u1, 16.5], DECK - 0.3, DECK + 1.2),
+      block([u0, -16.4, u1, -16], DECK + 1.2, DECK + 1.5, 'lamp'),
+      block([u0, 16, u1, 16.4], DECK + 1.2, DECK + 1.5, 'lamp'),
+    )
+  }
 
   for (const u of [-MAIN, MAIN]) {
     parts.push(block([u - 9, -LEG - 7, u + 9, LEG + 7], 0, 6, 'concrete'))
@@ -1108,6 +1174,7 @@ const BRIDGE: Landmark = {
   lights: bridgeLights(),
   name: '15 Temmuz Şehitler Köprüsü',
   near: [29.034368, 41.045537],
+  terrain: 'sea',
   hide: [],
   parts: bridgeParts(),
 }
@@ -1115,6 +1182,7 @@ const BRIDGE: Landmark = {
 export const LANDMARKS: Landmark[] = [
   ATAKULE,
   ANITKABIR,
+  ANKARA_KALESI,
   KOCATEPE,
   GALATA,
   KIZ_KULESI,
