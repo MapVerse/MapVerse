@@ -14,6 +14,13 @@ import type { Place } from '../features/place/place.ts'
 import { findPoiLayerIds, toPoi } from '../features/place/poi.ts'
 import SelectedPoi, { type PoiMatch } from '../features/place/SelectedPoi.tsx'
 import SearchBox from '../features/search/SearchBox.tsx'
+import SearchResults, {
+  SEARCH_RESULTS_LAYER,
+} from '../features/search/SearchResults.tsx'
+import {
+  useCategorySearch,
+  type CategorySearch,
+} from '../features/search/useCategorySearch.ts'
 import Settings from '../features/settings/Settings.tsx'
 import { useTheme } from '../theme/theme.ts'
 import './controls.css'
@@ -62,12 +69,26 @@ export default function MapView() {
     null,
   )
   const [labelLayerId, setLabelLayerId] = useState<string>()
+  // Places of a category near where the map was, picked from the search box
+  const [categorySearch, setCategorySearch] = useState<CategorySearch | null>(
+    null,
+  )
+  const nearby = useCategorySearch(categorySearch)
   const place = selection?.place
+  const onResultMarker =
+    !!place && nearby.results.some((r) => r.key === place.key)
 
   function onMapClick(event: MapLayerMouseEvent) {
     // Directions handle their own clicks (picking either end of a route)
     if (directions) return
     const feature = event.features?.[0]
+    if (feature?.layer.id === SEARCH_RESULTS_LAYER) {
+      const result = nearby.results.find(
+        (r) => r.key === feature.properties.key,
+      )
+      if (result) setSelection({ place: result })
+      return
+    }
     setSelection(
       feature
         ? {
@@ -93,7 +114,9 @@ export default function MapView() {
       // Drops the default MapLibre link but keeps the data attribution the
       // licenses require; it collapses to an ⓘ button once the map is moved.
       attributionControl={{ compact: true }}
-      interactiveLayerIds={directions ? [] : poiLayerIds}
+      interactiveLayerIds={
+        directions ? [] : [SEARCH_RESULTS_LAYER, ...poiLayerIds]
+      }
       cursor={hoveringPoi ? 'pointer' : undefined}
       onLoad={(event) => {
         const style = event.target.getStyle()
@@ -114,7 +137,12 @@ export default function MapView() {
         onSelect={(result) => setSelection({ place: result })}
         onClear={() => setSelection(null)}
         onDirections={() => setDirections({ to: selection?.place ?? null })}
+        nearby={categorySearch && { ...categorySearch, ...nearby }}
+        onCategory={setCategorySearch}
       />
+      {categorySearch && !directions && (
+        <SearchResults results={nearby.results} selectedKey={place?.key} />
+      )}
       {place?.outline && place.osm && (
         <Boundary key={`outline:${place.key}`} osm={place.osm} />
       )}
@@ -131,7 +159,8 @@ export default function MapView() {
         <PlaceCard
           key={`card:${selection.place.key}`}
           place={selection.place}
-          offset={selection.poi ? 26 : 8}
+          // Clear of the badge it points at
+          offset={selection.poi ? 26 : onResultMarker ? 20 : 8}
           onDirections={() => setDirections({ to: selection.place })}
           onClose={() => setSelection(null)}
         />

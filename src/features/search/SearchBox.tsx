@@ -4,7 +4,9 @@ import { Icon } from '../../icons/Icon.tsx'
 import CategoryBadge from '../place/CategoryBadge.tsx'
 import { distanceMeters, formatDistance } from '../place/place.ts'
 import { findMatch } from './match.ts'
+import { QUICK_CATEGORIES, type QuickCategory } from './overpass.ts'
 import type { SearchResult } from './photon.ts'
+import type { CategoryResults, CategorySearch } from './useCategorySearch.ts'
 import { MIN_QUERY_LENGTH, usePlaceSearch } from './usePlaceSearch.ts'
 import { addRecentSearch, useRecentSearches } from './useRecentSearches.ts'
 import './SearchBox.css'
@@ -15,6 +17,10 @@ type Props = {
   onClear: () => void
   /** Opens directions, to the selected place if there is one */
   onDirections: () => void
+  /** The category search under way, with its results */
+  nearby: (CategorySearch & CategoryResults) | null
+  /** Starts a search for a category nearby, or ends it with null */
+  onCategory: (search: CategorySearch | null) => void
 }
 
 export default function SearchBox({
@@ -22,35 +28,60 @@ export default function SearchBox({
   onSelect,
   onClear,
   onDirections,
+  nearby,
+  onCategory,
 }: Props) {
   const { current: map } = useMap()
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
-  // Only search while the list is open, so picking a result doesn't refetch it
-  const { results, status } = usePlaceSearch(open ? query : '')
+  // Only search while the list is open, so picking a result doesn't refetch it,
+  // and not while the box shows a category's name
+  const { results, status } = usePlaceSearch(open && !nearby ? query : '')
   const recent = useRecentSearches()
   const listId = useId()
 
   const trimmed = query.trim()
-  const typed = open && trimmed.length >= MIN_QUERY_LENGTH
-  const showRecent = open && trimmed === '' && recent.length > 0
-  const items = showRecent ? recent : typed ? results : []
-  const message =
-    typed && status === 'error'
-      ? 'Arama şu anda yapılamıyor.'
-      : typed && status === 'done' && results.length === 0
-        ? 'Sonuç bulunamadı.'
-        : null
-  const center = map?.getCenter().toArray()
+  const typed = open && !nearby && trimmed.length >= MIN_QUERY_LENGTH
+  const showCategories = open && trimmed === ''
+  const showRecent = showCategories && recent.length > 0
+  const items = nearby
+    ? open
+      ? nearby.results
+      : []
+    : showRecent
+      ? recent
+      : typed
+        ? results
+        : []
+  const message = !open
+    ? null
+    : nearby
+      ? nearby.status === 'loading'
+        ? 'Yakındaki yerler aranıyor…'
+        : nearby.status === 'error'
+          ? 'Arama şu anda yapılamıyor.'
+          : nearby.status === 'done' && nearby.results.length === 0
+            ? 'Yakında bu türde bir yer bulunamadı.'
+            : null
+      : typed && status === 'error'
+        ? 'Arama şu anda yapılamıyor.'
+        : typed && status === 'done' && results.length === 0
+          ? 'Sonuç bulunamadı.'
+          : null
+  // Nearby results are measured from where they were searched around
+  const center = nearby?.center ?? map?.getCenter().toArray()
 
   function select(result: SearchResult) {
-    setQuery(result.name)
+    // A category's name stays in the box, and its results on the map
+    if (!nearby) setQuery(result.name)
     setOpen(false)
     setActive(-1)
     addRecentSearch(result)
-    if (result.bbox) {
+    if (nearby) {
+      map?.easeTo({ center: result.lngLat, zoom: Math.max(map.getZoom(), 15) })
+    } else if (result.bbox) {
       map?.fitBounds(result.bbox, {
         padding: { top: 80, right: 60, bottom: 40, left: 40 },
         maxZoom: 17,
@@ -65,7 +96,18 @@ export default function SearchBox({
     setQuery('')
     setActive(-1)
     onClear()
+    onCategory(null)
     inputRef.current?.focus()
+  }
+
+  function pickCategory(category: QuickCategory) {
+    const around = map?.getCenter().toArray()
+    if (!around) return
+    setQuery(category.label)
+    setActive(-1)
+    setOpen(true)
+    onClear()
+    onCategory({ category, center: around })
   }
 
   /** The search button picks the highlighted result, or opens the list. */
@@ -89,12 +131,22 @@ export default function SearchBox({
     } else if (event.key === 'Enter' && items.length > 0) {
       select(items[active] ?? items[0])
     } else if (event.key === 'Escape') {
+      // Only close the list; a search box would also clear its text
+      event.preventDefault()
       setOpen(false)
     }
   }
 
   return (
-    <div className="search" role="search" hidden={hidden}>
+    <div
+      className="search"
+      role="search"
+      hidden={hidden}
+      // Stay open while focus moves between the box's own controls
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
+      }}
+    >
       <div className="search-field">
         <img
           className="search-logo"
@@ -121,11 +173,12 @@ export default function SearchBox({
             setQuery(event.target.value)
             setOpen(true)
             setActive(-1)
+            // Typing over a category's name starts an ordinary search
+            if (nearby) onCategory(null)
             // Emptying the box drops the selected place, like the clear button
             if (!event.target.value) onClear()
           }}
           onFocus={() => setOpen(true)}
-          onBlur={() => setOpen(false)}
           onKeyDown={onKeyDown}
         />
         {query && (
@@ -160,53 +213,79 @@ export default function SearchBox({
           <Icon name="route" size={22} strokeWidth={1.9} />
         </button>
       </div>
-      {items.length > 0 && (
+      {(showCategories || items.length > 0) && (
         <div
           className="search-panel"
           // Keep focus in the input so the click below still lands
           onMouseDown={(event) => event.preventDefault()}
         >
+          {showCategories && (
+            <div
+              className="search-categories"
+              role="group"
+              aria-label="Yakındakiler"
+              // Let a mouse wheel scroll the row sideways
+              onWheel={(event) => {
+                if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+                  event.currentTarget.scrollLeft += event.deltaY
+                }
+              }}
+            >
+              {QUICK_CATEGORIES.map((category) => (
+                <button
+                  key={category.key}
+                  type="button"
+                  onClick={() => pickCategory(category)}
+                >
+                  <CategoryBadge categoryKey={category.key} size={26} />
+                  {category.label}
+                </button>
+              ))}
+            </div>
+          )}
           {showRecent && <p className="search-heading">Son aramalar</p>}
-          <ul
-            id={listId}
-            role="listbox"
-            aria-label={showRecent ? 'Son aramalar' : 'Arama sonuçları'}
-            className="search-results"
-          >
-            {items.map((item, i) => (
-              <li
-                key={`${item.key}-${i}`}
-                id={`${listId}-${i}`}
-                role="option"
-                aria-selected={i === active}
-                onClick={() => select(item)}
-              >
-                {showRecent ? (
-                  <span className="search-recent-icon">
-                    <Icon name="clock" size={18} />
-                  </span>
-                ) : (
-                  <CategoryBadge categoryKey={item.categoryKey} size={36} />
-                )}
-                <span className="search-text">
-                  <span className="search-name">
-                    <Highlight
-                      text={item.name}
-                      query={showRecent ? '' : trimmed}
-                    />
-                  </span>
-                  {item.detail && (
-                    <span className="search-detail">{item.detail}</span>
+          {items.length > 0 && (
+            <ul
+              id={listId}
+              role="listbox"
+              aria-label={showRecent ? 'Son aramalar' : 'Arama sonuçları'}
+              className="search-results"
+            >
+              {items.map((item, i) => (
+                <li
+                  key={`${item.key}-${i}`}
+                  id={`${listId}-${i}`}
+                  role="option"
+                  aria-selected={i === active}
+                  onClick={() => select(item)}
+                >
+                  {showRecent ? (
+                    <span className="search-recent-icon">
+                      <Icon name="clock" size={18} />
+                    </span>
+                  ) : (
+                    <CategoryBadge categoryKey={item.categoryKey} size={36} />
                   )}
-                </span>
-                {center && (
-                  <span className="search-distance">
-                    {formatDistance(distanceMeters(center, item.lngLat))}
+                  <span className="search-text">
+                    <span className="search-name">
+                      <Highlight
+                        text={item.name}
+                        query={showRecent || nearby ? '' : trimmed}
+                      />
+                    </span>
+                    {item.detail && (
+                      <span className="search-detail">{item.detail}</span>
+                    )}
                   </span>
-                )}
-              </li>
-            ))}
-          </ul>
+                  {center && (
+                    <span className="search-distance">
+                      {formatDistance(distanceMeters(center, item.lngLat))}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
       {message && <p className="search-message">{message}</p>}

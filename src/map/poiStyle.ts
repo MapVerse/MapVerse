@@ -15,6 +15,11 @@ function poiImagePrefix(theme: Theme, selected: boolean) {
   return `${IMAGE_PREFIX}:${theme}:${selected ? 'selected' : 'normal'}:`
 }
 
+/** The badge image for a category, drawn on demand by `resolvePoiImage`. */
+export function poiImageId(theme: Theme, key: string, selected = false) {
+  return poiImagePrefix(theme, selected) + key
+}
+
 function parsePoiImageId(id: string) {
   const [prefix, theme, state, key] = id.split(':')
   if (prefix !== IMAGE_PREFIX || !key) return undefined

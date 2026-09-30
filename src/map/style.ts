@@ -85,6 +85,11 @@ const DARK: Palette = {
 
 const PALETTES: Record<Theme, Palette> = { light: LIGHT, dark: DARK }
 
+/** Halo behind map labels, for layers added outside the style. */
+export function labelHalo(theme: Theme) {
+  return PALETTES[theme].halo
+}
+
 const REGULAR = ['Noto Sans Regular']
 const BOLD = ['Noto Sans Bold']
 const ITALIC = ['Noto Sans Italic']

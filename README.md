@@ -14,6 +14,7 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 - 3B arazi: dağlar ve tepeler yükseltisiyle, gölgeli kabartmayla görünür ([Terrain Tiles](https://registry.opendata.aws/terrain-tiles/), API anahtarı gerekmez). Ayarlar panelinden açılıp kapanır ve seçim hatırlanır
 - Yakınlaştırma, pusula/eğim, konumum ve ölçek kontrolleri
 - Yer ve adres arama ([Photon](https://photon.komoot.io)): ekrandaki alana göre öncelikli öneriler, uzaklık bilgisi, klavyeyle seçim ve son aramalar
+- Aramaya tıklayınca kategoriler: restoran, kafe, market, eczane, akaryakıt, ATM, otel, hastane, park, müze, otopark ve cami. Seçilen türde en yakın yerler uzaklığa göre listelenir ve haritada işaretlenir ([Overpass API](https://overpass-api.de), API anahtarı gerekmez)
 - İl, ilçe ya da semt gibi alan sonuçlarında alan sınırının çizilmesi ([Nominatim](https://nominatim.openstreetmap.org))
 - Haritadaki mekânlara tıklayınca simgenin yerinde büyümesi ve ad, kategori, adres içeren kart
 - Uygulama içinde yol tarifi ([Valhalla](https://valhalla.github.io/valhalla/)): araba, yürüyüş ve bisiklet; alternatif rotalar; Türkçe adım adım tarif; başlangıç ve varış için konumun, aradığın yer ya da haritada seçtiğin nokta. Arama çubuğundaki rota düğmesiyle de açılır
