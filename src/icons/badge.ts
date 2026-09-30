@@ -35,15 +35,6 @@ export function drawBadge(
   ctx.fill()
 
   ctx.shadowColor = 'transparent'
-  ctx.lineWidth = selected ? 2 : 1
-  ctx.strokeStyle = selected
-    ? '#fff'
-    : dark
-      ? 'rgb(255 255 255 / 9%)'
-      : 'rgb(15 23 42 / 7%)'
-  ctx.beginPath()
-  ctx.arc(center, center, radius - ctx.lineWidth / 2, 0, 2 * Math.PI)
-  ctx.stroke()
 
   const offset = center - GLYPH_PX / 2
   ctx.translate(offset, offset)
