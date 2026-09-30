@@ -521,3 +521,218 @@ export const ATLANTIS: Landmark = {
     ),
   ],
 }
+
+/**
+ * Atlantis City's eight blocks of flats, five north of the boulevard and
+ * three south, as OpenStreetMap has them: 24 floors each, the middle of
+ * each long face stepped out.
+ */
+const BLOCKS: XY[][] = [
+  [
+    [-115.6, 210.4],
+    [-115.9, 209.5],
+    [-103, 204.8],
+    [-102.7, 205.7],
+    [-94.1, 202.6],
+    [-86.2, 224.3],
+    [-94.8, 227.4],
+    [-94.5, 228.3],
+    [-107.4, 233],
+    [-107.7, 232.1],
+    [-116.3, 235.2],
+    [-124.1, 213.5],
+  ],
+  [
+    [-129.9, 157.7],
+    [-130.2, 156.7],
+    [-116.9, 153.4],
+    [-116.7, 154.3],
+    [-107.8, 152],
+    [-102.1, 174.4],
+    [-111, 176.6],
+    [-110.7, 177.6],
+    [-124, 181],
+    [-124.3, 180],
+    [-133.1, 182.3],
+    [-138.8, 159.9],
+  ],
+  [
+    [-138.4, 105.7],
+    [-138.5, 104.8],
+    [-124.9, 103],
+    [-124.8, 104],
+    [-115.7, 102.8],
+    [-112.8, 125.6],
+    [-121.8, 126.8],
+    [-121.6, 127.8],
+    [-135.3, 129.6],
+    [-135.4, 128.6],
+    [-144.4, 129.8],
+    [-147.4, 106.9],
+  ],
+  [
+    [-140.1, 52.9],
+    [-140.1, 51.9],
+    [-126.4, 51.8],
+    [-126.4, 52.8],
+    [-117.3, 52.7],
+    [-117.1, 75.7],
+    [-126.2, 75.8],
+    [-126.2, 76.8],
+    [-139.9, 76.9],
+    [-139.9, 75.9],
+    [-149, 76],
+    [-149.2, 52.9],
+  ],
+  [
+    [-139.5, 1.4],
+    [-139.4, 0.4],
+    [-125.8, 1.1],
+    [-125.8, 2.1],
+    [-116.7, 2.6],
+    [-117.9, 25.6],
+    [-127, 25.1],
+    [-127, 26.1],
+    [-140.7, 25.4],
+    [-140.7, 24.4],
+    [-149.8, 23.9],
+    [-148.6, 0.9],
+  ],
+  [
+    [-127.9, -90.1],
+    [-127.7, -91],
+    [-114.4, -88.2],
+    [-114.6, -87.3],
+    [-105.6, -85.4],
+    [-110.3, -62.8],
+    [-119.3, -64.7],
+    [-119.5, -63.7],
+    [-132.9, -66.6],
+    [-132.7, -67.6],
+    [-141.6, -69.4],
+    [-136.9, -92],
+  ],
+  [
+    [-112.1, -135.7],
+    [-111.8, -136.6],
+    [-98.8, -132.4],
+    [-99, -131.5],
+    [-90.4, -128.7],
+    [-97.5, -106.8],
+    [-106.1, -109.6],
+    [-106.4, -108.6],
+    [-119.5, -112.9],
+    [-119.2, -113.8],
+    [-127.8, -116.6],
+    [-120.7, -138.5],
+  ],
+  [
+    [-95.7, -180.5],
+    [-95.4, -181.3],
+    [-82.7, -176.1],
+    [-83.1, -175.2],
+    [-74.7, -171.7],
+    [-83.5, -150.4],
+    [-91.9, -153.9],
+    [-92.3, -153],
+    [-105, -158.3],
+    [-104.6, -159.2],
+    [-113, -162.7],
+    [-104.2, -184],
+  ],
+]
+/** Its floors: a taller one at the ground, and its flats above */
+const LOBBY = 4.2
+const STOREY = 3
+const FLOORS = 24
+const ROOFS = LOBBY + (FLOORS - 1) * STOREY
+
+const middle = (footprint: XY[]): XY => [
+  footprint.reduce((sum, [x]) => sum + x, 0) / footprint.length,
+  footprint.reduce((sum, [, y]) => sum + y, 0) / footprint.length,
+]
+
+/** Whether a window is lit at night: about half, scattered. */
+const lit = (n: number) => (Math.imul(n + 1, 2654435761) >>> 0) % 100 < 55
+
+/**
+ * A block of flats: in light plaster, a glass lobby at its foot, its
+ * windows floor by floor, a parapet round the roof, and the lift's room
+ * on top.
+ */
+function flats(footprint: XY[], index: number): Part[] {
+  const parts: Part[] = [
+    block(footprint, 0, ROOFS, 'plaster'),
+    block(grown(footprint, 0.15), 0.4, 3.8, 'windows'),
+    block(footprint, ROOFS, ROOFS + 1.2, 'plaster', [grown(footprint, -0.4)]),
+  ]
+  // Along its long faces, as the step out in the middle of one runs
+  const [cx, cy] = middle(footprint)
+  const [[x0, y0], [x1, y1]] = [footprint[1], footprint[2]]
+  const length = Math.hypot(x1 - x0, y1 - y0)
+  const [ux, uy] = [(x1 - x0) / length, (y1 - y0) / length]
+  const room = (u: number, v: number): XY => [
+    cx + ux * u - uy * v,
+    cy + uy * u + ux * v,
+  ]
+  parts.push(
+    block(
+      [room(-5, -3.5), room(5, -3.5), room(5, 3.5), room(-5, 3.5)],
+      ROOFS,
+      ROOFS + 4.5,
+      'plaster',
+    ),
+  )
+  // Windows in each wall, about every 4.5 m, each lit or not
+  let area = 0
+  footprint.forEach(([ax, ay], i) => {
+    const [bx, by] = footprint[(i + 1) % footprint.length]
+    area += ax * by - bx * ay
+  })
+  const side = Math.sign(area)
+  footprint.forEach(([ax, ay], wall) => {
+    const [bx, by] = footprint[(wall + 1) % footprint.length]
+    const span = Math.hypot(bx - ax, by - ay)
+    if (span < 3) return
+    const [tx, ty] = [(bx - ax) / span, (by - ay) / span]
+    // Out of the wall
+    const [nx, ny] = [side * ty, -side * tx]
+    const units = Math.round(span / 4.5)
+    const pane = (s: number, out: number): XY => [
+      ax + tx * s + nx * out,
+      ay + ty * s + ny * out,
+    ]
+    for (let floor = 1; floor < FLOORS; floor++) {
+      const base = LOBBY + (floor - 1) * STOREY + 0.9
+      for (let unit = 0; unit < units; unit++) {
+        const [s0, s1] = [(unit + 0.2) / units, (unit + 0.8) / units].map(
+          (t) => t * span,
+        )
+        parts.push(
+          block(
+            [pane(s0, -0.05), pane(s1, -0.05), pane(s1, 0.15), pane(s0, 0.15)],
+            base,
+            base + 1.5,
+            lit(((index * 16 + wall) * 32 + floor) * 8 + unit)
+              ? 'windows'
+              : 'tint',
+          ),
+        )
+      }
+    }
+  })
+  return parts
+}
+
+export const ATLANTIS_CITY: Landmark = {
+  id: 'atlantis-city',
+  name: 'Atlantis City',
+  near: [32.7148, 39.97],
+  hide: BLOCKS.map((footprint) => ({
+    at: middle(footprint),
+    within: 1,
+    tallerThan: 0,
+  })),
+  lights: BLOCKS.flatMap((footprint) => lightsAlong(grown(footprint, 6), 12)),
+  parts: BLOCKS.flatMap(flats),
+}

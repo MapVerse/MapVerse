@@ -33,6 +33,7 @@ export type Material =
   | 'green'
   | 'red'
   | 'water'
+  | 'plaster'
 
 /**
  * A piece of a landmark, in metres round its centre: either turned round
@@ -112,6 +113,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
     green: '#79a37e',
     red: '#b8483d',
     water: '#9ccbe8',
+    plaster: '#e5dacb',
   },
   // At night: stone and plaster floodlit in warm light, windows lit from
   // inside, lamps and the bridge's cables glowing
@@ -139,6 +141,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
     green: '#2d4636',
     red: '#7a2b24',
     water: '#1f4466',
+    plaster: '#57534c',
   },
 }
 

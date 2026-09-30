@@ -158,6 +158,15 @@ describe('Atlantis', () => {
       return crosses ? !inside : inside
     }, false)
 
+  /** How far a point is from the line through two corners. */
+  const from = (
+    [x, y]: [number, number],
+    [ax, ay]: [number, number],
+    [bx, by]: [number, number],
+  ) =>
+    Math.abs((bx - ax) * (y - ay) - (by - ay) * (x - ax)) /
+    Math.hypot(bx - ax, by - ay)
+
   it('lays its green roofs and glass vault along its main building', () => {
     const roofs = blocks.filter(
       (p) =>
@@ -165,11 +174,44 @@ describe('Atlantis', () => {
         (p.material === 'windows' && p.base >= main.top),
     )
     expect(roofs).toHaveLength(6)
+    // Its ends: on the boulevard, and to the north west
+    const { footprint: outline } = main
+    const ends = [
+      [outline[1], outline[2]],
+      [outline[14], outline[16]],
+    ]
     for (const { footprint } of roofs) {
+      expect(footprint.length).toBeGreaterThan(20)
       for (const point of footprint) {
-        expect(within(point, main.footprint)).toBe(true)
+        expect(within(point, outline)).toBe(true)
+      }
+      // All the way along, from end to end
+      for (const [a, b] of ends) {
+        const nearest = Math.min(...footprint.map((p) => from(p, a, b)))
+        expect(nearest).toBeLessThan(5)
       }
     }
+  })
+})
+
+describe('Atlantis City', () => {
+  const blocks = landmark('atlantis-city').parts.filter(
+    (p) => p.kind === 'block',
+  )
+
+  it('has its eight blocks of flats, with 24 floors each', () => {
+    expect(
+      blocks.filter((p) => p.material === 'plaster' && p.base === 0),
+    ).toHaveLength(8)
+    // Windows on each floor over the lobby, about half of them lit
+    const windows = blocks.filter(
+      (p) => (p.material === 'windows' || p.material === 'tint') && p.base > 4,
+    )
+    expect(new Set(windows.map((p) => p.base)).size).toBe(23)
+    const lit =
+      windows.filter((p) => p.material === 'windows').length / windows.length
+    expect(lit).toBeGreaterThan(0.4)
+    expect(lit).toBeLessThan(0.7)
   })
 })
 

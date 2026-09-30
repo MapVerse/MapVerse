@@ -1,6 +1,6 @@
 import { ANITKABIR } from './anitkabir.ts'
 import { AKKALE, WALLS } from './ankaraKalesiWalls.ts'
-import { ATLANTIS } from './atlantis.ts'
+import { ATLANTIS, ATLANTIS_CITY } from './atlantis.ts'
 import type { Landmark, Material, Part, XY } from './landmarks.ts'
 import {
   dome,
@@ -1565,6 +1565,7 @@ export const LANDMARKS: Landmark[] = [
   ANKARA_KALESI,
   ASTI,
   ATLANTIS,
+  ATLANTIS_CITY,
   KOCATEPE,
   GALATA,
   KIZ_KULESI,
