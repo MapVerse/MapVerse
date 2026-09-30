@@ -29,6 +29,7 @@ export type Material =
   | 'flag'
   | 'lamp'
   | 'cable'
+  | 'sign'
 
 /**
  * A piece of a landmark, in metres round its centre: either turned round
@@ -104,6 +105,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
     flag: '#e30a17',
     lamp: '#ece8dc',
     cable: '#c4cad1',
+    sign: '#1f5fc4',
   },
   // At night: stone and plaster floodlit in warm light, windows lit from
   // inside, lamps and the bridge's cables glowing
@@ -127,6 +129,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
     flag: '#c8141f',
     lamp: '#ffd98a',
     cable: '#b8d3ff',
+    sign: '#5a9bff',
   },
 }
 

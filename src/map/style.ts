@@ -594,6 +594,8 @@ function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
         'source-layer': 'building',
         minzoom: 13,
         maxzoom: 15.5,
+        // Landmarks, drawn in 3D from this zoom, stand in for their own
+        filter: hideBuildings(LANDMARK_ZONES),
         paint: {
           'fill-color': c.building,
           'fill-outline-color': c.buildingLine,
