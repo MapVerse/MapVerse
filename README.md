@@ -14,6 +14,7 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 - Haritadaki mekânlara tıklayınca simgenin yerinde büyümesi ve ad, kategori, adres içeren kart
 - Uygulama içinde yol tarifi ([Valhalla](https://valhalla.github.io/valhalla/)): araba, yürüyüş ve bisiklet; alternatif rotalar; Türkçe adım adım tarif; başlangıç olarak konumun ya da haritada seçtiğin nokta
 - Uygulamaya özel çizilmiş ikon seti: kategori renkleriyle harita rozetleri, iki tonlu kategori sembolleri ve arayüz için çizgi ikonlar
+- Canlı trafik katmanı ([TomTom](https://developer.tomtom.com)): yollar hıza göre yeşilden kırmızıya renklenir, kapalı yollar kesikli çizilir, veri 2 dakikada bir tazelenir
 - Harita konumu URL'de tutulur (`#zoom/enlem/boylam`), link paylaşınca aynı görünüm açılır
 
 ## Geliştirme
@@ -28,6 +29,8 @@ npm run lint          # oxlint
 npm test              # vitest
 npm run format        # prettier
 ```
+
+Canlı trafik için bir TomTom API anahtarı gerekir (ücretsiz katman yeterli). Anahtarı GitHub'da repo ayarlarındaki **Secrets and variables → Actions** bölümüne `TOMTOM_API_KEY` adıyla ekle; yayın bu anahtarla derlenir. Yerelde denemek için `VITE_TOMTOM_API_KEY` değişkenini tanımla. Anahtar yoksa Trafik düğmesi görünmez. Anahtar tarayıcıya gittiği için TomTom panelinde site adresinle kısıtlaman önerilir.
 
 Rotalar varsayılan olarak FOSSGIS'in herkese açık Valhalla sunucusundan (`valhalla1.openstreetmap.de`) alınır. Bu sunucu düşük hacimli kullanım içindir; kendi Valhalla sunucunu kullanmak için derlemeden önce `VITE_VALHALLA_URL` değişkenini tanımla.
 

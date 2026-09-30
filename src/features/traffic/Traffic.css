@@ -1,0 +1,37 @@
+.traffic-toggle {
+  display: grid;
+  place-items: center;
+  color: var(--mv-text);
+  cursor: pointer;
+}
+
+.traffic-toggle[aria-pressed='true'] {
+  color: var(--mv-accent);
+}
+
+.traffic-legend {
+  position: absolute;
+  /* clear of the attribution line along the bottom edge */
+  bottom: 44px;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--mv-surface);
+  box-shadow: var(--mv-shadow-sm);
+  color: var(--mv-muted);
+  font-family: var(--mv-font);
+  font-size: 12px;
+  font-weight: 500;
+  transform: translateX(-50%);
+}
+
+.traffic-legend-bar {
+  width: 72px;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #22c55e, #f59e0b, #ef4444, #991b1b);
+}
