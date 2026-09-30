@@ -32,6 +32,52 @@ export function selectedPoiImage(icon: string, theme: Theme): string {
 const subclass = ['coalesce', ['get', 'subclass'], '']
 const klass = ['coalesce', ['get', 'class'], '']
 
+/** Street furniture and small features that are never worth a badge. */
+const HIDDEN = [
+  'bbq',
+  'bench',
+  'bicycle_parking',
+  'bollard',
+  'cycle_barrier',
+  'drinking_water',
+  'entrance',
+  'garden',
+  'gate',
+  'information',
+  'lift_gate',
+  'motorcycle_parking',
+  'parcel_locker',
+  'post_box',
+  'recycling',
+  'sally_port',
+  'shelter',
+  'stile',
+  'subway_entrance',
+  'telephone',
+  'toilets',
+  'train_station_entrance',
+  'vending_machine',
+  'waste_basket',
+  'waste_disposal',
+]
+
+/** Places still useful without a name; any other POI needs one to show. */
+const UNNAMED = ['atm', 'bus_stop', 'fuel', 'parking', 'pharmacy']
+
+/** Leaves out clutter: small features, and POIs with no name to show. */
+export function poiFilter(): ExpressionSpecification {
+  return [
+    'all',
+    ['match', subclass, HIDDEN, false, true],
+    ['match', klass, HIDDEN, false, true],
+    [
+      'any',
+      ['!=', ['coalesce', ['get', 'name'], ''], ''],
+      ['match', subclass, UNNAMED, true, false],
+    ],
+  ] as unknown as ExpressionSpecification
+}
+
 /** Picks each POI's badge image by category. */
 export function poiIconImage(theme: Theme): ExpressionSpecification {
   const prefix = poiImagePrefix(theme, false)

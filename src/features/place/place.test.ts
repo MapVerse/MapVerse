@@ -24,7 +24,7 @@ describe('distanceMeters', () => {
 describe('categoryLabel', () => {
   it('prefers the first known key and humanizes unknown ones', () => {
     expect(categoryLabel('bicycle', 'shop')).toBe('Mağaza')
-    expect(categoryLabel('water_park')).toBe('Water park')
+    expect(categoryLabel('escape_game')).toBe('Escape game')
     expect(categoryLabel('constructor')).toBe('Constructor')
     expect(categoryLabel('yes', undefined)).toBeUndefined()
   })
@@ -38,7 +38,7 @@ describe('categoryInfo', () => {
       glyph: 'bag',
       color: '#3b82f6',
     })
-    expect(categoryInfo('water_park')).toBeUndefined()
+    expect(categoryInfo('escape_game')).toBeUndefined()
   })
 
   it('shades colours for map labels', () => {

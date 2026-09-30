@@ -5,7 +5,7 @@ import type {
   StyleSpecification,
 } from 'maplibre-gl'
 import type { Theme } from '../theme/theme.ts'
-import { poiIconImage, poiLabelColor } from './poiStyle.ts'
+import { poiFilter, poiIconImage, poiLabelColor } from './poiStyle.ts'
 
 // Near-monochrome maps: pale grey ground with white roads and buildings, or
 // its dark counterpart, so routes, places and category colours stand out.
@@ -218,7 +218,7 @@ function poiLayer(
   theme: Theme,
   id: string,
   minzoom: number,
-  rank: FilterSpecification,
+  rank: ExpressionSpecification,
 ): LayerSpecification {
   return {
     id,
@@ -226,7 +226,7 @@ function poiLayer(
     source: 'openmaptiles',
     'source-layer': 'poi',
     minzoom,
-    filter: rank,
+    filter: ['all', rank, poiFilter()],
     layout: {
       'icon-image': poiIconImage(theme),
       'icon-size': 1,
