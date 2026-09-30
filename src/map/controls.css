@@ -58,24 +58,23 @@
   outline-offset: -4px;
 }
 
-/* 3D: a cube with its label under it */
-.maplibregl-ctrl-top-right .mv-group .mv-tilt {
+/* 2D/3D: a cube with the view's name close under it, also once clicked
+   (the button rules above set a grid on :focus) */
+.maplibregl-ctrl-top-right .mv-group .mv-tilt,
+.maplibregl-ctrl-top-right .mv-group .mv-tilt:focus {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
 }
 
+/* Pulled up into the space the icon leaves round the cube */
 .mv-tilt-label {
-  font-size: 9.5px;
+  margin-top: -1px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   line-height: 1;
-}
-
-.maplibregl-ctrl-top-right .mv-group .mv-tilt[aria-pressed='true'] {
-  color: var(--mv-accent);
 }
 
 .maplibregl-ctrl button .maplibregl-ctrl-icon {
