@@ -14,8 +14,6 @@ import type { Place } from '../features/place/place.ts'
 import { findPoiLayerIds, toPoi } from '../features/place/poi.ts'
 import SelectedPoi, { type PoiMatch } from '../features/place/SelectedPoi.tsx'
 import SearchBox from '../features/search/SearchBox.tsx'
-import Traffic from '../features/traffic/Traffic.tsx'
-import { TRAFFIC_API_KEY } from '../features/traffic/traffic.ts'
 import './controls.css'
 import { maplibre } from './maplibre.ts'
 import { resolvePoiImage } from './poiStyle.ts'
@@ -101,9 +99,6 @@ export default function MapView() {
       <NavigationControl position="top-right" visualizePitch />
       <GeolocateControl position="top-right" trackUserLocation />
       <TiltControl position="top-right" />
-      {TRAFFIC_API_KEY && (
-        <Traffic apiKey={TRAFFIC_API_KEY} beforeId={labelLayerId} />
-      )}
       <ScaleControl position="bottom-left" />
       <SearchBox
         hidden={!!directionsTo}

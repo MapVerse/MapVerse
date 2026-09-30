@@ -1,4 +1,4 @@
-import { circle, rr } from './shapes.ts'
+import { circle } from './shapes.ts'
 
 /** Line icons for the interface, drawn for this app on a 24×24 grid. */
 export const STROKES = {
@@ -6,11 +6,6 @@ export const STROKES = {
   close: 'M6.5 6.5L17.5 17.5M17.5 6.5L6.5 17.5',
   back: 'M19.5 12H5M10.5 6L4.5 12L10.5 18',
   clock: circle(12, 12, 8.6) + 'M12 7.6V12L15 13.8',
-  traffic:
-    rr(8, 2.8, 8, 18.4, 3) +
-    circle(12, 7.3, 1.6) +
-    circle(12, 12, 1.6) +
-    circle(12, 16.7, 1.6),
   cube: 'M12 3L20 7.5V16.5L12 21L4 16.5V7.5ZM4 7.5L12 12L20 7.5M12 12V21',
   locate:
     circle(12, 12, 6.3) +
