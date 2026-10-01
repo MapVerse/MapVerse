@@ -22,7 +22,7 @@ export default function LandmarkExtrusions({
   beforeId?: string
 }) {
   const theme = useTheme()
-  const [ground, raised] = useMemo(() => {
+  const [ground, raised, groundColors] = useMemo(() => {
     const { features } = landmarkExtrusions(LANDMARKS, theme)
     const collection = (
       keep: (height: number) => boolean,
@@ -30,7 +30,9 @@ export default function LandmarkExtrusions({
       type: 'FeatureCollection',
       features: features.filter(({ properties }) => keep(properties!.height)),
     })
-    return [collection((h) => h <= FLAT), collection((h) => h > FLAT)]
+    const flat = collection((h) => h <= FLAT)
+    const colors = [...new Set(flat.features.map((f) => f.properties!.color))]
+    return [flat, collection((h) => h > FLAT), colors as string[]]
   }, [theme])
 
   const data = useOnTerrain(raised)
@@ -38,14 +40,21 @@ export default function LandmarkExtrusions({
   return (
     <>
       <Source id="landmark-ground" type="geojson" data={ground}>
-        <Layer
-          id="landmark-paving"
-          type="fill"
-          // On the ground: over roads and parks, under the buildings
-          beforeId="building"
-          minzoom={13}
-          paint={{ 'fill-color': ['get', 'color'] }}
-        />
+        {/* A colour a layer, as the map's own areas are drawn: so they
+            share its shaders, rather than one being built for them when
+            they first come into view, which stalls the map for a moment */}
+        {groundColors.map((color, i) => (
+          <Layer
+            key={color}
+            id={`landmark-paving-${i}`}
+            type="fill"
+            // On the ground: over roads and parks, under the buildings
+            beforeId="building"
+            minzoom={13}
+            filter={['==', ['get', 'color'], color]}
+            paint={{ 'fill-color': color }}
+          />
+        ))}
       </Source>
       {theme === 'dark' && (
         <Source id="landmark-lights" type="geojson" data={LIGHTS}>
