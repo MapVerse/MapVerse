@@ -9,6 +9,8 @@ import AccountMenu from '../features/account/AccountMenu.tsx'
 import AreaNames from '../features/areas/AreaNames.tsx'
 import LandmarkExtrusions from '../features/landmarks/LandmarkExtrusions.tsx'
 import Directions from '../features/directions/Directions.tsx'
+import { resolveSignalImage } from '../features/traffic/signalImage.ts'
+import TrafficSignals from '../features/traffic/TrafficSignals.tsx'
 import Boundary from '../features/place/Boundary.tsx'
 import PlaceCard from '../features/place/PlaceCard.tsx'
 import type { Place } from '../features/place/place.ts'
@@ -49,10 +51,12 @@ const LOCALE = {
   'ScaleControl.Meters': 'm',
 }
 
-/** POI badges are drawn the first time the map needs each one. */
+/** POI badges and traffic lights are drawn the first time the map needs each one. */
 function installImageResolver(ref: MapRef | null) {
   const map = ref?.getMap()
-  map?.setMissingStyleImageResolver((id) => resolvePoiImage(map, id))
+  map?.setMissingStyleImageResolver((id) => {
+    if (!resolveSignalImage(map, id)) resolvePoiImage(map, id)
+  })
 }
 
 /** `poi` is set when the place was picked from the map's own POIs. */
@@ -131,6 +135,7 @@ export default function MapView() {
       <MapControls />
       <ScaleControl position="bottom-left" />
       {poiLayerIds.length > 0 && <AreaNames beforeId={poiLayerIds[0]} />}
+      {poiLayerIds.length > 0 && <TrafficSignals beforeId={poiLayerIds[0]} />}
       {labelLayerId && <LandmarkExtrusions beforeId={labelLayerId} />}
       <SearchBox
         hidden={!!directions}
