@@ -4,12 +4,15 @@ import type { Theme } from '../../theme/theme.ts'
 /** The map image of a traffic light, for each theme. */
 export const signalImage = (theme: Theme) => `traffic-signal-${theme}`
 
-const [WIDTH, HEIGHT] = [12, 24]
+/** Its size in CSS px, with room round it for its shadow and glow. */
+const [WIDTH, HEIGHT] = [16, 28]
 const RATIO = 2
+const LAMPS = ['#ff4d4f', '#ffb21f', '#22d37a']
 
 /**
- * Draws a traffic light: a dark housing, edged to stand out on either
- * map, with its red, amber and green lamps one over another.
+ * Draws a traffic light: a slim graphite capsule, lit softly from above,
+ * with its red, amber and green lamps glowing one over another. No rim
+ * round it; a soft shadow sets it off the map.
  */
 export function drawSignal(theme: Theme): ImageData {
   const canvas = document.createElement('canvas')
@@ -18,25 +21,42 @@ export function drawSignal(theme: Theme): ImageData {
   const ctx = canvas.getContext('2d')!
   ctx.scale(RATIO, RATIO)
 
-  ctx.shadowColor =
-    theme === 'dark' ? 'rgb(0 0 0 / 50%)' : 'rgb(15 23 42 / 25%)'
-  ctx.shadowBlur = 2
-  ctx.shadowOffsetY = 0.5
-  ctx.fillStyle = '#23272e'
-  ctx.strokeStyle = theme === 'dark' ? '#5b6370' : '#ffffff'
-  ctx.lineWidth = 1
+  const [x, y, w, h] = [WIDTH / 2 - 4.5, 2.5, 9, HEIGHT - 6]
+  const dark = theme === 'dark'
+  const body = ctx.createLinearGradient(0, y, 0, y + h)
+  body.addColorStop(0, dark ? '#4a515c' : '#3a404a')
+  body.addColorStop(1, dark ? '#2b3038' : '#1c2027')
+  ctx.shadowColor = dark ? 'rgb(0 0 0 / 55%)' : 'rgb(15 23 42 / 35%)'
+  ctx.shadowBlur = 3
+  ctx.shadowOffsetY = 1
+  ctx.fillStyle = body
   ctx.beginPath()
-  ctx.roundRect(1.5, 1.5, WIDTH - 3, HEIGHT - 3, 3)
+  ctx.roundRect(x, y, w, h, w / 2)
   ctx.fill()
   ctx.shadowColor = 'transparent'
-  ctx.stroke()
 
-  for (const [i, color] of ['#ef4444', '#f59e0b', '#22c55e'].entries()) {
-    ctx.fillStyle = color
+  // A sheen along its top edge
+  const sheen = ctx.createLinearGradient(0, y, 0, y + 4)
+  sheen.addColorStop(0, 'rgb(255 255 255 / 22%)')
+  sheen.addColorStop(1, 'rgb(255 255 255 / 0%)')
+  ctx.fillStyle = sheen
+  ctx.beginPath()
+  ctx.roundRect(x + 0.5, y + 0.5, w - 1, 6, [w / 2, w / 2, 1, 1])
+  ctx.fill()
+
+  LAMPS.forEach((color, i) => {
+    const [cx, cy] = [WIDTH / 2, y + 4.8 + i * 6.2]
+    ctx.shadowColor = color
+    ctx.shadowBlur = dark ? 4 : 2.5
+    const lamp = ctx.createRadialGradient(cx - 0.6, cy - 0.6, 0.2, cx, cy, 2.4)
+    lamp.addColorStop(0, '#ffffff')
+    lamp.addColorStop(0.35, color)
+    lamp.addColorStop(1, color)
+    ctx.fillStyle = lamp
     ctx.beginPath()
-    ctx.arc(WIDTH / 2, 6 + i * 6, 2.1, 0, 2 * Math.PI)
+    ctx.arc(cx, cy, 2.3, 0, 2 * Math.PI)
     ctx.fill()
-  }
+  })
   return ctx.getImageData(0, 0, canvas.width, canvas.height)
 }
 
