@@ -1,6 +1,7 @@
 import { Layer, Source } from '@vis.gl/react-maplibre'
 import type { FeatureCollection, Polygon } from 'geojson'
 import { useMemo } from 'react'
+import { RISE_ZOOM, rising } from '../../map/style.ts'
 import { useTheme } from '../../theme/theme.ts'
 import { LANDMARKS } from './catalog.ts'
 import { landmarkExtrusions, landmarkLights } from './landmarks.ts'
@@ -50,7 +51,7 @@ export default function LandmarkExtrusions({
             type="fill"
             // On the ground: over roads and parks, under the buildings
             beforeId="building"
-            minzoom={13}
+            minzoom={RISE_ZOOM}
             filter={['==', ['get', 'color'], color]}
             paint={{ 'fill-color': color }}
           />
@@ -63,7 +64,7 @@ export default function LandmarkExtrusions({
             type="heatmap"
             // On the ground and the paving, under the buildings
             beforeId="building"
-            minzoom={13}
+            minzoom={RISE_ZOOM}
             paint={{
               // About 16 m round each light, at every zoom
               'heatmap-radius': [
@@ -93,9 +94,9 @@ export default function LandmarkExtrusions({
                 'interpolate',
                 ['linear'],
                 ['zoom'],
-                13,
+                RISE_ZOOM,
                 0,
-                14.5,
+                RISE_ZOOM + 1,
                 1,
               ],
             }}
@@ -107,11 +108,12 @@ export default function LandmarkExtrusions({
           id="landmarks-3d"
           type="fill-extrusion"
           beforeId={beforeId}
-          minzoom={13}
+          minzoom={RISE_ZOOM}
           paint={{
             'fill-extrusion-color': ['get', 'color'],
-            'fill-extrusion-base': ['get', 'base'],
-            'fill-extrusion-height': ['get', 'height'],
+            // Rising out of the ground with the map's own buildings
+            'fill-extrusion-base': rising(['get', 'base']),
+            'fill-extrusion-height': rising(['get', 'height']),
             // By day, darker towards the ground; floodlit at night, it is
             // the other way round, as the colours already show
             'fill-extrusion-vertical-gradient': theme === 'light',

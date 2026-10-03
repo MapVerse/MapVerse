@@ -131,6 +131,25 @@ const NAME: ExpressionSpecification = [
 const byZoom = (...stops: number[]): ExpressionSpecification =>
   ['interpolate', ['linear'], ['zoom'], ...stops] as ExpressionSpecification
 
+/**
+ * Buildings rise in 3D from this zoom, landmarks among them, out of the
+ * ground to their full height a zoom in; further out, they lie flat.
+ */
+export const RISE_ZOOM = 15
+
+/** A height that grows out of the ground as the buildings rise in 3D. */
+export const rising = (
+  height: ExpressionSpecification,
+): ExpressionSpecification => [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  RISE_ZOOM,
+  0,
+  RISE_ZOOM + 1,
+  height,
+]
+
 const isClass = (...classes: string[]): ExpressionSpecification => [
   'match',
   ['get', 'class'],
@@ -594,8 +613,12 @@ function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
         'source-layer': 'building',
         minzoom: 13,
         maxzoom: 15.5,
-        // Landmarks, drawn in 3D from this zoom, stand in for their own
-        filter: hideBuildings(LANDMARK_ZONES),
+        // Landmarks, drawn in 3D once buildings rise, stand in for their own
+        filter: [
+          'any',
+          ['<', ['zoom'], RISE_ZOOM],
+          hideBuildings(LANDMARK_ZONES),
+        ],
         paint: {
           'fill-color': c.building,
           'fill-outline-color': c.buildingLine,
@@ -608,7 +631,7 @@ function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
         type: 'fill-extrusion',
         source: 'openmaptiles',
         'source-layer': 'building',
-        minzoom: 15,
+        minzoom: RISE_ZOOM,
         // Landmarks stand in for their own buildings
         filter: [
           'all',
@@ -617,24 +640,16 @@ function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
         ],
         paint: {
           'fill-extrusion-color': c.extrusion,
-          'fill-extrusion-height': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            15,
+          'fill-extrusion-height': rising([
+            'coalesce',
+            ['get', 'render_height'],
+            6,
+          ]),
+          'fill-extrusion-base': rising([
+            'coalesce',
+            ['get', 'render_min_height'],
             0,
-            16,
-            ['coalesce', ['get', 'render_height'], 6],
-          ],
-          'fill-extrusion-base': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            15,
-            0,
-            16,
-            ['coalesce', ['get', 'render_min_height'], 0],
-          ],
+          ]),
           'fill-extrusion-opacity': 0.94,
           'fill-extrusion-vertical-gradient': true,
         },

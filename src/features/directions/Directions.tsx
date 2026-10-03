@@ -4,6 +4,7 @@ import type { ExpressionSpecification } from 'maplibre-gl'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '../../icons/Icon.tsx'
 import type { StrokeName } from '../../icons/strokes.ts'
+import { RISE_ZOOM, rising } from '../../map/style.ts'
 import { useTheme, type Theme } from '../../theme/theme.ts'
 import { LANDMARKS } from '../landmarks/catalog.ts'
 import { routesOnDecks } from '../landmarks/decks.ts'
@@ -34,7 +35,7 @@ const ROUTE_COLORS: Record<
 }
 
 /** From this zoom the landmarks, bridges' decks among them, are drawn. */
-const DECKS_ZOOM = 13
+const DECKS_ZOOM = RISE_ZOOM
 
 /** Routes on the ground, but not along a deck once the deck is drawn. */
 const ON_GROUND: ExpressionSpecification = [
@@ -385,8 +386,9 @@ export default function Directions({ to, beforeId, onClose }: Props) {
               colors.selected,
               colors.alternate,
             ],
-            'fill-extrusion-base': ['get', 'base'],
-            'fill-extrusion-height': ['get', 'height'],
+            // Rising with the deck under them
+            'fill-extrusion-base': rising(['get', 'base']),
+            'fill-extrusion-height': rising(['get', 'height']),
             'fill-extrusion-vertical-gradient': false,
           }}
         />
