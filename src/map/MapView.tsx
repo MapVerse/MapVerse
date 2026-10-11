@@ -26,6 +26,7 @@ import {
 } from '../features/search/useCategorySearch.ts'
 import { useTheme } from '../theme/theme.ts'
 import './controls.css'
+import { useMapDesign } from './designSetting.ts'
 import MapControls from './MapControls.tsx'
 import { maplibre } from './maplibre.ts'
 import { resolvePoiImage } from './poiStyle.ts'
@@ -65,6 +66,7 @@ type Selection = { place: Place; poi?: PoiMatch }
 export default function MapView() {
   const theme = useTheme()
   const terrain = useTerrainEnabled()
+  const design = useMapDesign()
   const [poiLayerIds, setPoiLayerIds] = useState<string[]>([])
   const [hoveringPoi, setHoveringPoi] = useState(false)
   const [selection, setSelection] = useState<Selection | null>(null)
@@ -112,7 +114,7 @@ export default function MapView() {
       mapLib={maplibre}
       initialViewState={INITIAL_VIEW}
       ref={installImageResolver}
-      mapStyle={mapStyle(theme, terrain)}
+      mapStyle={mapStyle(theme, terrain, design)}
       locale={LOCALE}
       hash
       // Drops the default MapLibre link but keeps the data attribution the

@@ -3,6 +3,7 @@ import type { FeatureCollection, Point } from 'geojson'
 import type { ExpressionSpecification } from 'maplibre-gl'
 import { useEffect } from 'react'
 import { poiImageId } from '../../map/poiStyle.ts'
+import { useMapDesign } from '../../map/designSetting.ts'
 import { labelHalo } from '../../map/style.ts'
 import { useTheme } from '../../theme/theme.ts'
 import {
@@ -24,6 +25,7 @@ type Props = {
 export default function SearchResults({ results, selectedKey }: Props) {
   const { current: map } = useMap()
   const theme = useTheme()
+  const design = useMapDesign()
 
   // Bring results into view, unless they all are already
   useEffect(() => {
@@ -91,7 +93,7 @@ export default function SearchResults({ results, selectedKey }: Props) {
         }}
         paint={{
           'text-color': ['get', 'color'],
-          'text-halo-color': labelHalo(theme),
+          'text-halo-color': labelHalo(theme, design),
           'text-halo-width': 1.5,
         }}
       />

@@ -8,12 +8,18 @@ import type {
 import { LANDMARKS } from '../features/landmarks/catalog.ts'
 import { hideBuildings, hideZones } from '../features/landmarks/landmarks.ts'
 import type { Theme } from '../theme/theme.ts'
+import type { MapDesign } from './designSetting.ts'
 import { poiFilter, poiIconImage, poiLabelColor } from './poiStyle.ts'
 
 // A bright, lightly coloured map: warm ground, clear blue water, green
 // parks, tinted districts and yellow highways. Its dark counterpart stays
 // muted, so routes, places and category colours stand out on both.
 const LIGHT = {
+  // How labels are set: San Andreas writes them in capitals with a heavy
+  // outline, in one colour rather than each POI's category colour
+  upperLabels: false,
+  haloScale: 1,
+  poiLabel: null as string | null,
   land: '#f4f2ee',
   landuse: '#eeebe6',
   commercial: '#f8edf0',
@@ -62,6 +68,7 @@ const LIGHT = {
 type Palette = typeof LIGHT
 
 const DARK: Palette = {
+  ...LIGHT,
   land: '#1b1e24',
   landuse: '#1f232a',
   commercial: '#231f27',
@@ -105,16 +112,211 @@ const DARK: Palette = {
   sky: '#10151c',
 }
 
-const PALETTES: Record<Theme, Palette> = { light: LIGHT, dark: DARK }
+// An old printed map: parchment ground, sea-green water, inked labels and
+// ochre highways; by night, the same in sepia
+const VINTAGE_LIGHT: Palette = {
+  ...LIGHT,
+  land: '#f1e6cc',
+  landuse: '#ebdfc2',
+  commercial: '#f0dcc8',
+  industrial: '#e2d9c6',
+  hospital: '#efd2c4',
+  education: '#efe0b8',
+  green: '#d5dcac',
+  wood: '#c3ce98',
+  sand: '#f3e2b3',
+  ice: '#fbf7ee',
+  water: '#b7d0c8',
+  waterLabel: '#4d7468',
+  building: '#e2d3b4',
+  buildingLine: '#c9b48f',
+  extrusion: '#eadcc0',
+  road: '#fbf5e6',
+  primary: '#f7e4b8',
+  motorway: '#e9b875',
+  casing: '#cdb894',
+  majorCasing: '#c9a46a',
+  motorwayCasing: '#a8743d',
+  tunnel: '#efe5cf',
+  path: '#a89272',
+  rail: '#8f7e66',
+  runway: '#e0d2b5',
+  ferry: '#6f988b',
+  boundary: '#9a6a5a',
+  stateBoundary: '#c4a493',
+  label: '#3f2e1e',
+  labelSoft: '#5a4630',
+  labelMuted: '#76603f',
+  labelSubtle: '#9a8565',
+  areaLabel: '#8a6f4f',
+  halo: '#f6eedb',
+  lightColor: '#fff4dc',
+  hillShadow: '#5a4630',
+  hillHighlight: '#fffaf0',
+  hillAccent: '#76603f',
+  sky: '#e8dcc0',
+}
+
+const VINTAGE_DARK: Palette = {
+  ...DARK,
+  land: '#221d17',
+  landuse: '#262019',
+  commercial: '#2a211c',
+  industrial: '#25211c',
+  hospital: '#2d211d',
+  education: '#2a2519',
+  green: '#232619',
+  wood: '#20261a',
+  sand: '#2e2a1e',
+  ice: '#2e2b26',
+  water: '#16231f',
+  waterLabel: '#7f9e92',
+  building: '#2a241d',
+  buildingLine: '#3a3126',
+  extrusion: '#332b22',
+  road: '#4a3f30',
+  primary: '#574631',
+  motorway: '#6e5332',
+  casing: '#2a231b',
+  majorCasing: '#30271c',
+  motorwayCasing: '#3a2c1a',
+  tunnel: '#2e271f',
+  path: '#5e5140',
+  rail: '#544838',
+  runway: '#2e2820',
+  ferry: '#4a6a60',
+  boundary: '#7a5a4a',
+  stateBoundary: '#4f4236',
+  label: '#efe2c6',
+  labelSoft: '#d6c5a2',
+  labelMuted: '#ab9a7a',
+  labelSubtle: '#7f705a',
+  areaLabel: '#a08f70',
+  halo: '#221d17',
+  lightColor: '#fff0d6',
+  hillHighlight: '#4f4536',
+  hillAccent: '#0e0b08',
+  sky: '#16120e',
+}
+
+// After GTA San Andreas' radar: dusty desert ground, olive grass, muted blue
+// water, grey asphalt with dark kerbs and white capitals outlined in black,
+// under an orange smoggy sky. By night, the game's purple-blue streets.
+const SAN_ANDREAS_DAY: Palette = {
+  ...LIGHT,
+  upperLabels: true,
+  haloScale: 1.5,
+  poiLabel: '#ffffff',
+  land: '#b9ad8a',
+  landuse: '#b0a582',
+  commercial: '#b5a38c',
+  industrial: '#a39d8e',
+  hospital: '#c0a39a',
+  education: '#bdb08a',
+  green: '#8ea36a',
+  wood: '#6f8a52',
+  sand: '#d8c48f',
+  ice: '#e6e6e6',
+  water: '#5d7fa3',
+  waterLabel: '#ffffff',
+  building: '#9c9284',
+  buildingLine: '#7e7568',
+  extrusion: '#bdb3a2',
+  road: '#8c8c8c',
+  primary: '#7d7d7d',
+  motorway: '#5f5f5f',
+  casing: '#4a4a4a',
+  majorCasing: '#3c3c3c',
+  motorwayCasing: '#2a2a2a',
+  tunnel: '#a09a8c',
+  path: '#8a7d62',
+  rail: '#5b5249',
+  runway: '#7a7a7a',
+  ferry: '#3d5f85',
+  boundary: '#5a4a3a',
+  stateBoundary: '#7a6a55',
+  label: '#ffffff',
+  labelSoft: '#f4f4f4',
+  labelMuted: '#ececec',
+  labelSubtle: '#dedede',
+  areaLabel: '#f3e3bd',
+  halo: '#000000',
+  lightColor: '#ffd9a0',
+  lightIntensity: 0.3,
+  hillShadow: '#3b2e1e',
+  hillHighlight: '#f2dcae',
+  hillAccent: '#5a4630',
+  hillStrength: 0.55,
+  sky: '#f0a860',
+}
+
+const SAN_ANDREAS_NIGHT: Palette = {
+  ...SAN_ANDREAS_DAY,
+  land: '#2f3140',
+  landuse: '#33354a',
+  commercial: '#3a3148',
+  industrial: '#33344a',
+  hospital: '#43303e',
+  education: '#3e3a36',
+  green: '#2f3f33',
+  wood: '#273629',
+  sand: '#4a4434',
+  ice: '#4a4e5c',
+  water: '#1b2a45',
+  building: '#3b3d4d',
+  buildingLine: '#4a4c5e',
+  extrusion: '#46485a',
+  road: '#5c5c66',
+  primary: '#6a6670',
+  // Sodium-lit freeways
+  motorway: '#7a7058',
+  casing: '#1e1f28',
+  majorCasing: '#1a1b22',
+  motorwayCasing: '#14151b',
+  tunnel: '#3a3b46',
+  path: '#5a5468',
+  rail: '#565266',
+  runway: '#4a4a55',
+  ferry: '#3a5278',
+  boundary: '#7a6a8a',
+  stateBoundary: '#5a4f68',
+  areaLabel: '#d8c8a0',
+  lightColor: '#c8b8ff',
+  lightIntensity: 0.2,
+  hillShadow: '#000000',
+  hillHighlight: '#5a5470',
+  hillAccent: '#101018',
+  hillStrength: 0.6,
+  sky: '#1c1630',
+}
+
+const PALETTES: Record<MapDesign, Record<Theme, Palette>> = {
+  standard: { light: LIGHT, dark: DARK },
+  vintage: { light: VINTAGE_LIGHT, dark: VINTAGE_DARK },
+  'san-andreas': { light: SAN_ANDREAS_DAY, dark: SAN_ANDREAS_NIGHT },
+}
 
 /** Halo behind map labels, for layers added outside the style. */
-export function labelHalo(theme: Theme) {
-  return PALETTES[theme].halo
+export function labelHalo(theme: Theme, design: MapDesign = 'standard') {
+  return PALETTES[design][theme].halo
 }
 
 /** Colour for the names of estates and industrial areas. */
-export function areaLabelColor(theme: Theme) {
-  return PALETTES[theme].areaLabel
+export function areaLabelColor(theme: Theme, design: MapDesign = 'standard') {
+  return PALETTES[design][theme].areaLabel
+}
+
+/** A few of a design's colours, for its preview in the settings. */
+export function designSwatch(design: MapDesign, theme: Theme) {
+  const c = PALETTES[design][theme]
+  return {
+    land: c.land,
+    green: c.green,
+    water: c.water,
+    road: c.road,
+    casing: c.casing,
+    motorway: c.motorway,
+  }
 }
 
 const REGULAR = ['Noto Sans Regular']
@@ -291,6 +493,7 @@ function roads(c: Palette, tunnel: boolean): LayerSpecification[] {
 
 function poiLayer(
   theme: Theme,
+  c: Palette,
   id: string,
   minzoom: number,
   rank: ExpressionSpecification,
@@ -315,9 +518,9 @@ function poiLayer(
       'text-optional': true,
     },
     paint: {
-      'text-color': poiLabelColor(theme),
-      'text-halo-color': PALETTES[theme].halo,
-      'text-halo-width': 1.5,
+      'text-color': c.poiLabel ?? poiLabelColor(theme),
+      'text-halo-color': c.halo,
+      'text-halo-width': 1.5 * c.haloScale,
     },
   }
 }
@@ -349,7 +552,7 @@ function placeLabel(
       'text-font': options.font,
       'text-size': options.size,
       'text-max-width': 8,
-      ...(options.uppercase && {
+      ...((options.uppercase || c.upperLabels) && {
         'text-transform': 'uppercase',
         'text-letter-spacing': 0.08,
       }),
@@ -357,7 +560,7 @@ function placeLabel(
     paint: {
       'text-color': options.color,
       'text-halo-color': c.halo,
-      'text-halo-width': 1.6,
+      'text-halo-width': 1.6 * c.haloScale,
     },
   }
 }
@@ -394,8 +597,12 @@ function hillshade(c: Palette): LayerSpecification {
 /** The map's own buildings that the landmarks are drawn in place of. */
 const LANDMARK_ZONES = hideZones(LANDMARKS)
 
-function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
-  const c = PALETTES[theme]
+function buildStyle(
+  theme: Theme,
+  terrain: boolean,
+  design: MapDesign,
+): StyleSpecification {
+  const c = PALETTES[design][theme]
   return {
     version: 8,
     name: 'MapVerse',
@@ -702,7 +909,7 @@ function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
         paint: {
           'text-color': c.waterLabel,
           'text-halo-color': c.halo,
-          'text-halo-width': 1.2,
+          'text-halo-width': 1.2 * c.haloScale,
         },
       },
       {
@@ -719,7 +926,7 @@ function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
         paint: {
           'text-color': c.waterLabel,
           'text-halo-color': c.halo,
-          'text-halo-width': 1.2,
+          'text-halo-width': 1.2 * c.haloScale,
         },
       },
       {
@@ -739,7 +946,7 @@ function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
         paint: {
           'text-color': c.labelMuted,
           'text-halo-color': c.halo,
-          'text-halo-width': 1.6,
+          'text-halo-width': 1.6 * c.haloScale,
         },
       },
       {
@@ -756,21 +963,21 @@ function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
         paint: {
           'text-color': c.labelSubtle,
           'text-halo-color': c.halo,
-          'text-halo-width': 1.2,
+          'text-halo-width': 1.2 * c.haloScale,
         },
       },
       // Like OpenMapTiles styles, show the most important POIs first
-      poiLayer(theme, 'poi-r1', 15, [
+      poiLayer(theme, c, 'poi-r1', 15, [
         '<=',
         ['coalesce', ['get', 'rank'], 99],
         6,
       ]),
-      poiLayer(theme, 'poi-r7', 16, [
+      poiLayer(theme, c, 'poi-r7', 16, [
         'all',
         ['>', ['coalesce', ['get', 'rank'], 99], 6],
         ['<=', ['coalesce', ['get', 'rank'], 99], 19],
       ]),
-      poiLayer(theme, 'poi-r20', 17, [
+      poiLayer(theme, c, 'poi-r20', 17, [
         '>',
         ['coalesce', ['get', 'rank'], 99],
         19,
@@ -825,13 +1032,17 @@ function buildStyle(theme: Theme, terrain: boolean): StyleSpecification {
 
 const styles = new Map<string, StyleSpecification>()
 
-/** The map style for a theme, with or without 3D terrain. */
-export function mapStyle(theme: Theme, terrain: boolean): StyleSpecification {
+/** The map style for a theme and design, with or without 3D terrain. */
+export function mapStyle(
+  theme: Theme,
+  terrain: boolean,
+  design: MapDesign = 'standard',
+): StyleSpecification {
   // The same object each time, so the map only restyles on a real change
-  const key = `${theme}:${terrain}`
+  const key = `${design}:${theme}:${terrain}`
   let style = styles.get(key)
   if (!style) {
-    style = buildStyle(theme, terrain)
+    style = buildStyle(theme, terrain, design)
     styles.set(key, style)
   }
   return style

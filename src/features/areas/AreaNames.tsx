@@ -2,6 +2,7 @@ import { Layer, Source } from '@vis.gl/react-maplibre'
 import type { FeatureCollection, Point } from 'geojson'
 import { useMemo } from 'react'
 import { useTilesInView } from '../../lib/useTilesInView.ts'
+import { useMapDesign } from '../../map/designSetting.ts'
 import { areaLabelColor, labelHalo } from '../../map/style.ts'
 import { useTheme } from '../../theme/theme.ts'
 import { fetchAreaNames } from './areaNames.ts'
@@ -17,6 +18,7 @@ type Props = {
 /** Labels residential estates (sites) and industrial areas by name. */
 export default function AreaNames({ beforeId }: Props) {
   const theme = useTheme()
+  const design = useMapDesign()
   const areas = useTilesInView(MIN_ZOOM, fetchAreaNames)
 
   const data = useMemo<FeatureCollection<Point>>(
@@ -46,8 +48,8 @@ export default function AreaNames({ beforeId }: Props) {
           'text-letter-spacing': 0.02,
         }}
         paint={{
-          'text-color': areaLabelColor(theme),
-          'text-halo-color': labelHalo(theme),
+          'text-color': areaLabelColor(theme, design),
+          'text-halo-color': labelHalo(theme, design),
           'text-halo-width': 1.4,
         }}
       />

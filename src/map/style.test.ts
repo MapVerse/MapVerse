@@ -1,27 +1,30 @@
 import { validateStyleMin } from '@maplibre/maplibre-gl-style-spec'
 import { describe, expect, it } from 'vitest'
 import type { Theme } from '../theme/theme.ts'
+import { MAP_DESIGNS } from './designSetting.ts'
 import { mapStyle } from './style.ts'
 
-const variants = [
-  ['light', false],
-  ['dark', false],
-  ['light', true],
-  ['dark', true],
-] as const
+const variants = MAP_DESIGNS.flatMap((design) =>
+  (['light', 'dark'] as const).flatMap((theme) =>
+    [false, true].map((terrain) => [design, theme, terrain] as const),
+  ),
+)
 
-describe.each(variants)('%s map style, terrain %s', (theme, terrain) => {
-  const style = mapStyle(theme, terrain)
+describe.each(variants)(
+  '%s %s map style, terrain %s',
+  (design, theme, terrain) => {
+    const style = mapStyle(theme, terrain, design)
 
-  it('passes the MapLibre style spec validator', () => {
-    expect(validateStyleMin(style)).toEqual([])
-  })
+    it('passes the MapLibre style spec validator', () => {
+      expect(validateStyleMin(style)).toEqual([])
+    })
 
-  it('has unique layer ids', () => {
-    const ids = style.layers.map((layer) => layer.id)
-    expect(new Set(ids).size).toBe(ids.length)
-  })
-})
+    it('has unique layer ids', () => {
+      const ids = style.layers.map((layer) => layer.id)
+      expect(new Set(ids).size).toBe(ids.length)
+    })
+  },
+)
 
 describe('map styles', () => {
   const ids = (theme: Theme, terrain: boolean) =>
@@ -45,6 +48,15 @@ describe('map styles', () => {
         'hillshade',
       ),
     )
+  })
+
+  // Landmarks, traffic lights and search results find their place by id
+  it('share the same layers across designs', () => {
+    for (const design of MAP_DESIGNS) {
+      expect(
+        mapStyle('light', true, design).layers.map((layer) => layer.id),
+      ).toEqual(ids('light', true))
+    }
   })
 
   it('returns the same object for the same options', () => {
