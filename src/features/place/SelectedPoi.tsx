@@ -1,7 +1,8 @@
 import { Layer, Source, useMap } from '@vis.gl/react-maplibre'
 import type { ExpressionSpecification } from 'maplibre-gl'
 import { useEffect } from 'react'
-import { selectedPoiImage } from '../../map/poiStyle.ts'
+import { useMapDesign } from '../../map/designSetting.ts'
+import { badgeSkin, selectedPoiImage } from '../../map/poiStyle.ts'
 import { useTheme } from '../../theme/theme.ts'
 
 /** Identifies the picked feature within the style's POI layers. */
@@ -28,6 +29,7 @@ export default function SelectedPoi({
 }: Props) {
   const { current: map } = useMap()
   const theme = useTheme()
+  const design = useMapDesign()
   const image = icon && map?.hasImage(icon) ? map.getImage(icon) : undefined
   const side = image
     ? Math.max(image.data.width, image.data.height) / image.pixelRatio
@@ -36,7 +38,8 @@ export default function SelectedPoi({
     side > 0 ? Math.min(1.8, Math.max(1.3, TARGET_ICON_PX / side)) : 1.6
 
   // Fade out the POI's own small icon while the enlarged copy stands in for it.
-  // A theme change restyles the POI layers, so it's done again after one.
+  // A theme or design change restyles the POI layers, so it's done again
+  // after one.
   useEffect(() => {
     if (!map) return
     const style = map.getMap()
@@ -67,10 +70,10 @@ export default function SelectedPoi({
         }
       }
     }
-  }, [map, theme, layerIds, match.id, match.name, match.class])
+  }, [map, theme, design, layerIds, match.id, match.name, match.class])
 
   if (!icon) return null
-  const selectedIcon = selectedPoiImage(icon, theme)
+  const selectedIcon = selectedPoiImage(icon, badgeSkin(theme, design))
   return (
     <Source
       id="selected-poi"

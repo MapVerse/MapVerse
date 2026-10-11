@@ -1,0 +1,64 @@
+/* White figures and gothic district names, both outlined in black as in
+   the game's HUD */
+.mv-sa-hud {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.mv-sa-clock,
+.mv-sa-zone {
+  position: absolute;
+  -webkit-text-stroke: 1.5px #000;
+  paint-order: stroke fill;
+  text-shadow: 2px 2px 0 #000;
+}
+
+/* Beside the account button, where the game keeps its clock */
+.mv-sa-clock {
+  top: 14px;
+  right: 72px;
+  color: #e1e1e1;
+  font:
+    700 30px / 1 Impact,
+    'Arial Narrow Bold',
+    'Arial Black',
+    sans-serif;
+  letter-spacing: 1px;
+}
+
+/* Left of the map buttons, as low as the game sets it */
+.mv-sa-zone {
+  right: 76px;
+  bottom: 22px;
+  max-width: calc(100% - 200px);
+  color: #a9bee0;
+  font:
+    italic 700 32px / 1.1 'Old English Text MT',
+    'UnifrakturMaguntia',
+    Georgia,
+    'Times New Roman',
+    serif;
+  text-align: right;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.mv-sa-zone[data-shown='true'] {
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .mv-sa-clock {
+    top: 76px;
+    right: 14px;
+    font-size: 24px;
+  }
+
+  .mv-sa-zone {
+    bottom: 40px;
+    max-width: calc(100% - 100px);
+    font-size: 24px;
+  }
+}

@@ -7,30 +7,43 @@ import {
 } from '../features/place/categories.ts'
 import { drawBadge } from '../icons/badge.ts'
 import type { Theme } from '../theme/theme.ts'
+import type { MapDesign } from './designSetting.ts'
 
-// Badge images are named `mv-poi:{theme}:{normal|selected}:{category}`
+/**
+ * How badges are drawn: discs for the light or dark map, or San Andreas'
+ * radar blips, the same by day and night as in the game.
+ */
+export type BadgeSkin = Theme | 'blip'
+const SKINS: readonly BadgeSkin[] = ['light', 'dark', 'blip']
+
+export function badgeSkin(theme: Theme, design: MapDesign): BadgeSkin {
+  return design === 'san-andreas' ? 'blip' : theme
+}
+
+// Badge images are named `mv-poi:{skin}:{normal|selected}:{category}`
 const IMAGE_PREFIX = 'mv-poi'
 
-function poiImagePrefix(theme: Theme, selected: boolean) {
-  return `${IMAGE_PREFIX}:${theme}:${selected ? 'selected' : 'normal'}:`
+function poiImagePrefix(skin: BadgeSkin, selected: boolean) {
+  return `${IMAGE_PREFIX}:${skin}:${selected ? 'selected' : 'normal'}:`
 }
 
 /** The badge image for a category, drawn on demand by `resolvePoiImage`. */
-export function poiImageId(theme: Theme, key: string, selected = false) {
-  return poiImagePrefix(theme, selected) + key
+export function poiImageId(skin: BadgeSkin, key: string, selected = false) {
+  return poiImagePrefix(skin, selected) + key
 }
 
 function parsePoiImageId(id: string) {
-  const [prefix, theme, state, key] = id.split(':')
+  const [prefix, skin, state, key] = id.split(':')
   if (prefix !== IMAGE_PREFIX || !key) return undefined
-  if (theme !== 'light' && theme !== 'dark') return undefined
-  return { theme: theme as Theme, selected: state === 'selected', key }
+  const known = SKINS.find((s) => s === skin)
+  if (!known) return undefined
+  return { skin: known, selected: state === 'selected', key }
 }
 
-/** The selected version of a POI's badge image, in the given theme. */
-export function selectedPoiImage(icon: string, theme: Theme): string {
+/** The selected version of a POI's badge image, in the given skin. */
+export function selectedPoiImage(icon: string, skin: BadgeSkin): string {
   const parsed = parsePoiImageId(icon)
-  return parsed ? poiImagePrefix(theme, true) + parsed.key : icon
+  return parsed ? poiImagePrefix(skin, true) + parsed.key : icon
 }
 
 // POIs name their category in `subclass` (more specific) or `class`
@@ -84,8 +97,8 @@ export function poiFilter(): ExpressionSpecification {
 }
 
 /** Picks each POI's badge image by category. */
-export function poiIconImage(theme: Theme): ExpressionSpecification {
-  const prefix = poiImagePrefix(theme, false)
+export function poiIconImage(skin: BadgeSkin): ExpressionSpecification {
+  const prefix = poiImagePrefix(skin, false)
   return [
     'match',
     subclass,
@@ -126,7 +139,8 @@ export function resolvePoiImage(map: MapLibreMap, id: string) {
     id,
     drawBadge(info.glyph, info.color, {
       selected: parsed.selected,
-      dark: parsed.theme === 'dark',
+      dark: parsed.skin === 'dark',
+      blip: parsed.skin === 'blip',
     }),
     { pixelRatio: 2 },
   )

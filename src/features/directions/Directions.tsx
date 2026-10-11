@@ -4,6 +4,7 @@ import type { ExpressionSpecification } from 'maplibre-gl'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from '../../icons/Icon.tsx'
 import type { StrokeName } from '../../icons/strokes.ts'
+import { useMapDesign } from '../../map/designSetting.ts'
 import { RISE_ZOOM, rising } from '../../map/style.ts'
 import { useTheme, type Theme } from '../../theme/theme.ts'
 import { LANDMARKS } from '../landmarks/catalog.ts'
@@ -34,6 +35,13 @@ const ROUTE_COLORS: Record<
   dark: { casing: '#11151b', alternate: '#56657b', selected: '#4c8df6' },
 }
 
+// San Andreas: an objective-yellow route edged in black, by day and night
+const SAN_ANDREAS_ROUTE = {
+  casing: '#000000',
+  alternate: '#8c8c8c',
+  selected: '#ffd83a',
+}
+
 /** From this zoom the landmarks, bridges' decks among them, are drawn. */
 const DECKS_ZOOM = RISE_ZOOM
 
@@ -57,7 +65,9 @@ type Props = {
 export default function Directions({ to, beforeId, onClose }: Props) {
   const { current: map } = useMap()
   const panelRef = useRef<HTMLElement>(null)
-  const colors = ROUTE_COLORS[useTheme()]
+  const theme = useTheme()
+  const colors =
+    useMapDesign() === 'san-andreas' ? SAN_ANDREAS_ROUTE : ROUTE_COLORS[theme]
   const [mode, setMode] = useState<TravelMode>('auto')
   const [origin, setOrigin] = useState<Origin | null>(null)
   const [locating, setLocating] = useState<'pending' | 'failed' | 'done'>(() =>

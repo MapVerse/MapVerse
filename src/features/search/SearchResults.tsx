@@ -2,7 +2,7 @@ import { Layer, Source, useMap } from '@vis.gl/react-maplibre'
 import type { FeatureCollection, Point } from 'geojson'
 import type { ExpressionSpecification } from 'maplibre-gl'
 import { useEffect } from 'react'
-import { poiImageId } from '../../map/poiStyle.ts'
+import { badgeSkin, poiImageId } from '../../map/poiStyle.ts'
 import { useMapDesign } from '../../map/designSetting.ts'
 import { labelHalo } from '../../map/style.ts'
 import { useTheme } from '../../theme/theme.ts'
@@ -60,8 +60,12 @@ export default function SearchResults({ results, selectedKey }: Props) {
         properties: {
           key: result.key,
           name: result.name,
-          icon: poiImageId(theme, info.key, true),
-          color: labelColor(info.color, theme),
+          icon: poiImageId(badgeSkin(theme, design), info.key, true),
+          // San Andreas writes every name in white
+          color:
+            design === 'san-andreas'
+              ? '#ffffff'
+              : labelColor(info.color, theme),
         },
       }
     }),

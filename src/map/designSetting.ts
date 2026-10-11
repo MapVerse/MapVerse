@@ -13,6 +13,7 @@ const STORAGE_KEY = 'mapverse:map-design'
 
 let design = load()
 const listeners = new Set<() => void>()
+apply()
 
 function load(): MapDesign {
   try {
@@ -21,6 +22,12 @@ function load(): MapDesign {
   } catch {
     return 'standard'
   }
+}
+
+// Stylesheets dress the map's own markers (the user's location) by design
+function apply() {
+  if (typeof document === 'undefined') return
+  document.documentElement.dataset.mapDesign = design
 }
 
 /** Switches the map's design, and remembers it. */
@@ -32,6 +39,7 @@ export function setMapDesign(next: MapDesign) {
   } catch {
     // Storage can be unavailable (private mode); the choice then lasts one visit
   }
+  apply()
   for (const listener of listeners) listener()
 }
 

@@ -8,6 +8,12 @@ describe('selectedPoiImage', () => {
     )
   })
 
+  it('keeps San Andreas blips as blips', () => {
+    expect(selectedPoiImage('mv-poi:blip:normal:cafe', 'blip')).toBe(
+      'mv-poi:blip:selected:cafe',
+    )
+  })
+
   it('leaves other images as they are', () => {
     expect(selectedPoiImage('marker', 'light')).toBe('marker')
   })

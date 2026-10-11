@@ -9,7 +9,12 @@ import { LANDMARKS } from '../features/landmarks/catalog.ts'
 import { hideBuildings, hideZones } from '../features/landmarks/landmarks.ts'
 import type { Theme } from '../theme/theme.ts'
 import type { MapDesign } from './designSetting.ts'
-import { poiFilter, poiIconImage, poiLabelColor } from './poiStyle.ts'
+import {
+  badgeSkin,
+  poiFilter,
+  poiIconImage,
+  poiLabelColor,
+} from './poiStyle.ts'
 
 // A bright, lightly coloured map: warm ground, clear blue water, green
 // parks, tinted districts and yellow highways. Its dark counterpart stays
@@ -493,6 +498,7 @@ function roads(c: Palette, tunnel: boolean): LayerSpecification[] {
 
 function poiLayer(
   theme: Theme,
+  design: MapDesign,
   c: Palette,
   id: string,
   minzoom: number,
@@ -506,7 +512,7 @@ function poiLayer(
     minzoom,
     filter: ['all', rank, poiFilter()],
     layout: {
-      'icon-image': poiIconImage(theme),
+      'icon-image': poiIconImage(badgeSkin(theme, design)),
       'icon-size': 1,
       'symbol-sort-key': ['coalesce', ['get', 'rank'], 99],
       'text-field': NAME,
@@ -967,17 +973,17 @@ function buildStyle(
         },
       },
       // Like OpenMapTiles styles, show the most important POIs first
-      poiLayer(theme, c, 'poi-r1', 15, [
+      poiLayer(theme, design, c, 'poi-r1', 15, [
         '<=',
         ['coalesce', ['get', 'rank'], 99],
         6,
       ]),
-      poiLayer(theme, c, 'poi-r7', 16, [
+      poiLayer(theme, design, c, 'poi-r7', 16, [
         'all',
         ['>', ['coalesce', ['get', 'rank'], 99], 6],
         ['<=', ['coalesce', ['get', 'rank'], 99], 19],
       ]),
-      poiLayer(theme, c, 'poi-r20', 17, [
+      poiLayer(theme, design, c, 'poi-r20', 17, [
         '>',
         ['coalesce', ['get', 'rank'], 99],
         19,

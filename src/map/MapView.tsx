@@ -25,6 +25,7 @@ import {
   type CategorySearch,
 } from '../features/search/useCategorySearch.ts'
 import { useTheme } from '../theme/theme.ts'
+import SanAndreasHud from './SanAndreasHud.tsx'
 import './controls.css'
 import { useMapDesign } from './designSetting.ts'
 import MapControls from './MapControls.tsx'
@@ -136,6 +137,7 @@ export default function MapView() {
       <AccountMenu position="top-right" />
       <MapControls />
       <ScaleControl position="bottom-left" />
+      {design === 'san-andreas' && <SanAndreasHud />}
       {poiLayerIds.length > 0 && <AreaNames beforeId={poiLayerIds[0]} />}
       {poiLayerIds.length > 0 && <TrafficSignals beforeId={poiLayerIds[0]} />}
       {labelLayerId && <LandmarkExtrusions beforeId={labelLayerId} />}

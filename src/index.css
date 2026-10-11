@@ -114,3 +114,72 @@ body,
     background: var(--mv-surface);
   }
 }
+
+/* San Andreas: the interface turns to the game's menus, black boxy panels
+   with pale text, yellow for what's picked and money green for actions.
+   The same by day and night, as in the game. Set on <html> by the map
+   design (src/map/designSetting.ts). */
+:root[data-map-design='san-andreas'] {
+  --mv-text: #e6e6e6;
+  --mv-muted: #a9bee0;
+  --mv-subtle: #6f7d96;
+  --mv-border: #333333;
+  --mv-surface: #0b0b0b;
+  --mv-raised: #2a2a2a;
+  --mv-hover: #1d1d1d;
+  --mv-accent: #ffd83a;
+  --mv-accent-strong: #ffe36b;
+  --mv-accent-soft: rgb(255 216 58 / 14%);
+  --mv-primary: #2f6b1f;
+  --mv-primary-hover: #3d8a29;
+  --mv-danger: #d4302f;
+  --mv-success: #6fbf4a;
+  --mv-success-soft: rgb(111 191 74 / 16%);
+  --mv-radius: 4px;
+  --mv-radius-sm: 3px;
+  --mv-shadow: 0 0 0 1px #000, 0 6px 18px rgb(0 0 0 / 55%);
+  --mv-shadow-sm: 0 0 0 1px #000, 0 2px 6px rgb(0 0 0 / 45%);
+
+  --glass-tint: rgb(0 0 0 / 74%);
+  --glass-tint-strong: rgb(0 0 0 / 84%);
+  --glass-sheen: transparent;
+  --glass-rim: transparent;
+  --glass-edge: transparent;
+  --glass-line: rgb(255 255 255 / 12%);
+  --glass-fill: rgb(255 255 255 / 8%);
+  --glass-hover: rgb(255 255 255 / 10%);
+  --glass-shadow: 0 0 0 1px #000, 0 6px 18px rgb(0 0 0 / 50%);
+
+  color-scheme: dark;
+}
+
+/* Square corners on every panel and capsule, like the game's boxes */
+:root[data-map-design='san-andreas'] .mv-glass,
+:root[data-map-design='san-andreas'] .mv-glass button,
+:root[data-map-design='san-andreas'] .search,
+:root[data-map-design='san-andreas'] .search-categories button,
+:root[data-map-design='san-andreas'] .search-categories .category-badge,
+:root[data-map-design='san-andreas'] .mv-account-panel,
+:root[data-map-design='san-andreas'] .mv-sign-in input,
+:root[data-map-design='san-andreas'] .mv-account .mv-sign-in button,
+:root[data-map-design='san-andreas'] .mv-account .mv-profile-actions button,
+:root[data-map-design='san-andreas'] .mv-settings-themes,
+:root[data-map-design='san-andreas'] .mv-account .mv-settings-themes button,
+:root[data-map-design='san-andreas'] .mv-account .mv-settings-designs button,
+:root[data-map-design='san-andreas'] .mv-settings-design-preview,
+:root[data-map-design='san-andreas'] .mv-account .mv-settings-clear,
+:root[data-map-design='san-andreas'] .place-directions,
+:root[data-map-design='san-andreas'] .directions-modes,
+:root[data-map-design='san-andreas'] .directions-modes button,
+:root[data-map-design='san-andreas'] .directions-chips button,
+:root[data-map-design='san-andreas'] .directions-tag,
+:root[data-map-design='san-andreas'] .maplibregl-ctrl.mv-group,
+:root[data-map-design='san-andreas']
+  .maplibregl-ctrl-attrib.maplibregl-compact {
+  border-radius: 4px;
+}
+
+:root[data-map-design='san-andreas'] .mv-glass {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
