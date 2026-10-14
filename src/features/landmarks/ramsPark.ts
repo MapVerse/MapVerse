@@ -4,7 +4,7 @@ import { circle, grid, lightsAlong } from './shapes.ts'
 /*
  * Istanbul: Ali Sami Yen Spor Kompleksi RAMS Park, Galatasaray's stadium
  * in Seyrantepe (opened 2011), laid out on the pitch's own grid: `u` runs
- * along its 105 m, `v` across its 68 m.
+ * along its 105 m (east to west), `v` across its 68 m.
  * - the pitch, mown in stripes and marked out, with its goals and the two
  *   technical areas,
  * - the bowl round it: a lower tier raked at 20°, a level of boxes behind
@@ -14,14 +14,16 @@ import { circle, grid, lightsAlong } from './shapes.ts'
  * - the roof, a membrane on a steel truss over all the stands and open
  *   above the pitch, with the floodlights hung from its inner ring,
  * - the plaza round it, and its lamps.
- * The pitch and the tiers' rakes are the stadium's figures; the bowl's
- * size, the pitch's heading and the heights are estimates.
+ * Its place, outline (about 226 × 186 m, corners rounded at some 75 m) and
+ * heading are measured from OpenStreetMap's own building as the map drew
+ * it. The pitch and the tiers' rakes are the stadium's figures; the
+ * heights, and the shapes within the outline, are estimates.
  */
 
 const DEG = Math.PI / 180
 
-/** The pitch lies about 20° east of north, its goals at the north and south */
-const { at, box } = grid((90 - 20) * DEG)
+/** The pitch lies east to west, its goals at the two ends */
+const { at, box } = grid(0)
 
 /** A rounded rectangle: half its length and width, and its corners' radius. */
 type Shape = { hu: number; hv: number; r: number }
@@ -35,9 +37,9 @@ const lerp = (from: number, to: number, t: number) => from + (to - from) * t
  * seats (0) to the façade's piers (1), and on beyond them.
  */
 const shape = (t: number): Shape => ({
-  hu: lerp(65, 128, t),
-  hv: lerp(41, 108, t),
-  r: lerp(8, 66, t),
+  hu: lerp(65, 113, t),
+  hv: lerp(41, 93, t),
+  r: lerp(8, 74.5, t),
 })
 
 const ARC_STEPS = 6
@@ -252,37 +254,44 @@ function pitch(): Part[] {
   return parts
 }
 
+const STEPS = 11
+/** How far the bowl runs out across the pitch, from the first row to the piers */
+const DEPTH = 93 - 41
+/** The rise of a step, over the stretch of the bowl it covers, at a rake. */
+const rise = (from: number, to: number, degrees: number) =>
+  ((to - from) / STEPS) * DEPTH * Math.tan(degrees * DEG)
+
 /**
- * The seating, from the pitch out: the lower tier, raked at 20° (0.87 m up
- * over each 2.3 m step, three rows to a step); the boxes, behind glass; and
- * the upper tier, raked at 34°.
+ * The seating, from the pitch out: the lower tier, raked at 20° (three rows
+ * to a step); the boxes, behind glass; and the upper tier, raked at 34°.
  */
 function stands(): Part[] {
   const [lower, boxes, upper] = [0.394, 0.515, 0.94]
+  const [floor, glass] = [9.5, 12.9]
   const parts: Part[] = []
-  for (let k = 0; k < 11; k++) {
+  for (let k = 0; k < STEPS; k++) {
     parts.push(
       ring(
-        lerp(0, lower, k / 11),
-        lerp(0, lower, (k + 1) / 11),
+        lerp(0, lower, k / STEPS),
+        lerp(0, lower, (k + 1) / STEPS),
         0,
-        1.2 + 0.87 * (k + 1),
+        1.2 + rise(0, lower, 20) * (k + 1),
         k % 4 === 1 ? 'gold' : 'red',
       ),
     )
   }
   parts.push(
-    ring(lower, boxes, 0, 11.8, 'concrete'),
-    ring(lower, lower + 0.01, 11.8, 15.4, 'windows'),
-    ring(lower + 0.01, boxes, 11.8, 15.4, 'concrete'),
+    ring(lower, boxes, 0, floor, 'concrete'),
+    ring(lower, lower + 0.01, floor, glass, 'windows'),
+    ring(lower + 0.01, boxes, floor, glass, 'concrete'),
   )
-  for (let k = 0; k < 11; k++) {
+  for (let k = 0; k < STEPS; k++) {
     parts.push(
       ring(
-        lerp(boxes, upper, k / 11),
-        lerp(boxes, upper, (k + 1) / 11),
+        lerp(boxes, upper, k / STEPS),
+        lerp(boxes, upper, (k + 1) / STEPS),
         0,
-        15.4 + 1.62 * (k + 1),
+        glass + rise(boxes, upper, 34) * (k + 1),
         k % 4 === 2 ? 'gold' : 'red',
       ),
     )
@@ -296,10 +305,14 @@ const FACADE = perimeter(shape(1))
 const station = (k: number): Spot =>
   FACADE.walk(((k + 0.5) * FACADE.length) / STATIONS)
 const isGate = (k: number) => k % 8 === 4
+/** A gate fills the space of two piers' stations, less the piers' own width */
+const GATE = (2 * FACADE.length) / STATIONS - 2.8
 
 /** The floor slabs' tops: the façade is glass between them. */
-const SLABS = [9, 18, 27, 36, 42.2]
+const SLABS = [8, 15.2, 22.4, 29, 35.4]
 const WALL_TOP = SLABS[SLABS.length - 1]
+/** Where the piers narrow */
+const PIER_STEP = 18
 
 /**
  * The façade: the stands' back wall in glass, banded with slabs of
@@ -324,14 +337,19 @@ function facade(): Part[] {
     const spot = station(k)
     if (isGate(k)) {
       parts.push(
-        block(onWall(spot, 10.4, 2.2, -1.4), 0, 8.2, 'windows'),
-        block(onWall(spot, 12.6, 4.4, 0.9), 8.2, 9.2, 'gold'),
+        block(onWall(spot, GATE, 2.2, -1.4), 0, SLABS[0] - 1, 'windows'),
+        block(
+          onWall(spot, GATE + 2.2, 4.4, 0.9),
+          SLABS[0] - 1,
+          SLABS[0],
+          'gold',
+        ),
       )
       continue
     }
     parts.push(
-      block(onWall(spot, 2.6, 3, -1.5), 0, 21, 'concrete'),
-      block(onWall(spot, 2, 2.6, -1.7), 21, WALL_TOP, 'concrete'),
+      block(onWall(spot, 2.6, 3, -1.5), 0, PIER_STEP, 'concrete'),
+      block(onWall(spot, 2, 2.6, -1.7), PIER_STEP, WALL_TOP, 'concrete'),
     )
   }
   return parts
@@ -341,8 +359,11 @@ const ROOF_IN = 0.315
 const ROOF_OUT = 1.03
 const ROOF_THICK = 3.4
 const ROOF_RINGS = 12
+/** The membrane's height at the opening and at the rim */
+const ROOF_LOW = 34.6
+const ROOF_HIGH = 38.6
 const roofTop = (t: number) =>
-  lerp(41, 45.5, (t - ROOF_IN) / (ROOF_OUT - ROOF_IN))
+  lerp(ROOF_LOW, ROOF_HIGH, (t - ROOF_IN) / (ROOF_OUT - ROOF_IN))
 
 /**
  * The roof: a membrane on a deep steel truss, rising from the opening over
@@ -360,8 +381,8 @@ function roof(): Part[] {
     parts.push(ring(from, to, top - ROOF_THICK, top, 'whitewash'))
   }
   parts.push(
-    ring(ROOF_IN - 0.02, ROOF_IN, 37, 41.8, 'steel'),
-    ring(ROOF_OUT, 1.04, 42, 46, 'steel'),
+    ring(ROOF_IN - 0.02, ROOF_IN, ROOF_LOW - 4, ROOF_LOW + 0.8, 'steel'),
+    ring(ROOF_OUT, 1.04, ROOF_HIGH - 4, ROOF_HIGH + 0.5, 'steel'),
   )
   for (const [x, y] of lightsAlong(outline(shape(ROOF_IN - 0.03)), 9)) {
     parts.push(
@@ -372,8 +393,8 @@ function roof(): Part[] {
           [x + 0.9, y + 0.9],
           [x - 0.9, y + 0.9],
         ],
-        38.2,
-        39.8,
+        ROOF_LOW - 3,
+        ROOF_LOW - 1.4,
         'lamp',
       ),
     )
@@ -475,9 +496,10 @@ function plaza(): Part[] {
 export const RAMS_PARK: Landmark = {
   id: 'rams-park',
   name: 'Ali Sami Yen Spor Kompleksi RAMS Park',
-  near: [28.99056, 41.10278],
-  // The stadium's building, and any stands or podium drawn apart from it
-  hide: [{ within: 115, tallerThan: 6 }],
+  near: [28.991181, 41.103248],
+  // The stadium's building, and any stands or podium drawn apart from it:
+  // OpenStreetMap gives it no height, so the map draws it low, not above 6
+  hide: [{ within: 80, tallerThan: 0 }],
   lights: [
     ...LAMPS,
     ...Array.from({ length: STATIONS }, (_, k) => k)

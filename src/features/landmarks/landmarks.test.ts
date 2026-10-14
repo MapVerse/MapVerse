@@ -264,8 +264,7 @@ describe('Atlantis City', () => {
 
 describe('RAMS Park', () => {
   const blocks = landmark('rams-park').parts.filter((p) => p.kind === 'block')
-  // Along the pitch, from east
-  const angle = (90 - 20) * (Math.PI / 180)
+  // The pitch lies east to west
 
   const area = (ring: [number, number][]) =>
     Math.abs(
@@ -274,9 +273,6 @@ describe('RAMS Park', () => {
         return sum + x0 * y1 - x1 * y0
       }, 0),
     ) / 2
-  /** How far a point is along the pitch, from its centre. */
-  const along = ([x, y]: [number, number]) =>
-    x * Math.cos(angle) + y * Math.sin(angle)
   const inside = (point: [number, number], p: (typeof blocks)[number]) =>
     within(point, p.footprint) && !(p.holes ?? []).some((h) => within(point, h))
 
@@ -292,16 +288,17 @@ describe('RAMS Park', () => {
     expect(total).toBeCloseTo(105 * 68, 3)
   })
 
-  it('rakes its lower tier at 20° and its upper tier at 34°', () => {
+  it('rakes its lower tier at 20° and its upper tier at 34° down the sides', () => {
     const seats = blocks.filter(
       (p) => (p.material === 'red' || p.material === 'gold') && p.base === 0,
     )
     expect(seats).toHaveLength(22)
-    // How steep each step is: its rise over how far it runs out from the last
+    // How steep each step is: its rise over how far it runs out from the
+    // last, across the pitch
     const slopes = seats.slice(1).map((step, i) => {
       const run =
-        Math.max(...step.holes![0].map(along)) -
-        Math.max(...seats[i].holes![0].map(along))
+        Math.max(...step.holes![0].map(([, y]) => y)) -
+        Math.max(...seats[i].holes![0].map(([, y]) => y))
       return (Math.atan2(step.top - seats[i].top, run) * 180) / Math.PI
     })
     // Not between the tiers, where the boxes are
@@ -312,23 +309,19 @@ describe('RAMS Park', () => {
   it('roofs the stands but leaves the pitch open to the sky', () => {
     const roof = blocks.filter((p) => p.material === 'whitewash' && p.base > 30)
     expect(roof.length).toBeGreaterThan(10)
-    const at = (u: number): [number, number] => [
-      u * Math.cos(angle),
-      u * Math.sin(angle),
-    ]
     // Over the pitch, and over the upper tier at its end
-    expect(roof.some((p) => inside(at(0), p))).toBe(false)
-    expect(roof.some((p) => inside(at(52), p))).toBe(false)
-    expect(roof.some((p) => inside(at(100), p))).toBe(true)
+    expect(roof.some((p) => inside([0, 0], p))).toBe(false)
+    expect(roof.some((p) => inside([52, 0], p))).toBe(false)
+    expect(roof.some((p) => inside([100, 0], p))).toBe(true)
   })
 
   it('stands on piers of raw concrete, with a gate under a gold canopy between some', () => {
     const canopies = blocks.filter(
-      (p) => p.material === 'gold' && p.base === 8.2,
+      (p) => p.material === 'gold' && p.top === 8 && p.base === 7,
     )
     expect(canopies).toHaveLength(16)
     const piers = blocks.filter(
-      (p) => p.material === 'concrete' && p.base === 0 && p.top === 21,
+      (p) => p.material === 'concrete' && p.base === 0 && p.top === 18,
     )
     expect(piers).toHaveLength(128 - 16)
   })
