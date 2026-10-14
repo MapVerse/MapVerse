@@ -1,4 +1,13 @@
+.place-card {
+  /* The shimmer of the address while it is looked up */
+  --place-skeleton: color-mix(in srgb, var(--mv-muted) 16%, transparent);
+  --place-skeleton-glint: color-mix(in srgb, var(--mv-muted) 34%, transparent);
+}
+
 .place-card .maplibregl-popup-content {
+  /* It springs up out of the place it points at */
+  transform-origin: 50% 100%;
+  animation: place-card-in 460ms var(--mv-spring) both;
   min-width: 240px;
   padding: 14px;
   border-radius: var(--mv-radius);
@@ -13,6 +22,75 @@
 /* The card always opens above its place */
 .place-card.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
   border-top-color: var(--mv-surface);
+  animation: place-fade-in 220ms ease-out both;
+}
+
+/* Closed, or another place picked: it sinks back into its place */
+.place-card.is-leaving {
+  pointer-events: none;
+}
+
+.place-card.is-leaving .maplibregl-popup-content {
+  animation: place-card-out 180ms ease-in both;
+}
+
+.place-card.is-leaving .maplibregl-popup-tip {
+  animation: place-fade-out 140ms ease-in both;
+}
+
+/* Its rows come in one after another */
+.place-header,
+.place-address-row,
+.place-directions {
+  animation: place-rise 420ms var(--mv-ease-out) backwards;
+}
+
+.place-address-row {
+  animation-delay: 60ms;
+}
+
+.place-directions {
+  animation-delay: 120ms;
+}
+
+@keyframes place-card-in {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.84);
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes place-card-out {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+  }
+}
+
+@keyframes place-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes place-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes place-fade-out {
+  to {
+    opacity: 0;
+  }
 }
 
 .place-header {
@@ -60,6 +138,25 @@
   color: var(--mv-text);
 }
 
+/* Folds away, smoothly, when there turns out to be no address */
+.place-address-row {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 320ms var(--mv-ease-out),
+    opacity 220ms ease;
+}
+
+.place-address-row.is-empty {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.place-address-row > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .place-address {
   display: flex;
   align-items: flex-start;
@@ -67,6 +164,54 @@
   margin: 12px 0 0;
   color: var(--mv-muted);
   font-size: 13.5px;
+}
+
+.place-address-text {
+  animation: place-fade-in 280ms ease-out;
+}
+
+/* Two shimmering lines where the address will be */
+.place-skeleton {
+  display: grid;
+  flex: 1;
+  gap: 7px;
+  padding: 4px 0 2px;
+}
+
+.place-skeleton > span:not(.place-skeleton-hint) {
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(
+    90deg,
+    var(--place-skeleton) 30%,
+    var(--place-skeleton-glint) 50%,
+    var(--place-skeleton) 70%
+  );
+  background-size: 300% 100%;
+  animation: place-shimmer 1.4s ease-in-out infinite;
+}
+
+.place-skeleton > span:last-child {
+  width: 62%;
+}
+
+/* For screen readers only */
+.place-skeleton-hint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes place-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
 }
 
 .place-address svg {

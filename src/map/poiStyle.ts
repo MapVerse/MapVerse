@@ -130,18 +130,36 @@ export function poiLabelColor(theme: Theme): ExpressionSpecification {
   ] as unknown as ExpressionSpecification
 }
 
+/** A POI badge image, drawn at twice its size in CSS px. */
+export function poiBadge(id: string): ImageData | undefined {
+  const parsed = parsePoiImageId(id)
+  if (!parsed) return undefined
+  const info = categoryInfo(parsed.key) ?? FALLBACK_CATEGORY
+  return drawBadge(info.glyph, info.color, {
+    selected: parsed.selected,
+    dark: parsed.skin === 'dark',
+    blip: parsed.skin === 'blip',
+  })
+}
+
 /** Draws POI badges on demand, the first time the map asks for one. */
 export function resolvePoiImage(map: MapLibreMap, id: string) {
-  const parsed = parsePoiImageId(id)
-  if (!parsed) return
-  const info = categoryInfo(parsed.key) ?? FALLBACK_CATEGORY
-  map.addImage(
-    id,
-    drawBadge(info.glyph, info.color, {
-      selected: parsed.selected,
-      dark: parsed.skin === 'dark',
-      blip: parsed.skin === 'blip',
-    }),
-    { pixelRatio: 2 },
-  )
+  const badge = poiBadge(id)
+  if (badge) map.addImage(id, badge, { pixelRatio: 2 })
 }
+
+/**
+ * The feature state of a POI picked on the map: its own badge hides while
+ * an enlarged one stands in for it. Being a feature state, setting it costs
+ * next to nothing, where changing the layers' paint to single out a POI
+ * would have the map lay out every tile again.
+ */
+export const PICKED = 'picked'
+
+/** A POI badge's opacity: hidden while the POI is picked. */
+export const POI_ICON_OPACITY: ExpressionSpecification = [
+  'case',
+  ['boolean', ['feature-state', PICKED], false],
+  0,
+  1,
+]

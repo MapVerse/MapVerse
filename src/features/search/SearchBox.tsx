@@ -1,5 +1,11 @@
 import { useMap } from '@vis.gl/react-maplibre'
-import { useId, useRef, useState, type KeyboardEvent } from 'react'
+import {
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+} from 'react'
 import { Icon } from '../../icons/Icon.tsx'
 import CategoryBadge from '../place/CategoryBadge.tsx'
 import { distanceMeters, formatDistance } from '../place/place.ts'
@@ -231,9 +237,10 @@ export default function SearchBox({
                 }
               }}
             >
-              {QUICK_CATEGORIES.map((category) => (
+              {QUICK_CATEGORIES.map((category, i) => (
                 <button
                   key={category.key}
+                  style={{ '--row': i } as CSSProperties}
                   type="button"
                   onClick={() => pickCategory(category)}
                 >
@@ -255,6 +262,8 @@ export default function SearchBox({
                 <li
                   key={`${item.key}-${i}`}
                   id={`${listId}-${i}`}
+                  // The rows come in one after another
+                  style={{ '--row': Math.min(i, 8) } as CSSProperties}
                   role="option"
                   aria-selected={i === active}
                   onClick={() => select(item)}

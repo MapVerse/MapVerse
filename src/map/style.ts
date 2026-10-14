@@ -11,6 +11,7 @@ import type { Theme } from '../theme/theme.ts'
 import type { MapDesign } from './designSetting.ts'
 import {
   badgeSkin,
+  POI_ICON_OPACITY,
   poiFilter,
   poiIconImage,
   poiLabelColor,
@@ -524,6 +525,7 @@ function poiLayer(
       'text-optional': true,
     },
     paint: {
+      'icon-opacity': POI_ICON_OPACITY,
       'text-color': c.poiLabel ?? poiLabelColor(theme),
       'text-halo-color': c.halo,
       'text-halo-width': 1.5 * c.haloScale,

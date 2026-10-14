@@ -11,6 +11,8 @@ import './PlaceCard.css'
 type Props = {
   place: Place
   offset: number
+  /** On its way out, shrinking back into its place */
+  leaving?: boolean
   onDirections: () => void
   onClose: () => void
 }
@@ -18,6 +20,7 @@ type Props = {
 export default function PlaceCard({
   place,
   offset,
+  leaving = false,
   onDirections,
   onClose,
 }: Props) {
@@ -53,7 +56,7 @@ export default function PlaceCard({
       // button let the Enter that picked a result press that button as well
       focusAfterOpen={false}
       onClose={onClose}
-      className="place-card"
+      className={`place-card${leaving ? ' is-leaving' : ''}`}
     >
       <div className="place-header">
         <CategoryBadge categoryKey={place.categoryKey} size={42} />
@@ -77,12 +80,26 @@ export default function PlaceCard({
           <Icon name="close" size={18} />
         </button>
       </div>
-      {address !== null && (
-        <p className="place-address">
-          <Icon name="pin" size={16} />
-          <span>{address ?? 'Adres aranıyor…'}</span>
-        </p>
-      )}
+      {/* While the address is looked up, a shimmering outline of it; if there
+          turns out to be none, the row folds away */}
+      <div
+        className={`place-address-row${address === null ? ' is-empty' : ''}`}
+      >
+        <div>
+          <p className="place-address" aria-busy={!address}>
+            <Icon name="pin" size={16} />
+            {address ? (
+              <span className="place-address-text">{address}</span>
+            ) : (
+              <span className="place-skeleton" role="status">
+                <span className="place-skeleton-hint">Adres aranıyor…</span>
+                <span />
+                <span />
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
       <button type="button" className="place-directions" onClick={onDirections}>
         <Icon name="directions" size={18} />
         Yol tarifi

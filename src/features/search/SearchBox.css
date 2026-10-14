@@ -88,6 +88,21 @@
 
 .search-panel {
   border-top: 1px solid var(--glass-line);
+  animation: search-open 260ms var(--mv-ease-out) both;
+}
+
+@keyframes search-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* The categories and the rows of results come in one after another */
+.search-categories button,
+.search-results li {
+  animation: mv-rise 300ms var(--mv-ease-out) backwards;
+  animation-delay: calc(var(--row, 0) * 28ms);
 }
 
 /* One-tap categories, in a row that scrolls sideways */

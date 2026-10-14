@@ -1,0 +1,70 @@
+/* The picked POI's badge jumps up out of the map's own, bigger */
+.selected-poi {
+  position: relative;
+  width: var(--poi-size);
+  height: var(--poi-size);
+  transform-origin: 50% 100%;
+  animation: mv-poi-pop 560ms var(--mv-spring) both;
+  filter: drop-shadow(0 5px 6px rgb(15 23 42 / 22%));
+}
+
+.selected-poi canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* A ripple of its category colour, sent out once */
+.selected-poi::after {
+  content: '';
+  position: absolute;
+  inset: 22%;
+  border: 2px solid var(--poi-color);
+  border-radius: 50%;
+  opacity: 0;
+  animation: mv-poi-ripple 900ms 140ms var(--mv-ease-out);
+}
+
+/* Let go: back down into the map's badge */
+.selected-poi.is-leaving {
+  animation: mv-poi-drop 180ms ease-in both;
+}
+
+.selected-poi.is-leaving::after {
+  animation: none;
+}
+
+@keyframes mv-poi-pop {
+  0% {
+    transform: scale(var(--poi-from));
+  }
+  45% {
+    transform: translateY(-7px) scale(1.12);
+  }
+  72% {
+    transform: translateY(0) scale(0.97);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes mv-poi-ripple {
+  from {
+    opacity: 0.75;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+@keyframes mv-poi-drop {
+  from {
+    transform: none;
+  }
+  to {
+    transform: scale(var(--poi-from));
+  }
+}

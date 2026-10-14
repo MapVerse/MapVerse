@@ -60,9 +60,16 @@ type Props = {
   /** Style layer to draw routes beneath, so labels stay readable */
   beforeId?: string
   onClose: () => void
+  /** On its way out, once closed */
+  leaving?: boolean
 }
 
-export default function Directions({ to, beforeId, onClose }: Props) {
+export default function Directions({
+  to,
+  beforeId,
+  onClose,
+  leaving = false,
+}: Props) {
   const { current: map } = useMap()
   const panelRef = useRef<HTMLElement>(null)
   const theme = useTheme()
@@ -203,7 +210,12 @@ export default function Directions({ to, beforeId, onClose }: Props) {
 
   return (
     <>
-      <section ref={panelRef} className="directions" aria-label="Yol tarifi">
+      <section
+        ref={panelRef}
+        className={`directions${leaving ? ' is-leaving' : ''}`}
+        aria-label="Yol tarifi"
+        inert={leaving || undefined}
+      >
         <header className="directions-header">
           <button
             type="button"

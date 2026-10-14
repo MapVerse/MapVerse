@@ -3,6 +3,7 @@ import type { ControlPosition, IControl } from 'maplibre-gl'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../../icons/Icon.tsx'
+import { usePresence } from '../../lib/presence.ts'
 import SettingsSections from '../settings/SettingsSections.tsx'
 import Avatar from './Avatar.tsx'
 import { setProfile, squarePhoto, useProfile } from './profile.ts'
@@ -39,6 +40,8 @@ export default function AccountMenu({
   const [name, setName] = useState('')
   const panelId = useId()
   const title = profile ? profile.name : 'Giriş yap'
+  // Kept a moment once closed, to shrink back into the button
+  const panels = usePresence(open || null, open ? 'panel' : null, 170)
 
   // Close on Escape or on a click anywhere else
   useEffect(() => {
@@ -94,11 +97,14 @@ export default function AccountMenu({
       >
         <Avatar profile={profile} size={profile ? 36 : 40} />
       </button>
-      {open && (
+      {panels.map(({ key, leaving }) => (
         <section
-          id={panelId}
-          className="mv-account-panel mv-glass"
+          key={key}
+          id={leaving ? undefined : panelId}
+          className={`mv-account-panel mv-glass${leaving ? ' is-leaving' : ''}`}
           aria-label="Profil ve ayarlar"
+          aria-hidden={leaving || undefined}
+          inert={leaving || undefined}
         >
           <div className="mv-profile">
             <Avatar profile={profile} size={52} />
@@ -161,7 +167,7 @@ export default function AccountMenu({
 
           <SettingsSections />
         </section>
-      )}
+      ))}
     </>,
     slot.container,
   )

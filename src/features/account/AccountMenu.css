@@ -52,6 +52,10 @@
 .mv-account-panel {
   --glass-tint: var(--glass-tint-strong);
 
+  /* It opens out of the profile button, and shrinks back into it */
+  transform-origin: calc(100% - 22px) -10px;
+  animation: mv-pop-in 380ms var(--mv-spring) both;
+
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
@@ -171,4 +175,9 @@
 
 .mv-account .mv-profile-actions button:hover {
   background: var(--glass-hover);
+}
+
+.mv-account-panel.is-leaving {
+  pointer-events: none;
+  animation: mv-pop-out 170ms ease-in both;
 }

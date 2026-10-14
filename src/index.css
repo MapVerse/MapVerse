@@ -24,6 +24,10 @@
   --mv-shadow: 0 1px 2px rgb(15 23 42 / 6%), 0 6px 20px rgb(15 23 42 / 12%);
   --mv-shadow-sm: 0 1px 2px rgb(15 23 42 / 8%), 0 2px 8px rgb(15 23 42 / 8%);
 
+  /* How things move: easing out to rest, or springing a little past it */
+  --mv-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --mv-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+
   /* Liquid glass, shared by the search box, map buttons and menus */
   --glass-tint: rgb(255 255 255 / 58%);
   /* frostier, for glass holding a list or a form */
@@ -182,4 +186,39 @@ body,
 :root[data-map-design='san-andreas'] .mv-glass {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+}
+
+/* Menus and panels open out of what opened them, and close back into it */
+@keyframes mv-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.92);
+  }
+}
+
+@keyframes mv-pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+  }
+}
+
+/* Rows of a list come in, rising a little */
+@keyframes mv-rise {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+}
+
+/* Things appear and go at once for those who would rather not have motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

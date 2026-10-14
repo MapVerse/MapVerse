@@ -20,7 +20,7 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 - Yer ve adres arama ([Photon](https://photon.komoot.io)): ekrandaki alana göre öncelikli öneriler, uzaklık bilgisi, klavyeyle seçim ve son aramalar
 - Aramaya tıklayınca kategoriler: restoran, kafe, market, eczane, akaryakıt, ATM, otel, hastane, park, müze, otopark ve cami. Seçilen türde en yakın yerler uzaklığa göre listelenir ve haritada işaretlenir ([Overpass API](https://overpass-api.de), API anahtarı gerekmez)
 - İl, ilçe ya da semt gibi alan sonuçlarında alan sınırının çizilmesi ([Nominatim](https://nominatim.openstreetmap.org))
-- Haritadaki mekânlara tıklayınca simgenin yerinde büyümesi ve ad, kategori, adres içeren kart
+- Haritadaki mekânlara tıklayınca simge yerinden zıplayarak büyür ve kategori renginde bir dalga yayar; ad, kategori ve adres içeren kart da noktadan yaylanarak açılır, satırları sırayla gelir. Adres aranırken parlayan bir iskelet görünür, bulunamazsa satır yumuşakça kapanır. Kapatınca ya da başka bir mekâna geçince kart ve simge yerlerine geri küçülür. Profil menüsü, arama önerileri ve yol tarifi paneli de açılıp kapanırken canlanır; hareket azaltma tercihinde animasyonlar kapanır
 - Uygulama içinde yol tarifi ([Valhalla](https://valhalla.github.io/valhalla/)): araba, yürüyüş ve bisiklet; alternatif rotalar; Türkçe adım adım tarif; başlangıç ve varış için konumun, aradığın yer ya da haritada seçtiğin nokta. Arama çubuğundaki rota düğmesiyle de açılır
 - Uygulamaya özel çizilmiş ikon seti: kategori renkleriyle harita rozetleri, iki tonlu kategori sembolleri ve arayüz için çizgi ikonlar
 - Sağ üstte profil: adınla giriş yapıp fotoğraf ekleyebilirsin (yalnızca bu cihazda saklanır); aynı menüde tema, 3B arazi ve son aramaları temizleme

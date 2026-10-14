@@ -1,4 +1,7 @@
 .directions {
+  /* It opens out of the search box's corner, and folds back into it */
+  transform-origin: 24px 24px;
+  animation: mv-pop-in 400ms var(--mv-spring) both;
   position: absolute;
   top: 12px;
   left: 12px;
@@ -325,4 +328,9 @@
 
 :root[data-map-design='san-andreas'] .route-destination {
   background: #e0302f;
+}
+
+.directions.is-leaving {
+  pointer-events: none;
+  animation: mv-pop-out 170ms ease-in both;
 }

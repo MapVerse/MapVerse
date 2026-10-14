@@ -4,7 +4,7 @@ import {
   type MapLayerMouseEvent,
   type MapRef,
 } from '@vis.gl/react-maplibre'
-import { useState } from 'react'
+import { Fragment, useRef, useState } from 'react'
 import AccountMenu from '../features/account/AccountMenu.tsx'
 import AreaNames from '../features/areas/AreaNames.tsx'
 import LandmarkExtrusions from '../features/landmarks/LandmarkExtrusions.tsx'
@@ -13,6 +13,7 @@ import Directions from '../features/directions/Directions.tsx'
 import { resolveSignalImage } from '../features/traffic/signalImage.ts'
 import TrafficSignals from '../features/traffic/TrafficSignals.tsx'
 import Boundary from '../features/place/Boundary.tsx'
+import { categoryInfo } from '../features/place/categories.ts'
 import PlaceCard from '../features/place/PlaceCard.tsx'
 import type { Place } from '../features/place/place.ts'
 import { findPoiLayerIds, toPoi } from '../features/place/poi.ts'
@@ -25,6 +26,7 @@ import {
   useCategorySearch,
   type CategorySearch,
 } from '../features/search/useCategorySearch.ts'
+import { usePresence } from '../lib/presence.ts'
 import { useTheme } from '../theme/theme.ts'
 import SanAndreasHud from './SanAndreasHud.tsx'
 import './controls.css'
@@ -65,6 +67,9 @@ function installImageResolver(ref: MapRef | null) {
 /** `poi` is set when the place was picked from the map's own POIs. */
 type Selection = { place: Place; poi?: PoiMatch }
 
+/** How long a place's card and badge take to go, once let go, in ms. */
+const LEAVING_MS = 200
+
 export default function MapView() {
   const theme = useTheme()
   const terrain = useTerrainEnabled()
@@ -72,10 +77,15 @@ export default function MapView() {
   const [poiLayerIds, setPoiLayerIds] = useState<string[]>([])
   const [hoveringPoi, setHoveringPoi] = useState(false)
   const [selection, setSelection] = useState<Selection | null>(null)
-  // Open directions, to a place or (when null) to a point picked on the map
-  const [directions, setDirections] = useState<{ to: Place | null } | null>(
-    null,
-  )
+  // Open directions, to a place or (when null) to a point picked on the
+  // map, counted so each opening starts afresh
+  const [directions, setDirections] = useState<{
+    to: Place | null
+    opening: number
+  } | null>(null)
+  const openings = useRef(0)
+  const openDirections = (to: Place | null) =>
+    setDirections({ to, opening: ++openings.current })
   const [labelLayerId, setLabelLayerId] = useState<string>()
   // Places of a category near where the map was, picked from the search box
   const [categorySearch, setCategorySearch] = useState<CategorySearch | null>(
@@ -83,8 +93,21 @@ export default function MapView() {
   )
   const nearby = useCategorySearch(categorySearch)
   const place = selection?.place
-  const onResultMarker =
-    !!place && nearby.results.some((r) => r.key === place.key)
+  const onResultMarker = (key: string) =>
+    nearby.results.some((r) => r.key === key)
+  // Directions on screen, and a moment longer once closed, on their way
+  // out; opened again, they start afresh
+  const directionsShown = usePresence(
+    directions,
+    directions ? `directions:${directions.opening}` : null,
+    LEAVING_MS,
+  )
+  // The selection on screen, and any let go of a moment ago on its way out
+  const shown = usePresence(
+    directions ? null : selection,
+    directions ? null : (selection?.place.key ?? null),
+    LEAVING_MS,
+  )
 
   function onMapClick(event: MapLayerMouseEvent) {
     // Directions handle their own clicks (picking either end of a route)
@@ -147,7 +170,7 @@ export default function MapView() {
         hidden={!!directions}
         onSelect={(result) => setSelection({ place: result })}
         onClear={() => setSelection(null)}
-        onDirections={() => setDirections({ to: selection?.place ?? null })}
+        onDirections={() => openDirections(selection?.place ?? null)}
         nearby={categorySearch && { ...categorySearch, ...nearby }}
         onCategory={setCategorySearch}
       />
@@ -157,32 +180,36 @@ export default function MapView() {
       {place?.outline && place.osm && (
         <Boundary key={`outline:${place.key}`} osm={place.osm} />
       )}
-      {selection?.poi && !directions && (
-        <SelectedPoi
-          lngLat={selection.place.lngLat}
-          icon={selection.place.icon}
-          iconColor={selection.place.iconColor}
-          layerIds={poiLayerIds}
-          match={selection.poi}
-        />
-      )}
-      {selection && !directions && (
-        <PlaceCard
-          key={`card:${selection.place.key}`}
-          place={selection.place}
-          // Clear of the badge it points at
-          offset={selection.poi ? 26 : onResultMarker ? 20 : 8}
-          onDirections={() => setDirections({ to: selection.place })}
-          onClose={() => setSelection(null)}
-        />
-      )}
-      {directions && (
+      {shown.map(({ key, item, leaving }) => (
+        <Fragment key={key}>
+          {item.poi && (
+            <SelectedPoi
+              lngLat={item.place.lngLat}
+              icon={item.place.icon}
+              color={categoryInfo(item.place.categoryKey)?.color}
+              match={item.poi}
+              leaving={leaving}
+            />
+          )}
+          <PlaceCard
+            place={item.place}
+            // Clear of the badge it points at
+            offset={item.poi ? 26 : onResultMarker(key) ? 20 : 8}
+            leaving={leaving}
+            onDirections={() => openDirections(item.place)}
+            onClose={() => setSelection(null)}
+          />
+        </Fragment>
+      ))}
+      {directionsShown.map(({ key, item, leaving }) => (
         <Directions
-          to={directions.to}
+          key={key}
+          to={item.to}
           beforeId={labelLayerId}
+          leaving={leaving}
           onClose={() => setDirections(null)}
         />
-      )}
+      ))}
     </Map>
   )
 }
