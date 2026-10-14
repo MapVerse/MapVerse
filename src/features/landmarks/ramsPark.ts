@@ -1,4 +1,4 @@
-import type { Landmark, Material, Part, XY } from './landmarks.ts'
+import type { Beam, Landmark, Material, Part, XY } from './landmarks.ts'
 import { circle, grid, lightsAlong } from './shapes.ts'
 
 /*
@@ -456,6 +456,23 @@ function seams(): Part[] {
   return parts
 }
 
+/**
+ * Beams of light up into the sky from the roof's edge on match nights, tall
+ * and short by turns, in two tones taking turns.
+ */
+function beams(): Beam[] {
+  const count = 32
+  const rim = perimeter(shape(1.035))
+  return Array.from({ length: count }, (_, i) => {
+    const { u, v } = rim.walk(((i + 0.5) * rim.length) / count)
+    return {
+      at: at(u, v),
+      base: ROOF_HIGH + 0.5,
+      top: (i >> 1) % 2 ? 95 : 170,
+    }
+  })
+}
+
 /** Lamp posts all round the plaza. */
 const LAMPS = lightsAlong(outline(shape(1.19)), 24)
 
@@ -500,6 +517,7 @@ export const RAMS_PARK: Landmark = {
   // The stadium's building, and any stands or podium drawn apart from it:
   // OpenStreetMap gives it no height, so the map draws it low, not above 6
   hide: [{ within: 80, tallerThan: 0 }],
+  beams: beams(),
   lights: [
     ...LAMPS,
     ...Array.from({ length: STATIONS }, (_, k) => k)
