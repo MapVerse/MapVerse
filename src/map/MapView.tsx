@@ -7,8 +7,8 @@ import {
 import { useState } from 'react'
 import AccountMenu from '../features/account/AccountMenu.tsx'
 import AreaNames from '../features/areas/AreaNames.tsx'
-import LandmarkBeams from '../features/landmarks/LandmarkBeams.tsx'
 import LandmarkExtrusions from '../features/landmarks/LandmarkExtrusions.tsx'
+import LandmarkSearchlights from '../features/landmarks/LandmarkSearchlights.tsx'
 import Directions from '../features/directions/Directions.tsx'
 import { resolveSignalImage } from '../features/traffic/signalImage.ts'
 import TrafficSignals from '../features/traffic/TrafficSignals.tsx'
@@ -142,7 +142,7 @@ export default function MapView() {
       {poiLayerIds.length > 0 && <AreaNames beforeId={poiLayerIds[0]} />}
       {poiLayerIds.length > 0 && <TrafficSignals beforeId={poiLayerIds[0]} />}
       {labelLayerId && <LandmarkExtrusions beforeId={labelLayerId} />}
-      {labelLayerId && <LandmarkBeams beforeId={labelLayerId} />}
+      {labelLayerId && <LandmarkSearchlights beforeId={labelLayerId} />}
       <SearchBox
         hidden={!!directions}
         onSelect={(result) => setSelection({ place: result })}

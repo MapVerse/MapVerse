@@ -5,8 +5,6 @@ import {
   MATERIAL_COLORS,
   hideBuildings,
   hideZones,
-  BEAM_BANDS,
-  landmarkBeams,
   landmarkExtrusions,
   landmarkLights,
   mix,
@@ -326,36 +324,6 @@ describe('RAMS Park', () => {
       (p) => p.material === 'concrete' && p.base === 0 && p.top === 18,
     )
     expect(piers).toHaveLength(128 - 16)
-  })
-})
-
-describe('beams of light', () => {
-  const rams = landmark('rams-park')
-  const { features } = landmarkBeams([rams])
-  const bands = BEAM_BANDS.length - 1
-
-  it('are cut into bands, each starting where the last ends', () => {
-    expect(features).toHaveLength(rams.beams!.length * bands)
-    rams.beams!.forEach(({ base, top }, i) => {
-      const own = features.slice(i * bands, (i + 1) * bands)
-      expect(own[0].properties!.base).toBeCloseTo(base, 6)
-      expect(own[bands - 1].properties!.height).toBeCloseTo(top, 6)
-      own.slice(1).forEach(({ properties }, j) => {
-        expect(properties!.base).toBeCloseTo(own[j].properties!.height, 6)
-        expect(properties!.band).toBe(j + 1)
-      })
-    })
-  })
-
-  it('take two tones by turns round the landmark', () => {
-    const tones = rams.beams!.map(
-      (_, i) => features[i * bands].properties!.tone,
-    )
-    expect(tones.slice(0, 4)).toEqual([0, 1, 0, 1])
-  })
-
-  it('shine only from landmarks that have them', () => {
-    expect(landmarkBeams(LANDMARKS).features).toHaveLength(features.length)
   })
 })
 

@@ -61,13 +61,11 @@ export type Part =
       material: Material
     }
 
-/** A beam of light shone straight up into the sky at night. */
-export type Beam = {
-  at: XY
-  /** Where it starts and how high it reaches, in metres above the ground */
-  base: number
-  top: number
-}
+/** The colour of a searchlight's beam. */
+export type Tone = 'white' | 'gold' | 'red'
+
+/** A searchlight that sweeps the night sky from where it stands. */
+export type Searchlight = { at: XY; tone: Tone }
 
 /**
  * A landmark drawn in 3D where it stands, in place of the map's own
@@ -87,8 +85,8 @@ export type Landmark = {
   parts: Part[]
   /** Where its floodlights and lamps light the ground, at night */
   lights?: XY[]
-  /** Beams it shines up into the sky at night, with pulses running up them */
-  beams?: Beam[]
+  /** Searchlights that sweep the sky above it at night */
+  searchlights?: Searchlight[]
   /**
    * How it sits on the 3D terrain: level on the ground at its centre (by
    * default), each piece on the ground under it (walls up a hill), or
@@ -349,44 +347,6 @@ export function onTerrain(
       }
     }),
   }
-}
-
-/**
- * Where each beam's height is cut into bands, as fractions of it: a pulse
- * of light runs up the bands one after another.
- */
-export const BEAM_BANDS = [0, 0.1, 0.26, 0.46, 0.7, 1]
-const BEAM_RADIUS = 1.5
-
-/**
- * The beams of light the landmarks shine into the sky, as slim prisms cut
- * into bands, each in one of two tones, taking turns round the landmark.
- */
-export function landmarkBeams(
-  landmarks: Landmark[],
-): FeatureCollection<Polygon> {
-  const features: FeatureCollection<Polygon>['features'] = []
-  for (const { near, beams = [], terrain } of landmarks) {
-    const ground = groundOf(near, terrain)
-    beams.forEach(({ at, base, top }, i) => {
-      const shape = ring(offset(near, at), BEAM_RADIUS, 8)
-      for (let band = 0; band < BEAM_BANDS.length - 1; band++) {
-        const [from, to] = [BEAM_BANDS[band], BEAM_BANDS[band + 1]]
-        features.push({
-          type: 'Feature',
-          geometry: { type: 'Polygon', coordinates: [shape] },
-          properties: {
-            tone: i % 2,
-            band,
-            base: base + (top - base) * from,
-            height: base + (top - base) * to,
-            ground,
-          },
-        })
-      }
-    })
-  }
-  return { type: 'FeatureCollection', features }
 }
 
 /** The spots the landmarks light at night, for a glow on the ground. */
