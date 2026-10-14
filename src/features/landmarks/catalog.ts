@@ -2,6 +2,7 @@ import { ANITKABIR } from './anitkabir.ts'
 import { AKKALE, WALLS } from './ankaraKalesiWalls.ts'
 import { ATLANTIS, ATLANTIS_CITY } from './atlantis.ts'
 import type { Landmark, Material, Part, XY } from './landmarks.ts'
+import { RAMS_PARK } from './ramsPark.ts'
 import {
   dome,
   ellipse,
@@ -1572,6 +1573,7 @@ export const LANDMARKS: Landmark[] = [
   CAMLICA,
   SABANCI,
   SAPPHIRE,
+  RAMS_PARK,
   BEYAZIT,
   DOLMABAHCE,
   RUMELI,

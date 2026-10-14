@@ -32,6 +32,7 @@ export type Material =
   | 'sign'
   | 'green'
   | 'red'
+  | 'gold'
   | 'water'
   | 'plaster'
 
@@ -112,6 +113,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
     sign: '#1f5fc4',
     green: '#79a37e',
     red: '#b8483d',
+    gold: '#e8b02a',
     water: '#9ccbe8',
     plaster: '#e5dacb',
   },
@@ -140,6 +142,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
     sign: '#5a9bff',
     green: '#2d4636',
     red: '#7a2b24',
+    gold: '#a67c1c',
     water: '#1f4466',
     plaster: '#57534c',
   },
