@@ -295,11 +295,11 @@
   color: inherit;
 }
 
-/* On a phone, a sheet from the bottom. Opened from the map, only its top
-   shows at first, its name and what can be done there; pulled up, or
-   tapped, it shows the rest. Tall and fixed in height, it moves only by
-   its transform, so following a finger or springing between its heights
-   stays smooth. */
+/* On a phone, a sheet from the bottom, its details shown at once. Pulled
+   down, it keeps only its top, its name and what can be done there;
+   pulled up again, or tapped, it shows the rest. Fixed in height, it
+   moves only by its transform, so following a finger or springing
+   between its heights stays smooth. */
 @media (max-width: 640px) {
   .place-panel {
     top: auto;
@@ -309,7 +309,8 @@
     /* Over the map's buttons and scale bar */
     z-index: 3;
     width: auto;
-    height: min(80%, 640px);
+    /* Its details at once, with the place left in sight above it */
+    height: min(64%, 580px);
     max-height: none;
     /* Solid, so the map's buttons don't show through it */
     background: var(--mv-surface);

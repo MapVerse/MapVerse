@@ -11,7 +11,9 @@ type PhotonProperties = {
   name?: string
   street?: string
   housenumber?: string
+  locality?: string
   district?: string
+  county?: string
   city?: string
   state?: string
   country?: string
@@ -104,6 +106,41 @@ export function toSearchResult({
     bbox: p.extent && [p.extent[0], p.extent[3], p.extent[2], p.extent[1]],
     outline: !!osm && OUTLINED_TYPES.has(p.type ?? ''),
   }
+}
+
+/** What a point on the map is: a name for it and where it lies. */
+export type PointDescription = { title: string; detail: string }
+
+/**
+ * Names a point on the map from what is found there: the building or
+ * place it is in if it has a name, else its street and number, else its
+ * neighbourhood; then where that lies, down to the city.
+ */
+export function describePointFrom(
+  p: PhotonProperties,
+): PointDescription | null {
+  const street = streetLine(p)
+  const title = p.name || street || p.locality || p.district || p.county
+  if (!title) return null
+  const detail = uniqueParts(
+    [p.name ? street : undefined, p.locality, p.district, p.county, p.city],
+    title,
+  ).join(', ')
+  return { title, detail }
+}
+
+/** What is at a point on the map, or null if nothing is known there. */
+export async function describePoint(
+  [lng, lat]: [number, number],
+  signal?: AbortSignal,
+): Promise<PointDescription | null> {
+  const params = new URLSearchParams({
+    lon: lng.toFixed(6),
+    lat: lat.toFixed(6),
+    limit: '1',
+  })
+  const [feature] = await photon(`/reverse?${params}`, signal)
+  return feature ? describePointFrom(feature.properties) : null
 }
 
 /** Street, district and city, leaving out the place's own name. */

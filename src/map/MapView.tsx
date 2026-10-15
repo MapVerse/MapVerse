@@ -18,15 +18,12 @@ import {
   FALLBACK_CATEGORY,
   categoryInfo,
 } from '../features/place/categories.ts'
-import PlaceBalloon from '../features/place/PlaceBalloon.tsx'
 import PlaceCard from '../features/place/PlaceCard.tsx'
 import PlaceDetails from '../features/place/PlaceDetails.tsx'
+import PointCard from '../features/place/PointCard.tsx'
 import type { Place } from '../features/place/place.ts'
 import { findPoiLayerIds, toPoi } from '../features/place/poi.ts'
-import SelectedPoi, {
-  PIN_PX,
-  type PoiMatch,
-} from '../features/place/SelectedPoi.tsx'
+import SelectedPoi, { type PoiMatch } from '../features/place/SelectedPoi.tsx'
 import SearchBox from '../features/search/SearchBox.tsx'
 import SearchResults, {
   SEARCH_RESULTS_LAYER,
@@ -75,11 +72,12 @@ function installImageResolver(ref: MapRef | null) {
 }
 
 /**
- * How an open place shows: in brief, as a balloon over it (on a phone, the
- * top of its sheet), or in full, in the panel beside the map (on a phone,
- * its sheet pulled up).
+ * How an open place shows: in full, in the panel beside the map (on a
+ * phone, a sheet), or on a phone in brief, its sheet pulled down to its
+ * top. A point clicked where there is no place shows as a card at the
+ * bottom.
  */
-type View = 'brief' | 'full'
+type View = 'brief' | 'full' | 'point'
 
 /**
  * A place shown: `poi` is set when it was picked from the map's own POIs,
@@ -89,6 +87,19 @@ type Selection = { place: Place; poi?: PoiMatch; view?: View }
 
 /** How long a place's card and badge take to go, once let go, in ms. */
 const LEAVING_MS = 200
+
+/**
+ * How long a click on an empty spot waits before showing what is there,
+ * in ms: a second click meanwhile makes it a double click, to zoom.
+ */
+const DOUBLE_CLICK_MS = 260
+
+/** A point clicked on the map, as a place. */
+const pointAt = (lngLat: [number, number]): Place => ({
+  key: `point:${lngLat.join()}`,
+  name: 'Seçilen nokta',
+  lngLat,
+})
 
 /**
  * How long the pointer rests on a place before a glance at it shows, and
@@ -114,6 +125,8 @@ export default function MapView() {
   const [hover, setHover] = useState<Selection | null>(null)
   const hoverKey = useRef<string | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  // A click on an empty spot, waiting to see if it is a double click
+  const pointTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   // Open directions, to a place or (when null) to a point picked on the
   // map, counted so each opening starts afresh
   const [directions, setDirections] = useState<{
@@ -140,13 +153,13 @@ export default function MapView() {
     LEAVING_MS,
   )
   // Each on screen, and a moment longer once let go of, on its way out:
-  // the open place, in a balloon over it,
+  // the open place's details (on a phone, a sheet, in brief only its top),
   const open = directions ? null : selection
-  const brief = open && !phone && open.view === 'brief' ? open : null
-  const balloons = usePresence(brief, brief?.place.key ?? null, LEAVING_MS)
-  // or in full (on a phone, a sheet, in brief only its top),
-  const full = open && (phone || open.view === 'full') ? open : null
-  const details = usePresence(full, full?.place.key ?? null, LEAVING_MS)
+  const opened = open && open.view !== 'point' ? open : null
+  const details = usePresence(opened, opened?.place.key ?? null, LEAVING_MS)
+  // a point clicked where there is no place, in a card at the bottom,
+  const point = open?.view === 'point' ? open : null
+  const points = usePresence(point, point?.place.key ?? null, LEAVING_MS)
   // a glance at the one the pointer rests on, while none is open,
   const glance = !directions && !selection && hover ? hover : null
   const glances = usePresence(glance, glance?.place.key ?? null, LEAVING_MS)
@@ -156,17 +169,20 @@ export default function MapView() {
   const shown = directions ? null : (selection ?? hover)
   if (
     shown &&
+    shown.view !== 'point' &&
     (shown.poi || (shown !== hover && !onResultMarker(shown.place.key)))
   ) {
     wanted.push({ key: shown.place.key, item: shown })
   }
   const badges = usePresences(wanted, LEAVING_MS)
-  const sanAndreas = design === 'san-andreas'
-  /** How high over a place its balloon's point stands, clear of its pin. */
-  const liftOf = (s: Selection) =>
-    s.poi || !onResultMarker(s.place.key) ? (sanAndreas ? 34 : PIN_PX + 10) : 20
 
-  useEffect(() => () => clearTimeout(hoverTimer.current), [])
+  useEffect(
+    () => () => {
+      clearTimeout(hoverTimer.current)
+      clearTimeout(pointTimer.current)
+    },
+    [],
+  )
 
   /** What a feature under the pointer is, as a place to show. */
   function selectionOf(
@@ -197,20 +213,38 @@ export default function MapView() {
     setHover(null)
   }
 
-  // As on Yandex Maps, one click at a time: a click on a place opens it;
-  // while it is open, a click anywhere else on the map only closes it, and
-  // is spent on that, even on another place; the next click picks anew.
-  // Dragging the map is no click, and leaves it open.
+  // As on Yandex Maps, one click at a time: a click on a place opens it,
+  // and on an empty spot shows what is there; while either is open, a
+  // click anywhere else on the map only closes it, and is spent on that,
+  // even on another place; the next click picks anew. Dragging the map is
+  // no click, and leaves it open.
   function onMapClick(event: MapLayerMouseEvent) {
     // Directions handle their own clicks (picking either end of a route)
     if (directions) return
     stopGlance()
+    // The second click of a double click, which zooms: nothing to show
+    if (pointTimer.current) {
+      clearTimeout(pointTimer.current)
+      pointTimer.current = undefined
+      return
+    }
     if (selection) {
       setSelection(null)
       return
     }
-    const picked = selectionOf(event.features?.[0], event.lngLat)
-    if (picked) setSelection({ ...picked, view: 'brief' })
+    const feature = event.features?.[0]
+    const picked = selectionOf(feature, event.lngLat)
+    if (picked) {
+      setSelection({ ...picked, view: 'full' })
+      return
+    }
+    // A result marker whose place is gone leaves things as they are
+    if (feature) return
+    const lngLat = event.lngLat.toArray()
+    pointTimer.current = setTimeout(() => {
+      pointTimer.current = undefined
+      setSelection({ place: pointAt(lngLat), view: 'point' })
+    }, DOUBLE_CLICK_MS)
   }
 
   /** Opens the open place in full, or back to brief. */
@@ -273,11 +307,7 @@ export default function MapView() {
       {labelLayerId && <LandmarkSearchlights beforeId={labelLayerId} />}
       <SearchBox
         hidden={!!directions}
-        // Looked for, a place opens in full; on a phone, the map in view,
-        // as the top of its sheet
-        onSelect={(result) =>
-          setSelection({ place: result, view: phone ? 'brief' : 'full' })
-        }
+        onSelect={(result) => setSelection({ place: result, view: 'full' })}
         onClear={() => setSelection(null)}
         onDirections={() => openDirections(selection?.place ?? null)}
         nearby={categorySearch && { ...categorySearch, ...nearby }}
@@ -319,14 +349,12 @@ export default function MapView() {
           />
         ),
       )}
-      {balloons.map(({ key, item, leaving }) => (
-        <PlaceBalloon
+      {points.map(({ key, item, leaving }) => (
+        <PointCard
           key={key}
           place={item.place}
-          lift={liftOf(item)}
           leaving={leaving}
-          onDirections={() => openDirections(item.place)}
-          onDetails={() => viewAs(key, 'full')}
+          onDirections={(to) => openDirections(to)}
           onClose={() => setSelection(null)}
         />
       ))}

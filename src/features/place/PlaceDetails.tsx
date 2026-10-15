@@ -41,8 +41,8 @@ type Props = {
   /** On its way out, once closed */
   leaving?: boolean
   /**
-   * On a phone, only its top shows, its name and what can be done there,
-   * until it is pulled up (or tapped) for the rest
+   * On a phone, pulled down to only its top, its name and what can be
+   * done there, until it is pulled up (or tapped) for the rest
    */
   peek?: boolean
   /** Pulled up from a peek, or back down to one */
@@ -63,6 +63,9 @@ const PULL = 70
 const FLICK = 0.5
 /** A press that moves less than this, in px, is a tap. */
 const TAP = 6
+
+/** How far down the search box reaches over the map, in px. */
+const SEARCH_BAR_PX = 76
 
 /** Whether the panel is a sheet from the bottom, as on a phone. */
 const isSheet = () => window.matchMedia('(max-width: 640px)').matches
@@ -165,13 +168,14 @@ export default function PlaceDetails({
       y > box.top - margin &&
       y < box.bottom + margin
     if (!covered) return
-    // Beside the map on a wide screen, over its lower part on a phone
+    // Beside the map on a wide screen; on a phone, over its lower part,
+    // the place going between it and the search box
     const beside = box.width < frame.width * 0.75
     map.easeTo({
       center: openedAt.current,
       offset: beside
         ? [(box.right - frame.left) / 2, 0]
-        : [0, (box.top - frame.bottom) / 2],
+        : [0, (box.top - frame.bottom + SEARCH_BAR_PX) / 2],
       duration: 650,
     })
     // Only as it opens (the map stays the same): the reader may move the

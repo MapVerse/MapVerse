@@ -1,0 +1,385 @@
+/* A pin dropped onto the point: it falls in from above, lands with a
+   squash and settles, its shadow growing as it nears the ground, and
+   sends a ring out over the ground */
+.point-pin {
+  position: relative;
+  display: block;
+  width: 26px;
+  height: 34px;
+}
+
+.point-pin-head {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 3px 4px rgb(15 23 42 / 30%));
+  animation: point-pin-drop 560ms ease-out both;
+}
+
+/* A drop, pointing down, with a white dot in its middle */
+.point-pin-head::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  border: 2px solid #fff;
+  border-radius: 50% 50% 0 50%;
+  background: var(--mv-danger);
+  transform: rotate(45deg);
+}
+
+.point-pin-head::after {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.point-pin-ground {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  width: 14px;
+  height: 5px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(15 23 42 / 40%), transparent);
+  animation: point-pin-shadow 560ms ease-out both;
+}
+
+.point-pin-ground::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--mv-danger);
+  border-radius: 50%;
+  opacity: 0;
+  animation: point-pin-ring 800ms 300ms var(--mv-ease-out);
+}
+
+:root[data-theme='dark'] .point-pin-ground {
+  background: radial-gradient(closest-side, rgb(0 0 0 / 65%), transparent);
+}
+
+.point-pin.is-leaving .point-pin-head {
+  animation: point-pin-lift 160ms ease-in both;
+}
+
+.point-pin.is-leaving .point-pin-ground {
+  animation: point-fade 140ms ease-in both;
+}
+
+.point-pin.is-leaving .point-pin-ground::after {
+  animation: none;
+}
+
+/* The card, at the bottom of the map, in the middle */
+.point-card {
+  --place-skeleton: color-mix(in srgb, var(--mv-muted) 16%, transparent);
+  --place-skeleton-glint: color-mix(in srgb, var(--mv-muted) 34%, transparent);
+
+  position: absolute;
+  right: 0;
+  bottom: 30px;
+  left: 0;
+  z-index: 3;
+  box-sizing: border-box;
+  width: min(400px, calc(100% - 220px));
+  margin: 0 auto;
+  padding: 14px 12px 12px 14px;
+  border-radius: 22px;
+  /* Solid rather than glass: a blur of the map under it would have to be
+     drawn again on every frame the map moves */
+  background: var(--mv-surface);
+  box-shadow:
+    0 14px 34px rgb(15 23 42 / 22%),
+    0 2px 6px rgb(15 23 42 / 12%);
+  color: var(--mv-text);
+  font-family: var(--mv-font);
+  font-size: 14px;
+  line-height: 1.4;
+  transform-origin: 50% 100%;
+  animation: point-card-in 440ms var(--mv-spring) both;
+}
+
+:root[data-theme='dark'] .point-card {
+  box-shadow:
+    0 14px 34px rgb(0 0 0 / 50%),
+    0 2px 6px rgb(0 0 0 / 30%),
+    inset 0 0 0 1px rgb(255 255 255 / 6%);
+}
+
+.point-card.is-leaving {
+  pointer-events: none;
+  animation: point-card-out 160ms ease-in both;
+}
+
+.point-card-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.point-card-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--mv-danger) 14%, transparent);
+  color: var(--mv-danger);
+}
+
+.point-card-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Each line one line high, so nothing moves as the address comes in */
+.point-card-text h2,
+.point-card-detail {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: place-fade-in 240ms ease-out;
+}
+
+.point-card-text h2 {
+  height: 21px;
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 21px;
+}
+
+.point-card-detail {
+  height: 19px;
+  color: var(--mv-muted);
+  font-size: 13px;
+  line-height: 19px;
+}
+
+.point-card-skeleton {
+  display: block;
+  width: 62%;
+  height: 9px;
+  margin: 5px 0;
+  border-radius: 5px;
+  background: linear-gradient(
+    90deg,
+    var(--place-skeleton) 30%,
+    var(--place-skeleton-glint) 50%,
+    var(--place-skeleton) 70%
+  );
+  background-size: 300% 100%;
+  animation: place-shimmer 1.4s ease-in-out infinite;
+}
+
+.point-card-skeleton.is-title {
+  width: 78%;
+  height: 11px;
+  margin: 5px 0;
+}
+
+.point-card-coordinates {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  margin-top: 3px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--mv-subtle);
+  font: inherit;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.point-card-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -2px 0 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--mv-muted);
+  cursor: pointer;
+}
+
+.point-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.point-card-actions button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  border: none;
+  border-radius: 999px;
+  background: var(--mv-hover);
+  color: var(--mv-text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 140ms var(--mv-ease-out),
+    background-color 140ms;
+}
+
+.point-card-actions button:active {
+  transform: scale(0.96);
+}
+
+.point-card-actions .is-primary {
+  background: var(--mv-primary);
+  color: #fff;
+}
+
+@media (hover: hover) {
+  .point-card-close:hover {
+    background: var(--mv-hover);
+    color: var(--mv-text);
+  }
+
+  .point-card-coordinates:hover {
+    color: var(--mv-text);
+  }
+
+  .point-card-actions button:hover {
+    background: color-mix(in srgb, var(--mv-text) 11%, var(--mv-surface));
+  }
+
+  .point-card-actions .is-primary:hover {
+    background: var(--mv-primary-hover);
+  }
+}
+
+:root[data-map-design='san-andreas'] .point-card,
+:root[data-map-design='san-andreas'] .point-card-icon,
+:root[data-map-design='san-andreas'] .point-card-actions button {
+  border-radius: 4px;
+}
+
+:root[data-map-design='san-andreas'] .point-card {
+  box-shadow: var(--mv-shadow);
+}
+
+/* On a phone, edge to edge over the bottom of the map, the map's own
+   buttons stepping aside */
+@media (max-width: 640px) {
+  .point-card {
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    width: calc(100% - 20px);
+  }
+
+  .maplibregl-map:has(.point-card:not(.is-leaving))
+    .maplibregl-ctrl-bottom-right
+    .maplibregl-ctrl.mv-group {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 160ms,
+      visibility 0s 160ms;
+  }
+}
+
+@keyframes point-pin-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-34px) scale(0.9, 1.1);
+  }
+  30% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(0) scale(1.12, 0.84);
+  }
+  72% {
+    transform: translateY(-5px) scale(0.96, 1.04);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes point-pin-shadow {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes point-pin-ring {
+  from {
+    opacity: 0.8;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3.4);
+  }
+}
+
+@keyframes point-pin-lift {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.6);
+  }
+}
+
+@keyframes point-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes point-card-in {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.94);
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes point-card-out {
+  to {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}

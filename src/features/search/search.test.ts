@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { findMatch } from './match.ts'
-import { formatAddress, toSearchResult } from './photon.ts'
+import { describePointFrom, formatAddress, toSearchResult } from './photon.ts'
 
 describe('toSearchResult', () => {
   it('describes a point of interest with its category and address', () => {
@@ -99,6 +99,45 @@ describe('toSearchResult', () => {
 describe('formatAddress', () => {
   it('returns null when there is nothing to show', () => {
     expect(formatAddress({ country: 'Türkiye' })).toBeNull()
+  })
+})
+
+describe('describePointFrom', () => {
+  it('names a point by its street and number, then where that lies', () => {
+    expect(
+      describePointFrom({
+        street: 'Galip Dede Caddesi',
+        housenumber: '12',
+        district: 'Şahkulu',
+        county: 'Beyoğlu',
+        city: 'İstanbul',
+      }),
+    ).toEqual({
+      title: 'Galip Dede Caddesi 12',
+      detail: 'Şahkulu, Beyoğlu, İstanbul',
+    })
+  })
+
+  it('prefers the name of what it is in, keeping the street below', () => {
+    expect(
+      describePointFrom({
+        name: 'Gezi Parkı',
+        street: 'Cumhuriyet Caddesi',
+        district: 'Gümüşsuyu',
+        city: 'İstanbul',
+      }),
+    ).toEqual({
+      title: 'Gezi Parkı',
+      detail: 'Cumhuriyet Caddesi, Gümüşsuyu, İstanbul',
+    })
+  })
+
+  it('falls back to the neighbourhood, and to nothing', () => {
+    expect(describePointFrom({ district: 'Moda', city: 'İstanbul' })).toEqual({
+      title: 'Moda',
+      detail: 'İstanbul',
+    })
+    expect(describePointFrom({ country: 'Türkiye' })).toBeNull()
   })
 })
 
