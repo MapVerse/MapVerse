@@ -7,6 +7,10 @@ export type Maneuver = {
   type: number
   meters: number
   seconds: number
+  /** The streets it runs along */
+  streets: string[]
+  /** Where it starts, as an index into its route's shape */
+  at: number
 }
 
 export type Route = {
@@ -25,6 +29,8 @@ type ValhallaTrip = {
       type: number
       length: number
       time: number
+      street_names?: string[]
+      begin_shape_index?: number
     }[]
   }[]
 }
@@ -66,18 +72,30 @@ export async function getRoutes(
 
 export function parseRoutes(data: ValhallaResponse): Route[] {
   return [data.trip, ...(data.alternates ?? []).map((a) => a.trip)].map(
-    (trip) => ({
-      meters: trip.summary.length * 1000,
-      seconds: trip.summary.time,
-      shape: trip.legs.flatMap((leg) => decodePolyline6(leg.shape)),
-      maneuvers: trip.legs.flatMap((leg) =>
-        leg.maneuvers.map((m) => ({
-          instruction: m.instruction,
-          type: m.type,
-          meters: m.length * 1000,
-          seconds: m.time,
-        })),
-      ),
-    }),
+    (trip) => {
+      const shape: [number, number][] = []
+      const maneuvers: Maneuver[] = []
+      for (const leg of trip.legs) {
+        // Each leg counts its maneuvers' places from its own start
+        const offset = shape.length
+        shape.push(...decodePolyline6(leg.shape))
+        for (const m of leg.maneuvers) {
+          maneuvers.push({
+            instruction: m.instruction,
+            type: m.type,
+            meters: m.length * 1000,
+            seconds: m.time,
+            streets: m.street_names ?? [],
+            at: Math.min(offset + (m.begin_shape_index ?? 0), shape.length - 1),
+          })
+        }
+      }
+      return {
+        meters: trip.summary.length * 1000,
+        seconds: trip.summary.time,
+        shape,
+        maneuvers,
+      }
+    },
   )
 }

@@ -1,28 +1,36 @@
+/* Directions: a column beside the map, the card to plan with on top and the
+   routes below it; on a phone, the card at the top and the routes in a
+   sheet from the bottom */
 .directions {
-  /* It opens out of the search box's corner, and folds back into it */
-  transform-origin: 24px 24px;
-  animation: mv-pop-in 400ms var(--mv-spring) both;
+  --dir-skeleton: color-mix(in srgb, var(--mv-muted) 16%, transparent);
+  --dir-skeleton-glint: color-mix(in srgb, var(--mv-muted) 34%, transparent);
+
   position: absolute;
   top: 12px;
   left: 12px;
   z-index: 3;
   display: flex;
   flex-direction: column;
+  gap: 10px;
   width: min(392px, calc(100% - 80px));
   /* stop above the scale bar */
   max-height: calc(100% - 72px);
-  overflow: hidden;
-  border-radius: var(--mv-radius);
-  background: var(--mv-surface);
-  box-shadow: var(--mv-shadow);
   color: var(--mv-text);
   font-family: var(--mv-font);
   font-size: 14px;
   line-height: 1.4;
+  /* It opens out of the search box's corner, and folds back into it */
+  transform-origin: 24px 24px;
+  animation: mv-pop-in 400ms var(--mv-spring) backwards;
+}
+
+.directions.is-leaving {
+  pointer-events: none;
+  animation: mv-pop-out 170ms ease-in both;
 }
 
 /* Zero-specificity reset, so the button styles below win without */
-:where(.directions) button {
+:where(.directions, .directions-picking) button {
   border: none;
   background: none;
   color: inherit;
@@ -30,15 +38,24 @@
   cursor: pointer;
 }
 
-.directions-header {
+/* The card: how to travel, and from where to where */
+.directions-planner {
+  --glass-tint: var(--glass-tint-strong);
+
+  flex: none;
+  padding: 8px 10px 10px;
+  border-radius: 22px;
+}
+
+.directions-top {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 8px 12px 4px 6px;
 }
 
 .directions-icon-button {
   display: grid;
+  flex: none;
   place-items: center;
   width: 38px;
   height: 38px;
@@ -46,72 +63,124 @@
   color: var(--mv-muted);
 }
 
-.directions-icon-button:hover {
-  background: var(--mv-hover);
-  color: var(--mv-text);
-}
-
-.directions-title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-}
-
+/* How to travel, the picked way marked by a pill that slides to it */
 .directions-modes {
+  position: relative;
   display: grid;
+  flex: 1;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  margin: 4px 12px 0;
-  padding: 4px;
+  padding: 3px;
   border-radius: 14px;
-  background: var(--mv-hover);
+  background: var(--glass-fill);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+
+.directions-modes::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / 3);
+  border-radius: 11px;
+  background: var(--mv-raised);
+  box-shadow: var(--mv-shadow-sm);
+  transform: translateX(calc(var(--mode, 0) * 100%));
+  transition: transform 360ms var(--mv-spring);
 }
 
 .directions-modes button {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   padding: 7px 4px;
-  border-radius: 10px;
+  border-radius: 11px;
   color: var(--mv-muted);
   font-size: 13px;
   font-weight: 500;
+  transition: color 200ms;
 }
 
 .directions-modes button[aria-selected='true'] {
-  background: var(--mv-raised);
-  box-shadow: var(--mv-shadow-sm);
   color: var(--mv-accent);
   font-weight: 600;
 }
 
-.directions-points {
-  position: relative;
-  display: grid;
-  gap: 6px;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--mv-border);
-}
-
-/* dotted line joining the start and end markers */
-.directions-points::before {
-  position: absolute;
-  top: 34px;
-  bottom: 34px;
-  left: 21px;
-  border-left: 2px dotted var(--mv-subtle);
-  content: '';
-}
-
-.directions-point {
+/* From and to, joined by a dotted line, with a button to swap them */
+.directions-ends {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.directions-fields {
+  position: relative;
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
+
+.directions-fields::before {
+  content: '';
+  position: absolute;
+  top: 26px;
+  bottom: 26px;
+  left: 17px;
+  border-left: 2px dotted var(--mv-subtle);
+}
+
+.directions-field {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: var(--glass-fill);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+  cursor: text;
+  transition:
+    background-color 160ms,
+    box-shadow 160ms;
+}
+
+.directions-field.is-editing {
+  background: var(--mv-surface);
+  box-shadow: inset 0 0 0 2px var(--mv-accent);
+}
+
+.directions-field input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--mv-text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+.directions-field input::placeholder {
+  color: var(--mv-subtle);
+  font-weight: 400;
+}
+
+.directions-field > svg {
+  flex: none;
+  color: var(--mv-accent);
 }
 
 .directions-dot {
   position: relative;
+  z-index: 1;
   box-sizing: border-box;
   flex: none;
   width: 12px;
@@ -130,106 +199,209 @@
   box-shadow: 0 0 0 1px var(--mv-danger);
 }
 
-.directions-point-text {
+.directions-swap {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--mv-muted);
+  transition:
+    background-color 160ms,
+    transform 220ms var(--mv-spring);
+}
+
+.directions-swap:active {
+  transform: scale(0.86) rotate(180deg);
+}
+
+.directions-swap:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.directions-notice {
+  margin: 8px 6px 0;
+  color: var(--mv-danger);
+  font-size: 12.5px;
+}
+
+/* What to offer under the end being typed in */
+.directions-suggestions {
+  --glass-tint: var(--glass-tint-strong);
+
+  flex: 0 1 auto;
+  min-height: 0;
+  padding: 6px;
+  overflow-y: auto;
+  border-radius: 22px;
+  transform-origin: 50% 0;
+  animation: mv-pop-in 260ms var(--mv-ease-out) backwards;
+}
+
+.directions-suggestions ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.directions-suggestions li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  animation: mv-rise 260ms var(--mv-ease-out) backwards;
+  animation-delay: calc(var(--row, 0) * 26ms);
+}
+
+.directions-suggestions li[aria-selected='true'] {
+  background: var(--glass-hover);
+}
+
+.directions-suggestion-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--glass-fill);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+  color: var(--mv-muted);
+}
+
+.directions-suggestion-icon.is-accent {
+  background: var(--mv-accent-soft);
+  box-shadow: none;
+  color: var(--mv-accent);
+}
+
+.directions-suggestion-text {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-width: 0;
 }
 
-.directions-point-label {
-  color: var(--mv-muted);
-  font-size: 11.5px;
-  font-weight: 500;
-}
-
-.directions-point-name {
+.directions-suggestion-text strong,
+.directions-suggestion-text small {
   overflow: hidden;
-  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.directions-chips {
-  display: flex;
-  gap: 6px;
-  margin-left: 26px;
+.directions-suggestion-text strong {
+  font-size: 14.5px;
+  font-weight: 600;
 }
 
-.directions-chips-inline {
-  flex: none;
-  margin-left: 0;
-}
-
-.directions-chips button {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 10px 5px 8px;
-  border: 1px solid var(--mv-border);
-  border-radius: 999px;
-  color: var(--mv-accent);
-  font-size: 12.5px;
-  font-weight: 500;
-}
-
-.directions-chips button:hover,
-.directions-chips button[aria-pressed='true'] {
-  background: var(--mv-accent-soft);
-}
-
-.directions-message {
-  margin: 0;
-  padding: 12px 16px;
+.directions-suggestion-text small {
   color: var(--mv-muted);
+  font-size: 12.5px;
+}
+
+.directions-suggestion-distance {
+  flex: none;
+  color: var(--mv-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.directions-searching {
+  display: grid;
+  gap: 8px;
+  padding: 10px 14px 12px;
+}
+
+/* The routes found, and the turns of the picked one */
+.directions-results {
+  --glass-tint: var(--glass-tint-strong);
+
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 22px;
+  transform-origin: 50% 0;
+  animation: mv-pop-in 320ms var(--mv-ease-out) backwards;
+}
+
+.directions-grabber {
+  display: none;
 }
 
 .directions-routes {
   display: grid;
-  gap: 6px;
+  flex: none;
+  gap: 8px;
   margin: 0;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--mv-border);
+  padding: 10px 10px 4px;
   list-style: none;
+}
+
+.directions-routes li,
+.directions-steps li {
+  animation: mv-rise 300ms var(--mv-ease-out) backwards;
+  animation-delay: calc(var(--row, 0) * 40ms);
 }
 
 .directions-routes button {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  flex-direction: column;
+  gap: 2px;
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--mv-border);
-  border-radius: var(--mv-radius-sm);
+  padding: 11px 14px;
+  border-radius: 16px;
+  background: var(--glass-fill);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
   text-align: left;
+  transition:
+    background-color 160ms,
+    box-shadow 160ms,
+    transform 160ms var(--mv-ease-out);
 }
 
-.directions-routes button:hover {
-  background: var(--mv-hover);
+.directions-routes button:active {
+  transform: scale(0.98);
 }
 
 .directions-routes button[aria-pressed='true'] {
-  border-color: var(--mv-accent);
   background: var(--mv-accent-soft);
+  box-shadow: inset 0 0 0 2px var(--mv-accent);
+}
+
+.directions-route-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .directions-route-time {
-  font-size: 17px;
-  font-weight: 650;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .directions-routes button[aria-pressed='true'] .directions-route-time {
   color: var(--mv-accent-strong);
 }
 
-.directions-route-distance,
-.directions-route-arrival {
+.directions-route-meta {
   color: var(--mv-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
-.directions-route-arrival::before {
-  margin-right: 8px;
-  content: '·';
+.directions-route-via {
+  overflow: hidden;
+  color: var(--mv-muted);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .directions-tag {
@@ -240,26 +412,164 @@
   color: var(--mv-success);
   font-size: 11.5px;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.directions-steps-title {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 10px 16px 4px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.directions-steps-title button {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  font-weight: inherit;
+  text-align: left;
+  /* Only a heading beside the map; it opens the sheet on a phone */
+  pointer-events: none;
+}
+
+.directions-steps-title span {
+  margin-left: auto;
+  color: var(--mv-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.directions-steps-title svg {
+  display: none;
+  color: var(--mv-muted);
+  transition: transform 300ms var(--mv-spring);
+}
+
+.directions-steps-title [aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+/* On a phone, a turn picked from the list, with the way to the ones
+   before and after it */
+.directions-stepper {
+  display: none;
+  grid-template-areas:
+    'turn turn turn'
+    'overview prev next';
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 6px 4px;
+  margin: 0 12px 2px;
+  padding: 10px 8px 8px 12px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--mv-accent) 9%, transparent);
+}
+
+.directions-stepper-turn {
+  display: flex;
+  grid-area: turn;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  animation: dir-turn-in 280ms var(--mv-ease-out);
+}
+
+.directions-stepper-turn .directions-step-icon {
+  width: 38px;
+  height: 38px;
+  background: var(--mv-accent);
+  color: #fff;
+}
+
+.directions-stepper-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.directions-stepper-text strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 14.5px;
+  font-weight: 650;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.directions-stepper-text small {
+  color: var(--mv-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.directions-stepper > button:first-child {
+  grid-area: prev;
+}
+
+.directions-stepper > button:nth-child(3) {
+  grid-area: next;
+}
+
+.directions-stepper .directions-icon-button {
+  background: var(--mv-surface);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 12%);
+  color: var(--mv-text);
+}
+
+.directions-stepper .directions-icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.directions-overview {
+  display: inline-flex;
+  grid-area: overview;
+  align-items: center;
+  justify-self: start;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--mv-accent) !important;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@keyframes dir-turn-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
 }
 
 .directions-steps {
   flex: 1;
   min-height: 0;
   margin: 0;
-  padding: 4px 0 8px;
+  padding: 0 6px 8px;
   overflow-y: auto;
   list-style: none;
 }
 
-.directions-steps li {
+.directions-steps button {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 9px 16px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 14px;
+  text-align: left;
+  transition: background-color 160ms;
 }
 
-.directions-steps li + li {
-  border-top: 1px solid var(--mv-hover);
+.directions-steps button[aria-current] {
+  background: var(--mv-accent-soft);
 }
 
 .directions-step-icon {
@@ -273,8 +583,14 @@
   color: var(--mv-accent);
 }
 
+.directions-steps button[aria-current] .directions-step-icon {
+  background: var(--mv-accent);
+  color: #fff;
+}
+
 .directions-instruction {
   flex: 1;
+  font-size: 13.5px;
 }
 
 .directions-step-distance {
@@ -284,9 +600,164 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Start and end of a route, in the same style as the location puck */
-.route-origin,
-.route-destination {
+.directions-message {
+  margin: 0;
+  padding: 14px 16px;
+  color: var(--mv-muted);
+}
+
+.directions-message.is-problem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--mv-text);
+}
+
+.directions-message.is-problem svg {
+  flex: none;
+  color: var(--mv-danger);
+}
+
+/* While routes are worked out, shimmering outlines of them */
+.directions-loading {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.directions-route-skeleton {
+  display: grid;
+  gap: 9px;
+  padding: 14px;
+  border-radius: 16px;
+  background: var(--glass-fill);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+
+.directions-skeleton {
+  display: block;
+  width: 70%;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(
+    90deg,
+    var(--dir-skeleton) 30%,
+    var(--dir-skeleton-glint) 50%,
+    var(--dir-skeleton) 70%
+  );
+  background-size: 300% 100%;
+  animation: dir-shimmer 1.4s ease-in-out infinite;
+}
+
+.directions-skeleton.is-big {
+  width: 34%;
+  height: 16px;
+}
+
+.directions-skeleton.is-short {
+  width: 45%;
+}
+
+/* For screen readers only */
+.directions-skeleton-hint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes dir-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+/* Picking an end on the map: a bar saying so, and on a phone a pin in the
+   middle of the map that it moves under */
+.directions-picking {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.directions-picking-bar {
+  --glass-tint: var(--glass-tint-strong);
+
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: calc(100% - 24px);
+  padding: 10px 10px 10px 18px;
+  border-radius: 20px;
+  color: var(--mv-text);
+  font-family: var(--mv-font);
+  pointer-events: auto;
+  transform: translateX(-50%);
+  animation: dir-bar-in 360ms var(--mv-spring) backwards;
+}
+
+.directions-picking-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.directions-picking-text strong {
+  font-size: 14.5px;
+  font-weight: 650;
+}
+
+.directions-picking-text small {
+  color: var(--mv-muted);
+  font-size: 12.5px;
+}
+
+.directions-picking-actions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+
+.directions-picking-actions button {
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--glass-fill);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.directions-picking-actions .is-primary {
+  background: var(--mv-primary);
+  box-shadow: none;
+  color: #fff;
+}
+
+.directions-picking .on-phone,
+.directions-picking-pin {
+  display: none;
+}
+
+@keyframes dir-bar-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px) scale(0.96);
+  }
+}
+
+/* The ends of a route: a dot where it starts (pulsing at the user's own
+   location), and a pin that drops in where it ends */
+.route-origin {
+  position: relative;
   display: block;
   box-sizing: border-box;
   width: 20px;
@@ -297,20 +768,339 @@
   box-shadow: 0 2px 6px rgb(15 23 42 / 28%);
 }
 
-.route-destination {
-  background: var(--mv-danger);
+.route-origin.is-mine::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: var(--mv-accent);
+  opacity: 0;
+  animation: route-pulse 2.2s ease-out infinite;
 }
 
+.route-destination {
+  position: relative;
+  display: block;
+  width: 26px;
+  height: 31px;
+  transform-origin: 50% 100%;
+  animation: route-pin-drop 560ms var(--mv-spring) backwards;
+}
+
+.route-destination::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 1px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--mv-danger);
+  box-shadow: 0 3px 8px rgb(15 23 42 / 30%);
+  transform: rotate(-45deg);
+}
+
+.route-destination::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+/* The turn picked in the list, on the map */
+.route-step {
+  display: block;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--mv-accent);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--mv-accent) 30%, transparent),
+    0 2px 6px rgb(15 23 42 / 28%);
+  animation: mv-poi-pop 420ms var(--mv-spring) backwards;
+}
+
+@keyframes route-pulse {
+  from {
+    opacity: 0.35;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+@keyframes route-pin-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-26px) scale(0.8);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(2px) scale(1.04, 0.94);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* Only where a pointer rests on things: after a tap, on a phone, a hover
+   would stay stuck on what was tapped */
+@media (hover: hover) {
+  .directions-icon-button:hover,
+  .directions-swap:hover {
+    background: var(--glass-hover);
+    color: var(--mv-text);
+  }
+
+  .directions-suggestions li:hover,
+  .directions-routes button:not([aria-pressed='true']):hover,
+  .directions-steps button:not([aria-current]):hover {
+    background: var(--glass-hover);
+  }
+
+  .directions-overview:hover {
+    background: color-mix(in srgb, var(--mv-accent) 10%, transparent);
+  }
+}
+
+/* On a phone: the card at the top, the routes in a sheet from the bottom
+   that is pulled up for the turns */
 @media (max-width: 640px) {
-  /* On phones the panel takes half the screen and scrolls as a whole */
   .directions {
-    max-height: 48%;
-    overflow-y: auto;
+    inset: 0;
+    box-sizing: border-box;
+    width: auto;
+    max-height: none;
+    padding: 10px 10px 0;
+    gap: 8px;
+    pointer-events: none;
+    animation: none;
+  }
+
+  .directions > * {
+    pointer-events: auto;
+  }
+
+  .directions-planner {
+    animation: dir-drop 380ms var(--mv-spring) backwards;
+  }
+
+  .directions-suggestions {
+    margin-bottom: 10px;
+  }
+
+  .directions-results {
+    /* Over the map's buttons, edge to edge, solid */
+    margin: auto -10px 0;
+    max-height: 188px;
+    border-radius: 24px 24px 0 0;
+    background: var(--mv-surface);
+    box-shadow: 0 -8px 30px rgb(15 23 42 / 18%);
+    transform-origin: 50% 100%;
+    animation: dir-rise 420ms var(--mv-spring) backwards;
+    transition: max-height 380ms var(--mv-spring);
+  }
+
+  .directions-results.is-expanded {
+    max-height: 78%;
+  }
+
+  /* The turns fade out under the sheet's edge until it is pulled up */
+  .directions-results:not(.is-expanded) .directions-steps {
+    mask-image: linear-gradient(#000 0, transparent 44px);
+  }
+
+  .directions-grabber {
+    position: relative;
+    display: block;
+    flex: none;
+    width: 100%;
+    height: 24px;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .directions-grabber::before {
+    content: '';
+    position: absolute;
+    top: 9px;
+    left: 50%;
+    width: 38px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--mv-border);
+    transform: translateX(-50%);
+  }
+
+  /* The routes side by side, swiped through */
+  .directions-routes {
+    display: flex;
+    gap: 8px;
+    padding: 0 12px 4px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .directions-routes li {
+    flex: 0 0 auto;
+    width: 72%;
+    scroll-snap-align: start;
+  }
+
+  .directions-routes li:only-child {
+    width: 100%;
   }
 
   .directions-steps {
-    flex: none;
-    overflow: visible;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .directions-steps-title button {
+    pointer-events: auto;
+  }
+
+  .directions-steps-title svg {
+    display: block;
+  }
+
+  /* Going turn by turn, the turn stands in for the routes until the
+     sheet is pulled up */
+  .directions-stepper {
+    display: grid;
+  }
+
+  .directions-results.is-stepping:not(.is-expanded) .directions-routes {
+    display: none;
+  }
+
+  /* The map's own buttons would stand over the sheet; pinching and the
+     planner do their work meanwhile */
+  .maplibregl-map:has(.directions) .maplibregl-ctrl.mv-group {
+    visibility: hidden;
+  }
+
+  .directions.is-leaving {
+    animation: none;
+  }
+
+  .directions.is-leaving .directions-planner {
+    animation: dir-lift 170ms ease-in both;
+  }
+
+  .directions.is-leaving .directions-results,
+  .directions.is-leaving .directions-suggestions {
+    animation: dir-sink 170ms ease-in both;
+  }
+
+  /* While picking on the map, it all steps aside for the map and its pin */
+  .directions.is-picking {
+    visibility: hidden;
+  }
+
+  .directions-picking .on-phone {
+    display: inline;
+  }
+
+  .directions-picking .on-wide {
+    display: none;
+  }
+
+  .directions-picking-bar {
+    right: 10px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    left: 10px;
+    flex-wrap: wrap;
+    max-width: none;
+    padding: 14px 14px 14px 16px;
+    transform: none;
+    animation-name: dir-rise;
+  }
+
+  .directions-picking-text {
+    flex: 1 1 100%;
+  }
+
+  .directions-picking-actions {
+    flex: 1;
+  }
+
+  .directions-picking-actions button {
+    flex: 1;
+    padding: 11px 14px;
+  }
+
+  /* The pin the map moves under, its point on the middle of the map */
+  .directions-picking-pin {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: block;
+    width: 30px;
+    height: 32px;
+    /* Not by a transform, which its drop animates */
+    margin: -32px 0 0 -15px;
+    animation: route-pin-drop 520ms var(--mv-spring) backwards;
+  }
+
+  .directions-picking-pin::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 2px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50% 50% 50% 0;
+    background: var(--mv-accent);
+    box-shadow: 0 4px 10px rgb(15 23 42 / 30%);
+    transform: rotate(-45deg);
+  }
+
+  .directions-picking-pin::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fff;
+  }
+}
+
+@keyframes dir-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes dir-lift {
+  to {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+@keyframes dir-rise {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+}
+
+@keyframes dir-sink {
+  to {
+    opacity: 0;
+    transform: translateY(40px);
   }
 }
 
@@ -330,7 +1120,8 @@
   background: #e0302f;
 }
 
-.directions.is-leaving {
-  pointer-events: none;
-  animation: mv-pop-out 170ms ease-in both;
+:root[data-map-design='san-andreas'] .route-destination::before,
+:root[data-map-design='san-andreas'] .route-destination::after,
+:root[data-map-design='san-andreas'] .route-origin::after {
+  display: none;
 }

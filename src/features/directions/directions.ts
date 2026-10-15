@@ -1,4 +1,5 @@
 import type { StrokeName } from '../../icons/strokes.ts'
+import type { Route } from './valhalla.ts'
 
 /** Decodes a Valhalla (precision 6) encoded polyline into [lng, lat] pairs. */
 export function decodePolyline6(encoded: string): [number, number][] {
@@ -72,4 +73,31 @@ const MANEUVER_ICONS: Partial<Record<number, StrokeName>> = {
 
 export function maneuverIcon(type: number): StrokeName {
   return MANEUVER_ICONS[type] ?? 'straight'
+}
+
+/** The street a route runs along furthest, to tell it from the others. */
+export function routeVia(route: Route): string | undefined {
+  const along = new Map<string, number>()
+  for (const { streets, meters } of route.maneuvers) {
+    for (const street of streets) {
+      along.set(street, (along.get(street) ?? 0) + meters)
+    }
+  }
+  return [...along].sort((a, b) => b[1] - a[1])[0]?.[0]
+}
+
+/**
+ * What sets each route apart: the first, Valhalla's pick, is the one
+ * suggested; another that is clearly shorter says so.
+ */
+export function routeLabels(routes: Route[]): (string | undefined)[] {
+  if (routes.length < 2) return routes.map(() => undefined)
+  const shortest = Math.min(...routes.map((r) => r.meters))
+  return routes.map((route, i) =>
+    i === 0
+      ? 'Önerilen'
+      : route.meters === shortest && route.meters < routes[0].meters * 0.95
+        ? 'Daha kısa'
+        : undefined,
+  )
 }

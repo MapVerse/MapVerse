@@ -4,8 +4,10 @@ import {
   formatArrival,
   formatDuration,
   maneuverIcon,
+  routeLabels,
+  routeVia,
 } from './directions.ts'
-import { parseRoutes } from './valhalla.ts'
+import { parseRoutes, type Route } from './valhalla.ts'
 
 // Reference encoder, to build fixtures
 function encode(points: [number, number][]): string {
@@ -78,6 +80,8 @@ describe('parseRoutes', () => {
       type: 1,
       meters: 7400,
       seconds: 1080,
+      streets: [],
+      at: 0,
     })
     expect(routes[1].meters).toBeCloseTo(6900)
   })
@@ -106,5 +110,76 @@ describe('maneuverIcon', () => {
     expect(maneuverIcon(15)).toBe('left')
     expect(maneuverIcon(26)).toBe('roundabout')
     expect(maneuverIcon(8)).toBe('straight')
+  })
+})
+
+describe('routes of several legs', () => {
+  it('count where each maneuver starts along the whole route', () => {
+    const leg = (instruction: string) => ({
+      shape: encode(line),
+      maneuvers: [
+        {
+          instruction,
+          type: 10,
+          length: 1,
+          time: 60,
+          street_names: ['Barbaros Bulvarı'],
+          begin_shape_index: 1,
+        },
+      ],
+    })
+    const [route] = parseRoutes({
+      trip: {
+        summary: { length: 2, time: 120 },
+        legs: [leg('Birinci'), leg('İkinci')],
+      },
+    })
+    expect(route.shape).toHaveLength(6)
+    expect(route.maneuvers.map((m) => m.at)).toEqual([1, 4])
+    expect(route.maneuvers[0].streets).toEqual(['Barbaros Bulvarı'])
+  })
+})
+
+const route = (meters: number, streets: [string, number][]): Route => ({
+  meters,
+  seconds: meters / 10,
+  shape: [],
+  maneuvers: streets.map(([street, m], at) => ({
+    instruction: '',
+    type: 10,
+    meters: m,
+    seconds: m / 10,
+    streets: street ? [street] : [],
+    at,
+  })),
+})
+
+describe('routeVia', () => {
+  it('names the street the route runs along furthest, in total', () => {
+    expect(
+      routeVia(
+        route(3000, [
+          ['Cumhuriyet Caddesi', 400],
+          ['Dolmabahçe Caddesi', 900],
+          ['Barbaros Bulvarı', 700],
+          ['Dolmabahçe Caddesi', 600],
+          ['', 400],
+        ]),
+      ),
+    ).toBe('Dolmabahçe Caddesi')
+    expect(routeVia(route(100, [['', 100]]))).toBeUndefined()
+  })
+})
+
+describe('routeLabels', () => {
+  it('suggests the first route, and marks a clearly shorter other', () => {
+    expect(
+      routeLabels([route(3000, []), route(2600, []), route(3400, [])]),
+    ).toEqual(['Önerilen', 'Daha kısa', undefined])
+    expect(routeLabels([route(3000, []), route(2950, [])])).toEqual([
+      'Önerilen',
+      undefined,
+    ])
+    expect(routeLabels([route(3000, [])])).toEqual([undefined])
   })
 })
