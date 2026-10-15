@@ -18,11 +18,15 @@ import {
   FALLBACK_CATEGORY,
   categoryInfo,
 } from '../features/place/categories.ts'
+import PlaceBalloon from '../features/place/PlaceBalloon.tsx'
 import PlaceCard from '../features/place/PlaceCard.tsx'
 import PlaceDetails from '../features/place/PlaceDetails.tsx'
 import type { Place } from '../features/place/place.ts'
 import { findPoiLayerIds, toPoi } from '../features/place/poi.ts'
-import SelectedPoi, { type PoiMatch } from '../features/place/SelectedPoi.tsx'
+import SelectedPoi, {
+  PIN_PX,
+  type PoiMatch,
+} from '../features/place/SelectedPoi.tsx'
 import SearchBox from '../features/search/SearchBox.tsx'
 import SearchResults, {
   SEARCH_RESULTS_LAYER,
@@ -32,6 +36,7 @@ import {
   type CategorySearch,
 } from '../features/search/useCategorySearch.ts'
 import { usePresence, usePresences, type Wanted } from '../lib/presence.ts'
+import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.ts'
 import { useTheme } from '../theme/theme.ts'
 import SanAndreasHud from './SanAndreasHud.tsx'
 import './controls.css'
@@ -69,8 +74,18 @@ function installImageResolver(ref: MapRef | null) {
   })
 }
 
-/** `poi` is set when the place was picked from the map's own POIs. */
-type Selection = { place: Place; poi?: PoiMatch }
+/**
+ * How an open place shows: in brief, as a balloon over it (on a phone, the
+ * top of its sheet), or in full, in the panel beside the map (on a phone,
+ * its sheet pulled up).
+ */
+type View = 'brief' | 'full'
+
+/**
+ * A place shown: `poi` is set when it was picked from the map's own POIs,
+ * `view` once it is opened rather than glanced at.
+ */
+type Selection = { place: Place; poi?: PoiMatch; view?: View }
 
 /** How long a place's card and badge take to go, once let go, in ms. */
 const LEAVING_MS = 200
@@ -88,6 +103,7 @@ const CAN_HOVER = window.matchMedia(
 ).matches
 
 export default function MapView() {
+  const phone = useMediaQuery(PHONE_QUERY)
   const theme = useTheme()
   const terrain = useTerrainEnabled()
   const design = useMapDesign()
@@ -124,27 +140,31 @@ export default function MapView() {
     LEAVING_MS,
   )
   // Each on screen, and a moment longer once let go of, on its way out:
-  // the picked place's details,
-  const details = usePresence(
-    directions ? null : selection,
-    directions ? null : (selection?.place.key ?? null),
-    LEAVING_MS,
-  )
-  // a glance at the one the pointer rests on, unless it is the picked one,
-  const glance =
-    !directions && hover && hover.place.key !== selection?.place.key
-      ? hover
-      : null
+  // the open place, in a balloon over it,
+  const open = directions ? null : selection
+  const brief = open && !phone && open.view === 'brief' ? open : null
+  const balloons = usePresence(brief, brief?.place.key ?? null, LEAVING_MS)
+  // or in full (on a phone, a sheet, in brief only its top),
+  const full = open && (phone || open.view === 'full') ? open : null
+  const details = usePresence(full, full?.place.key ?? null, LEAVING_MS)
+  // a glance at the one the pointer rests on, while none is open,
+  const glance = !directions && !selection && hover ? hover : null
   const glances = usePresence(glance, glance?.place.key ?? null, LEAVING_MS)
-  // and the badges standing out for both, a result marker standing out
-  // enough by itself
+  // and the badge standing out for either, standing up as a pin for the
+  // open one; a result marker stands out enough by itself
   const wanted: Wanted<Selection>[] = []
-  for (const s of directions ? [] : [selection, hover]) {
-    if (!s || wanted.some(({ key }) => key === s.place.key)) continue
-    if (!s.poi && (s === hover || onResultMarker(s.place.key))) continue
-    wanted.push({ key: s.place.key, item: s })
+  const shown = directions ? null : (selection ?? hover)
+  if (
+    shown &&
+    (shown.poi || (shown !== hover && !onResultMarker(shown.place.key)))
+  ) {
+    wanted.push({ key: shown.place.key, item: shown })
   }
   const badges = usePresences(wanted, LEAVING_MS)
+  const sanAndreas = design === 'san-andreas'
+  /** How high over a place its balloon's point stands, clear of its pin. */
+  const liftOf = (s: Selection) =>
+    s.poi || !onResultMarker(s.place.key) ? (sanAndreas ? 34 : PIN_PX + 10) : 20
 
   useEffect(() => () => clearTimeout(hoverTimer.current), [])
 
@@ -177,22 +197,32 @@ export default function MapView() {
     setHover(null)
   }
 
+  // As on Yandex Maps, one click at a time: a click on a place opens it;
+  // while it is open, a click anywhere else on the map only closes it, and
+  // is spent on that, even on another place; the next click picks anew.
+  // Dragging the map is no click, and leaves it open.
   function onMapClick(event: MapLayerMouseEvent) {
     // Directions handle their own clicks (picking either end of a route)
     if (directions) return
     stopGlance()
-    const feature = event.features?.[0]
-    const picked = selectionOf(feature, event.lngLat)
-    // A result marker whose place is gone leaves things as they are
-    if (feature && !picked) return
-    setSelection(picked)
+    if (selection) {
+      setSelection(null)
+      return
+    }
+    const picked = selectionOf(event.features?.[0], event.lngLat)
+    if (picked) setSelection({ ...picked, view: 'brief' })
+  }
+
+  /** Opens the open place in full, or back to brief. */
+  function viewAs(key: string, view: View) {
+    setSelection((s) => (s?.place.key === key ? { ...s, view } : s))
   }
 
   // Rest the pointer on a place a moment for a glance at it; move off it,
-  // and the glance goes. Not while the map is dragged, nor on a phone,
-  // where a tap opens the details at once.
+  // and the glance goes. Not while the map is dragged or a place is open,
+  // nor on a phone, where a tap opens a place at once.
   function onMapMouseMove(event: MapLayerMouseEvent) {
-    if (!CAN_HOVER || directions) return
+    if (!CAN_HOVER || directions || selection) return
     const candidate = event.originalEvent.buttons
       ? null
       : selectionOf(event.features?.[0], event.lngLat)
@@ -220,7 +250,8 @@ export default function MapView() {
       interactiveLayerIds={
         directions ? [] : [SEARCH_RESULTS_LAYER, ...poiLayerIds]
       }
-      cursor={hoveringPoi ? 'pointer' : undefined}
+      // A pointer over a place only while a click would open it
+      cursor={hoveringPoi && !selection ? 'pointer' : undefined}
       onLoad={(event) => {
         const style = event.target.getStyle()
         setPoiLayerIds(findPoiLayerIds(style))
@@ -242,7 +273,11 @@ export default function MapView() {
       {labelLayerId && <LandmarkSearchlights beforeId={labelLayerId} />}
       <SearchBox
         hidden={!!directions}
-        onSelect={(result) => setSelection({ place: result })}
+        // Looked for, a place opens in full; on a phone, the map in view,
+        // as the top of its sheet
+        onSelect={(result) =>
+          setSelection({ place: result, view: phone ? 'brief' : 'full' })
+        }
         onClear={() => setSelection(null)}
         onDirections={() => openDirections(selection?.place ?? null)}
         nearby={categorySearch && { ...categorySearch, ...nearby }}
@@ -268,15 +303,31 @@ export default function MapView() {
           color={categoryInfo(item.place.categoryKey)?.color}
           match={item.poi}
           leaving={leaving}
+          pin={!!item.view}
+          categoryKey={item.place.categoryKey}
         />
       ))}
-      {glances.map(({ key, item, leaving }) => (
-        <PlaceCard
+      {glances.map(({ key, item, leaving }) =>
+        // A glance at a place just opened makes way for it at once
+        leaving && key === selection?.place.key ? null : (
+          <PlaceCard
+            key={key}
+            place={item.place}
+            // Clear of the badge it points at
+            offset={item.poi ? 26 : onResultMarker(key) ? 20 : 8}
+            leaving={leaving}
+          />
+        ),
+      )}
+      {balloons.map(({ key, item, leaving }) => (
+        <PlaceBalloon
           key={key}
           place={item.place}
-          // Clear of the badge it points at
-          offset={item.poi ? 26 : onResultMarker(key) ? 20 : 8}
+          lift={liftOf(item)}
           leaving={leaving}
+          onDirections={() => openDirections(item.place)}
+          onDetails={() => viewAs(key, 'full')}
+          onClose={() => setSelection(null)}
         />
       ))}
       {details.map(({ key, item, leaving }) => (
@@ -284,6 +335,8 @@ export default function MapView() {
           key={key}
           place={item.place}
           leaving={leaving}
+          peek={phone && item.view === 'brief'}
+          onPeek={(peek) => viewAs(key, peek ? 'brief' : 'full')}
           onDirections={() => openDirections(item.place)}
           onClose={() => setSelection(null)}
         />

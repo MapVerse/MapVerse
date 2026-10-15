@@ -1,6 +1,7 @@
 import { Marker, useMap } from '@vis.gl/react-maplibre'
 import { useEffect, useMemo, useRef, type CSSProperties } from 'react'
 import { BADGE_IMAGE_PX } from '../../icons/badge.ts'
+import { Glyph } from '../../icons/Icon.tsx'
 import { useMapDesign } from '../../map/designSetting.ts'
 import {
   PICKED,
@@ -9,6 +10,7 @@ import {
   selectedPoiImage,
 } from '../../map/poiStyle.ts'
 import { useTheme } from '../../theme/theme.ts'
+import { FALLBACK_CATEGORY, categoryInfo } from './categories.ts'
 import './SelectedPoi.css'
 
 /** Identifies the picked feature within the style's POI layers. */
@@ -23,16 +25,25 @@ type Props = {
   match?: PoiMatch
   /** On its way out, shrinking back into the map's own badge */
   leaving?: boolean
+  /** Opened, rather than glanced at: it stands up as a pin */
+  pin?: boolean
+  /** The category, for the pin's glyph */
+  categoryKey?: string
 }
+
+/** How tall the pin stands over its place, in px. */
+export const PIN_PX = 48
 
 /** How much bigger than the map's own badge the picked one grows. */
 const GROWTH = 1.3
 
 /**
- * The selected map POI's badge, filled with its colour, standing in for
- * the map's own: it jumps up out of it, bigger, with a ripple, and shrinks
- * back into it when let go. Drawn as a marker over the map, it shows at
- * once and animates smoothly.
+ * The map POI looked at, standing in for the map's own badge. Glanced at,
+ * its badge fills with its colour and jumps up out of the map's, bigger,
+ * with a ripple; opened, it stands up from its place as a pin of its
+ * colour, landing with a bounce and a ring on the ground. Either goes
+ * back into the map's badge when let go. Drawn as a marker over the map
+ * and moved only by transforms, it shows at once and animates smoothly.
  */
 export default function SelectedPoi({
   lngLat,
@@ -40,6 +51,8 @@ export default function SelectedPoi({
   color,
   match,
   leaving = false,
+  pin = false,
+  categoryKey,
 }: Props) {
   const { current: ref } = useMap()
   const theme = useTheme()
@@ -71,6 +84,34 @@ export default function SelectedPoi({
       if (map.getSource('openmaptiles')) map.removeFeatureState(target, PICKED)
     }
   }, [ref, match?.id])
+
+  // San Andreas keeps to its radar blips
+  if (pin && design !== 'san-andreas') {
+    const info = categoryInfo(categoryKey) ?? FALLBACK_CATEGORY
+    return (
+      <Marker
+        longitude={lngLat[0]}
+        latitude={lngLat[1]}
+        anchor="bottom"
+        style={{ zIndex: 1, pointerEvents: 'none' }}
+      >
+        <div
+          className={`poi-pin${leaving ? ' is-leaving' : ''}`}
+          style={
+            {
+              '--pin-height': `${PIN_PX}px`,
+              '--poi-color': color ?? info.color,
+            } as CSSProperties
+          }
+        >
+          <span className="poi-pin-ground" />
+          <span className="poi-pin-body">
+            <Glyph name={info.glyph} size={20} />
+          </span>
+        </div>
+      </Marker>
+    )
+  }
 
   if (!badge) return null
   return (

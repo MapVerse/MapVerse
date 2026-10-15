@@ -295,7 +295,11 @@
   color: inherit;
 }
 
-/* On a phone, a sheet over the lower part of the map */
+/* On a phone, a sheet from the bottom. Opened from the map, only its top
+   shows at first, its name and what can be done there; pulled up, or
+   tapped, it shows the rest. Tall and fixed in height, it moves only by
+   its transform, so following a finger or springing between its heights
+   stays smooth. */
 @media (max-width: 640px) {
   .place-panel {
     top: auto;
@@ -305,17 +309,24 @@
     /* Over the map's buttons and scale bar */
     z-index: 3;
     width: auto;
-    /* A steady height, so it doesn't jump as its details come in, and
-       the place moved clear of it stays clear */
-    height: min(58%, 520px);
+    height: min(80%, 640px);
     max-height: none;
     /* Solid, so the map's buttons don't show through it */
     background: var(--mv-surface);
-    /* Pulled down by its top; its list still scrolls */
+    box-shadow: 0 -8px 30px rgb(15 23 42 / 18%);
+    /* Pulled by its top; its list still scrolls */
     touch-action: none;
     border-radius: 24px 24px 0 0;
     transform-origin: 50% 100%;
+    transition: transform 420ms var(--mv-spring);
     animation-name: place-sheet-in;
+    animation-duration: 460ms;
+  }
+
+  .place-panel.is-peek {
+    transform: translateY(
+      calc(100% - var(--peek) - env(safe-area-inset-bottom, 0px))
+    );
   }
 
   .place-panel.is-leaving {
@@ -323,9 +334,17 @@
   }
 
   .place-panel-body {
+    flex: 1;
+    min-height: 0;
     touch-action: pan-y;
     /* Clear of a phone's home bar */
     padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+
+  /* Room kept for whether it is open, so a peek is as tall before it is
+     known as after */
+  .place-panel-status-slot {
+    min-height: 24px;
   }
 
   /* A grabber, as on a sheet */
@@ -338,12 +357,32 @@
     border-radius: 2px;
     background: var(--glass-line);
   }
+
+  .place-panel-more svg {
+    transform: rotate(180deg);
+  }
+
+  .maplibregl-ctrl-bottom-right .maplibregl-ctrl.mv-group {
+    transition: opacity 220ms 100ms;
+  }
+
+  /* The map's own buttons would stand over the sheet's top; pinching does
+     their work meanwhile */
+  .maplibregl-map:has(.place-panel:not(.is-leaving))
+    .maplibregl-ctrl-bottom-right
+    .maplibregl-ctrl.mv-group {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 160ms,
+      visibility 0s 160ms;
+  }
 }
 
+/* Up from below the map */
 @keyframes place-sheet-in {
   from {
-    opacity: 0;
-    transform: translateY(48px);
+    transform: translateY(100%);
   }
 }
 

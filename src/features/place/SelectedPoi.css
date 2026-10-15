@@ -68,3 +68,146 @@
     transform: scale(var(--poi-from));
   }
 }
+
+/* Opened: it stands up from its place as a pin of its colour, its point
+   on the place. It jumps up, lands with a squash and settles, its shadow
+   on the ground shrinking while it is in the air, and sends a ring out
+   over the ground as it lands. */
+.poi-pin {
+  position: relative;
+  width: 40px;
+  height: var(--pin-height);
+}
+
+.poi-pin-body {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  justify-items: center;
+  padding-top: 10px;
+  box-sizing: border-box;
+  color: #fff;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 4px 5px rgb(15 23 42 / 28%));
+  animation: poi-pin-rise 640ms ease-out both;
+}
+
+/* A drop: a square, three corners rounded, turned to point down */
+.poi-pin-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: 40px;
+  height: 40px;
+  border: 2.5px solid #fff;
+  border-radius: 50% 50% 0 50%;
+  background: var(--poi-color);
+  transform: rotate(45deg);
+}
+
+.poi-pin-body svg {
+  position: relative;
+}
+
+.poi-pin-ground {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  width: 18px;
+  height: 6px;
+  margin-left: -9px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(15 23 42 / 38%), transparent);
+  animation: poi-pin-shadow 640ms ease-out both;
+}
+
+/* The ring it sends out over the ground */
+.poi-pin-ground::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--poi-color);
+  border-radius: 50%;
+  opacity: 0;
+  animation: poi-pin-ring 900ms 330ms var(--mv-ease-out);
+}
+
+:root[data-theme='dark'] .poi-pin-ground {
+  background: radial-gradient(closest-side, rgb(0 0 0 / 60%), transparent);
+}
+
+.poi-pin.is-leaving .poi-pin-body {
+  animation: poi-pin-sink 170ms ease-in both;
+}
+
+.poi-pin.is-leaving .poi-pin-ground {
+  animation: poi-pin-fade 150ms ease-in both;
+}
+
+.poi-pin.is-leaving .poi-pin-ground::after {
+  animation: none;
+}
+
+@keyframes poi-pin-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(4px) scale(0.25);
+  }
+  34% {
+    opacity: 1;
+    transform: translateY(-16px) scale(1.04);
+  }
+  56% {
+    transform: translateY(0) scale(1.1, 0.88);
+  }
+  76% {
+    transform: translateY(-3px) scale(0.97, 1.03);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes poi-pin-shadow {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  34% {
+    opacity: 0.4;
+    transform: scale(0.55);
+  }
+  56% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes poi-pin-ring {
+  from {
+    opacity: 0.85;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 0;
+    transform: scale(3.6);
+  }
+}
+
+@keyframes poi-pin-sink {
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.3);
+  }
+}
+
+@keyframes poi-pin-fade {
+  to {
+    opacity: 0;
+  }
+}

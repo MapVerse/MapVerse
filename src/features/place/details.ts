@@ -48,6 +48,11 @@ export function nearest(
 }
 
 const cache = new Map<string, Promise<PlaceDetails | null>>()
+// The answers already in, to show at once rather than a moment later
+const settled = new Map<string, PlaceDetails | null>()
+
+/** A place's details if they are already in: undefined if not yet. */
+export const knownPlaceDetails = (key: string) => settled.get(key)
 
 /** A place's details from OpenStreetMap, or null if it has none there. */
 export function fetchPlaceDetails(
@@ -63,6 +68,7 @@ export function fetchPlaceDetails(
       : null
   })
   cache.set(place.key, found)
+  found.then((details) => settled.set(place.key, details)).catch(() => {})
   // Asked again after a failure, it is tried again
   found.catch(() => cache.delete(place.key))
   return found

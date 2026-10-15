@@ -1,6 +1,7 @@
 import { useMap } from '@vis.gl/react-maplibre'
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -14,13 +15,11 @@ import {
   cuisine,
   email,
   features,
-  fetchPlaceDetails,
   osmUrl,
   phone,
   tagAddress,
   website,
   wikipedia,
-  type PlaceDetails as Details,
 } from './details.ts'
 import {
   dayHours,
@@ -31,7 +30,9 @@ import {
   weekLines,
 } from './openingHours.ts'
 import type { Place } from './place.ts'
+import { sharePlace } from './share.ts'
 import { useAddress } from './useAddress.ts'
+import { useNow, usePlaceDetails } from './usePlaceDetails.ts'
 import './PlaceCard.css'
 import './PlaceDetails.css'
 
@@ -39,6 +40,13 @@ type Props = {
   place: Place
   /** On its way out, once closed */
   leaving?: boolean
+  /**
+   * On a phone, only its top shows, its name and what can be done there,
+   * until it is pulled up (or tapped) for the rest
+   */
+  peek?: boolean
+  /** Pulled up from a peek, or back down to one */
+  onPeek?: (peek: boolean) => void
   onDirections: () => void
   onClose: () => void
 }
@@ -46,9 +54,15 @@ type Props = {
 /** How long "copied" shows on a button, in ms. */
 const COPIED_MS = 1600
 
-/** How far, in px, or how fast, in px a ms, a sheet is pulled down to close. */
-const PULL_CLOSE = 110
-const FLICK = 0.6
+/**
+ * How far, in px, or how fast, in px a ms, a sheet is pulled to go from
+ * one height to the next: up from a peek to the whole of it, down from
+ * there to a peek, and down from a peek to close.
+ */
+const PULL = 70
+const FLICK = 0.5
+/** A press that moves less than this, in px, is a tap. */
+const TAP = 6
 
 /** Whether the panel is a sheet from the bottom, as on a phone. */
 const isSheet = () => window.matchMedia('(max-width: 640px)').matches
@@ -64,40 +78,51 @@ const row = (i: number) => ({ '--row': i }) as CSSProperties
 export default function PlaceDetails({
   place,
   leaving = false,
+  peek = false,
+  onPeek,
   onDirections,
   onClose,
 }: Props) {
   const theme = useTheme()
   const { current: ref } = useMap()
   const panel = useRef<HTMLElement>(null)
+  const actions = useRef<HTMLDivElement>(null)
   const info = categoryInfo(place.categoryKey)
   const lookedUp = useAddress(place)
   // undefined while they are looked up, null when there are none
-  const [details, setDetails] = useState<Details | null>()
+  const details = usePlaceDetails(place)
   const [week, setWeek] = useState(false)
   const [copied, setCopied] = useState<'link' | 'coordinates' | null>(null)
   // The time, to tell whether it is open; kept current while it is shown
-  const [now, setNow] = useState(() => new Date())
+  const now = useNow()
   // Where it was when the panel opened
   const openedAt = useRef(place.lngLat)
-  // A pull on the sheet, under way
-  const pull = useRef<{ from: number; at: number; by: number } | null>(null)
+  // A pull on the sheet, under way: where it started, when, how far it has
+  // gone, and how far down the sheet stood
+  const pull = useRef<{
+    from: number
+    at: number
+    by: number
+    base: number
+  } | null>(null)
+  // How much of the sheet a peek shows, in px: down to its buttons
+  const [peekPx, setPeekPx] = useState(0)
+  const peekRef = useRef(0)
   const [lng, lat] = place.lngLat
 
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(timer)
-  }, [])
-
-  useEffect(() => {
-    let current = true
-    fetchPlaceDetails(place)
-      .then((found) => current && setDetails(found))
-      .catch(() => current && setDetails(null))
-    return () => {
-      current = false
+  // Measured before it is first drawn, so the sheet comes up to the right
+  // height; again if the window changes
+  useLayoutEffect(() => {
+    const measure = () => {
+      const row = actions.current
+      if (!row) return
+      peekRef.current = Math.round(row.offsetTop + row.offsetHeight)
+      setPeekPx(peekRef.current)
     }
-  }, [place])
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [place.key])
 
   // Escape closes it
   useEffect(() => {
@@ -119,9 +144,18 @@ export default function PlaceDetails({
   // stands in the middle of what the panel leaves free
   useEffect(() => {
     const map = ref?.getMap()
-    const box = panel.current?.getBoundingClientRect()
-    if (!map || !box) return
+    const rect = panel.current?.getBoundingClientRect()
+    if (!map || !rect) return
     const frame = map.getContainer().getBoundingClientRect()
+    // A sheet is still coming up: what it will cover once it is up
+    const box = isSheet()
+      ? new DOMRect(
+          rect.left,
+          frame.bottom - (peek ? peekRef.current : rect.height),
+          rect.width,
+          rect.height,
+        )
+      : rect
     const point = map.project(openedAt.current)
     const [x, y] = [point.x + frame.left, point.y + frame.top]
     const margin = 32
@@ -142,6 +176,7 @@ export default function PlaceDetails({
     })
     // Only as it opens (the map stays the same): the reader may move the
     // map as they like after
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref])
 
   const tags = details?.tags
@@ -158,17 +193,7 @@ export default function PlaceDetails({
   const coordinates = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
 
   async function share() {
-    const url = `${location.origin}${location.pathname}#17/${lat.toFixed(5)}/${lng.toFixed(5)}`
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: place.name, url })
-      } catch {
-        // Dismissed
-      }
-      return
-    }
-    await navigator.clipboard?.writeText(url)
-    setCopied('link')
+    if ((await sharePlace(place)) === 'copied') setCopied('link')
   }
 
   async function copyCoordinates() {
@@ -176,41 +201,67 @@ export default function PlaceDetails({
     setCopied('coordinates')
   }
 
-  // On a phone, pull the sheet down by its top to close it; let go short
-  // of that, and it springs back
+  // On a phone, the sheet follows a finger on its top: pulled up from a
+  // peek, it shows the rest; pulled down, it goes back to a peek, and
+  // from a peek it closes. A tap on a peek opens it up too. Let go short
+  // of the next height, and it springs back. Only its transform moves,
+  // so it keeps up with the finger.
   function onPullStart(event: PointerEvent<HTMLElement>) {
     const target = event.target as HTMLElement
     if (!isSheet() || target.closest('.place-panel-body, button, a')) return
-    pull.current = { from: event.clientY, at: performance.now(), by: 0 }
-    event.currentTarget.setPointerCapture(event.pointerId)
-    event.currentTarget.style.transition = 'none'
+    const sheet = event.currentTarget
+    pull.current = {
+      from: event.clientY,
+      at: performance.now(),
+      by: 0,
+      base: peek ? sheet.offsetHeight - peekRef.current : 0,
+    }
+    sheet.setPointerCapture(event.pointerId)
+    sheet.style.transition = 'none'
   }
 
   function onPull(event: PointerEvent<HTMLElement>) {
-    if (!pull.current) return
-    pull.current.by = Math.max(0, event.clientY - pull.current.from)
-    event.currentTarget.style.transform = `translateY(${pull.current.by}px)`
+    const pulled = pull.current
+    if (!pulled) return
+    pulled.by = event.clientY - pulled.from
+    // Past the top it gives only a little, as if held back
+    const y = pulled.base + pulled.by
+    const shown = y < 0 ? y / 4 : y
+    event.currentTarget.style.transform = `translateY(${shown}px)`
   }
 
   function onPullEnd(event: PointerEvent<HTMLElement>) {
     const pulled = pull.current
     if (!pulled) return
     pull.current = null
-    const speed = pulled.by / Math.max(1, performance.now() - pulled.at)
     const sheet = event.currentTarget
-    if (pulled.by > PULL_CLOSE || (speed > FLICK && pulled.by > 30)) {
-      onClose()
-      return
-    }
-    sheet.style.transition = 'transform 260ms var(--mv-spring)'
+    const speed = pulled.by / Math.max(1, performance.now() - pulled.at)
+    const down = pulled.by > PULL || speed > FLICK
+    const up = pulled.by < -PULL || speed < -FLICK
+    // Back to where its class puts it, springing from where it was let go
+    sheet.style.transition = ''
     sheet.style.transform = ''
+    if (Math.abs(pulled.by) < TAP) {
+      if (peek) onPeek?.(false)
+    } else if (peek && up) {
+      onPeek?.(false)
+    } else if (peek && down) {
+      onClose()
+    } else if (!peek && down) {
+      // Pulled far, it closes; else it goes back to a peek
+      if (pulled.by > sheet.offsetHeight - peekRef.current + PULL) onClose()
+      else onPeek?.(true)
+    }
   }
 
   let i = 0
   return (
     <aside
       ref={panel}
-      className={`place-panel mv-glass${leaving ? ' is-leaving' : ''}`}
+      className={`place-panel mv-glass${leaving ? ' is-leaving' : ''}${
+        peek ? ' is-peek' : ''
+      }`}
+      style={{ '--peek': `${peekPx}px` } as CSSProperties}
       aria-label={place.name}
       inert={leaving || undefined}
       onPointerDown={onPullStart}
@@ -230,17 +281,19 @@ export default function PlaceDetails({
               {place.category}
             </p>
           )}
-          {details === undefined ? (
-            <span className="place-skeleton-line place-panel-status-skeleton" />
-          ) : (
-            parsed && (
-              <p
-                className={`place-panel-status ${open ? 'is-open' : 'is-closed'}`}
-              >
-                {describeOpenState(parsed, now)}
-              </p>
-            )
-          )}
+          <div className="place-panel-status-slot">
+            {details === undefined ? (
+              <span className="place-skeleton-line place-panel-status-skeleton" />
+            ) : (
+              parsed && (
+                <p
+                  className={`place-panel-status ${open ? 'is-open' : 'is-closed'}`}
+                >
+                  {describeOpenState(parsed, now)}
+                </p>
+              )
+            )}
+          </div>
         </div>
         <button
           type="button"
@@ -252,7 +305,7 @@ export default function PlaceDetails({
         </button>
       </header>
 
-      <div className="place-panel-actions">
+      <div ref={actions} className="place-panel-actions">
         <button type="button" className="is-primary" onClick={onDirections}>
           <Icon name="directions" size={18} />
           Yol tarifi
@@ -261,9 +314,19 @@ export default function PlaceDetails({
           <Icon name={copied === 'link' ? 'check' : 'share'} size={18} />
           {copied === 'link' ? 'Bağlantı kopyalandı' : 'Paylaş'}
         </button>
+        {peek && (
+          <button
+            type="button"
+            className="place-panel-more"
+            onClick={() => onPeek?.(false)}
+          >
+            <Icon name="chevronDown" size={18} />
+            Ayrıntılar
+          </button>
+        )}
       </div>
 
-      <div className="place-panel-body">
+      <div className="place-panel-body" inert={peek || undefined}>
         <ul className="place-facts">
           {address !== null && (
             <li style={row(i++)}>

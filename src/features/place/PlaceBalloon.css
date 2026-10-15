@@ -1,0 +1,313 @@
+/* The balloon's frame is ours: MapLibre's box and tip go, so the point
+   is drawn with the card and opens with it */
+.place-balloon {
+  z-index: 2;
+}
+
+.place-balloon .maplibregl-popup-content {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.place-balloon .maplibregl-popup-tip {
+  display: none;
+}
+
+.balloon {
+  --balloon-skeleton: color-mix(in srgb, var(--mv-muted) 16%, transparent);
+  --balloon-skeleton-glint: color-mix(
+    in srgb,
+    var(--mv-muted) 34%,
+    transparent
+  );
+
+  position: relative;
+  box-sizing: border-box;
+  /* One size, whatever comes in: nothing moves once it is open */
+  width: 304px;
+  padding: 14px 12px 12px 16px;
+  border-radius: 20px;
+  /* Solid rather than glass: a blur of the map under it would have to be
+     drawn again on every frame the map moves */
+  background: var(--mv-surface);
+  box-shadow:
+    0 14px 34px rgb(15 23 42 / 22%),
+    0 2px 6px rgb(15 23 42 / 12%);
+  color: var(--mv-text);
+  font-family: var(--mv-font);
+  font-size: 14px;
+  line-height: 1.4;
+  /* It opens out of its point, springing a little past its size */
+  transform-origin: 50% calc(100% + 8px);
+  animation: balloon-in 460ms var(--mv-spring) both;
+}
+
+:root[data-theme='dark'] .balloon {
+  box-shadow:
+    0 14px 34px rgb(0 0 0 / 50%),
+    0 2px 6px rgb(0 0 0 / 30%),
+    inset 0 0 0 1px rgb(255 255 255 / 6%);
+}
+
+/* Its point, on the pin */
+.balloon::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 0 0 3px;
+  background: var(--mv-surface);
+  box-shadow: 3px 3px 5px rgb(15 23 42 / 10%);
+  transform: rotate(45deg);
+}
+
+/* Closed: back down into its point */
+.place-balloon.is-leaving .balloon {
+  pointer-events: none;
+  animation: balloon-out 150ms ease-in both;
+}
+
+/* Its rows come in one after another as it opens */
+.balloon-head,
+.balloon-address,
+.balloon-actions {
+  animation: mv-rise 360ms var(--mv-ease-out) backwards;
+}
+
+.balloon-address {
+  animation-delay: 60ms;
+}
+
+.balloon-actions {
+  animation-delay: 110ms;
+}
+
+.balloon-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.balloon-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.balloon-title h2 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Its kind and whether it is open, on one line */
+.balloon-kind {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 19px;
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.balloon-category {
+  flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.balloon-category + .balloon-status::before,
+.balloon-category + .balloon-status-skeleton::before {
+  content: '·';
+  margin-right: 6px;
+  color: var(--mv-subtle);
+}
+
+.balloon-status {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: place-fade-in 240ms ease-out;
+}
+
+.balloon-status.is-open {
+  color: var(--mv-success);
+}
+
+.balloon-status.is-closed {
+  color: var(--mv-danger);
+}
+
+.balloon-status-skeleton {
+  display: flex;
+  align-items: center;
+}
+
+.balloon-status-skeleton::after,
+.balloon-address-skeleton {
+  content: '';
+  display: block;
+  height: 9px;
+  border-radius: 5px;
+  background: linear-gradient(
+    90deg,
+    var(--balloon-skeleton) 30%,
+    var(--balloon-skeleton-glint) 50%,
+    var(--balloon-skeleton) 70%
+  );
+  background-size: 300% 100%;
+  animation: place-shimmer 1.4s ease-in-out infinite;
+}
+
+.balloon-status-skeleton::after {
+  width: 84px;
+}
+
+.balloon-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -2px 0 0;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--mv-muted);
+  cursor: pointer;
+  transition: background-color 140ms;
+}
+
+/* The address, on one line */
+.balloon-address {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 20px;
+  margin: 8px 0 0;
+  color: var(--mv-muted);
+  font-size: 13px;
+}
+
+.balloon-address svg {
+  flex: none;
+}
+
+.balloon-address-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: place-fade-in 240ms ease-out;
+}
+
+.balloon-address-text.is-faint {
+  color: var(--mv-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.balloon-address-skeleton {
+  flex: 1;
+  max-width: 190px;
+}
+
+.balloon-actions {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 0;
+}
+
+.balloon-actions button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--mv-hover);
+  color: var(--mv-text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 140ms var(--mv-ease-out),
+    background-color 140ms;
+}
+
+.balloon-actions button:active {
+  transform: scale(0.95);
+}
+
+.balloon-actions .is-primary {
+  background: var(--mv-primary);
+  color: #fff;
+}
+
+.balloon-actions .is-icon {
+  flex: none;
+  width: 36px;
+  padding: 0;
+}
+
+@media (hover: hover) {
+  .balloon-close:hover {
+    background: var(--mv-hover);
+    color: var(--mv-text);
+  }
+
+  .balloon-actions button:hover {
+    background: color-mix(in srgb, var(--mv-text) 11%, var(--mv-surface));
+  }
+
+  .balloon-actions .is-primary:hover {
+    background: var(--mv-primary-hover);
+  }
+}
+
+:root[data-map-design='san-andreas'] .balloon,
+:root[data-map-design='san-andreas'] .balloon-actions button {
+  border-radius: 4px;
+}
+
+:root[data-map-design='san-andreas'] .balloon {
+  box-shadow: var(--mv-shadow);
+}
+
+@keyframes balloon-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.55);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes balloon-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.86);
+  }
+}
