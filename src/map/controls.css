@@ -4,6 +4,19 @@
   font-family: var(--mv-font);
 }
 
+/* A click on the map shows what is there, so it gets an arrow rather than
+   an open hand; a pointing finger over a place a click would open; and a
+   closed hand only while the map is dragged, not on every press (a click
+   would flash it). Above a cursor set on the map, as over a place. */
+.maplibregl-canvas-container.maplibregl-interactive,
+.maplibregl-canvas-container.maplibregl-interactive:active {
+  cursor: default;
+}
+
+.maplibregl-map.is-dragging .maplibregl-canvas {
+  cursor: grabbing !important;
+}
+
 .maplibregl-ctrl-top-right .maplibregl-ctrl {
   margin: 12px 12px 0 0;
 }

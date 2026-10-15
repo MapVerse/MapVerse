@@ -294,6 +294,13 @@ export default function MapView() {
       onMouseEnter={() => setHoveringPoi(true)}
       onMouseLeave={() => setHoveringPoi(false)}
       onMouseMove={onMapMouseMove}
+      // A closed hand while the map is dragged (see controls.css)
+      onDragStart={(event) =>
+        event.target.getContainer().classList.add('is-dragging')
+      }
+      onDragEnd={(event) =>
+        event.target.getContainer().classList.remove('is-dragging')
+      }
       onMouseOut={stopGlance}
       onClick={onMapClick}
     >
