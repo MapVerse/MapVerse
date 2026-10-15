@@ -2,14 +2,17 @@
   /* The shimmer of the address while it is looked up */
   --place-skeleton: color-mix(in srgb, var(--mv-muted) 16%, transparent);
   --place-skeleton-glint: color-mix(in srgb, var(--mv-muted) 34%, transparent);
+
+  /* Only a glance: the pointer goes through it to the map */
+  pointer-events: none;
 }
 
 .place-card .maplibregl-popup-content {
   /* It springs up out of the place it points at */
   transform-origin: 50% 100%;
-  animation: place-card-in 460ms var(--mv-spring) both;
-  min-width: 240px;
-  padding: 14px;
+  animation: place-card-in 420ms var(--mv-spring) both;
+  min-width: 220px;
+  padding: 12px 14px;
   border-radius: var(--mv-radius);
   background: var(--mv-surface);
   box-shadow: var(--mv-shadow);
@@ -25,117 +28,53 @@
   animation: place-fade-in 220ms ease-out both;
 }
 
-/* Closed, or another place picked: it sinks back into its place */
-.place-card.is-leaving {
-  pointer-events: none;
-}
-
+/* Let go of: it sinks back into its place */
 .place-card.is-leaving .maplibregl-popup-content {
-  animation: place-card-out 180ms ease-in both;
+  animation: place-card-out 160ms ease-in both;
 }
 
 .place-card.is-leaving .maplibregl-popup-tip {
-  animation: place-fade-out 140ms ease-in both;
+  animation: place-fade-out 120ms ease-in both;
 }
 
 /* Its rows come in one after another */
 .place-header,
 .place-address-row,
-.place-directions {
-  animation: place-rise 420ms var(--mv-ease-out) backwards;
+.place-hint {
+  animation: place-rise 380ms var(--mv-ease-out) backwards;
 }
 
 .place-address-row {
-  animation-delay: 60ms;
+  animation-delay: 50ms;
 }
 
-.place-directions {
-  animation-delay: 120ms;
-}
-
-@keyframes place-card-in {
-  0% {
-    opacity: 0;
-    transform: translateY(14px) scale(0.84);
-  }
-  45% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes place-card-out {
-  to {
-    opacity: 0;
-    transform: translateY(10px) scale(0.9);
-  }
-}
-
-@keyframes place-rise {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-}
-
-@keyframes place-fade-in {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes place-fade-out {
-  to {
-    opacity: 0;
-  }
+.place-hint {
+  animation-delay: 100ms;
 }
 
 .place-header {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 11px;
 }
 
 .place-title {
   flex: 1;
   min-width: 0;
-  padding-top: 2px;
 }
 
 .place-name {
   margin: 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 650;
   line-height: 1.3;
 }
 
 .place-category {
-  margin: 2px 0 0;
+  margin: 1px 0 0;
   color: var(--mv-muted);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 500;
-}
-
-.place-close {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  margin: -4px -4px 0 0;
-  border: none;
-  border-radius: 50%;
-  background: none;
-  color: var(--mv-muted);
-  cursor: pointer;
-}
-
-.place-close:hover {
-  background: var(--mv-hover);
-  color: var(--mv-text);
 }
 
 /* Folds away, smoothly, when there turns out to be no address */
@@ -161,16 +100,30 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: 12px 0 0;
+  margin: 10px 0 0;
   color: var(--mv-muted);
-  font-size: 13.5px;
+  font-size: 13px;
+}
+
+.place-address svg {
+  flex: none;
+  margin-top: 1px;
 }
 
 .place-address-text {
   animation: place-fade-in 280ms ease-out;
 }
 
-/* Two shimmering lines where the address will be */
+/* A hint at what a click does */
+.place-hint {
+  margin: 9px 0 0;
+  color: var(--mv-subtle);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Shimmering lines where text will be, while it is looked up; shared
+   with the details panel */
 .place-skeleton {
   display: grid;
   flex: 1;
@@ -178,7 +131,8 @@
   padding: 4px 0 2px;
 }
 
-.place-skeleton > span:not(.place-skeleton-hint) {
+.place-skeleton > span:not(.place-skeleton-hint),
+.place-skeleton-line {
   height: 10px;
   border-radius: 5px;
   background: linear-gradient(
@@ -205,6 +159,46 @@
   white-space: nowrap;
 }
 
+@keyframes place-card-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.86);
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes place-card-out {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+}
+
+@keyframes place-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes place-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes place-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
 @keyframes place-shimmer {
   from {
     background-position: 100% 0;
@@ -212,29 +206,4 @@
   to {
     background-position: 0 0;
   }
-}
-
-.place-address svg {
-  flex: none;
-  margin-top: 1px;
-}
-
-.place-directions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 14px;
-  padding: 9px 16px 9px 12px;
-  border: none;
-  border-radius: 999px;
-  background: var(--mv-primary);
-  box-shadow: 0 1px 2px rgb(37 99 235 / 30%);
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.place-directions:hover {
-  background: var(--mv-primary-hover);
 }

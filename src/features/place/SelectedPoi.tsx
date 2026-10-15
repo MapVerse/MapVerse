@@ -19,7 +19,8 @@ type Props = {
   icon?: string
   /** The category colour, for the ripple it sends out */
   color?: string
-  match: PoiMatch
+  /** The map's own POI it stands in for, to hide that meanwhile */
+  match?: PoiMatch
   /** On its way out, shrinking back into the map's own badge */
   leaving?: boolean
 }
@@ -55,8 +56,9 @@ export default function SelectedPoi({
   // (the theme or design changing) forgets it, so it is set again after one.
   useEffect(() => {
     const map = ref?.getMap()
-    if (!map || match.id === undefined) return
-    const target = { source: 'openmaptiles', sourceLayer: 'poi', id: match.id }
+    const id = match?.id
+    if (!map || id === undefined) return
+    const target = { source: 'openmaptiles', sourceLayer: 'poi', id }
     const pick = () => {
       if (!map.getSource('openmaptiles')) return
       if (map.getFeatureState(target)[PICKED]) return
@@ -68,7 +70,7 @@ export default function SelectedPoi({
       map.off('styledata', pick)
       if (map.getSource('openmaptiles')) map.removeFeatureState(target, PICKED)
     }
-  }, [ref, match.id])
+  }, [ref, match?.id])
 
   if (!badge) return null
   return (
