@@ -17,8 +17,9 @@
 
 /* Beside the account button, where the game keeps its clock */
 .mv-sa-clock {
-  top: 14px;
-  right: 72px;
+  top: calc(14px + var(--safe-top));
+  right: calc(72px + var(--safe-right));
+  transition: opacity 160ms;
   color: #e1e1e1;
   font:
     700 30px / 1 Impact,
@@ -31,7 +32,7 @@
 /* Left of the map buttons, as low as the game sets it */
 .mv-sa-zone {
   right: 76px;
-  bottom: 22px;
+  bottom: calc(22px + var(--safe-bottom));
   max-width: calc(100% - 200px);
   color: #a9bee0;
   font:
@@ -51,14 +52,19 @@
 
 @media (max-width: 640px) {
   .mv-sa-clock {
-    top: 76px;
-    right: 14px;
+    top: calc(76px + var(--safe-top));
+    right: calc(14px + var(--safe-right));
     font-size: 24px;
   }
 
   .mv-sa-zone {
-    bottom: 40px;
+    bottom: calc(40px + var(--safe-bottom));
     max-width: calc(100% - 100px);
     font-size: 24px;
   }
+}
+
+/* Out of the way of the profile menu, which opens over where it stands */
+.maplibregl-map:has(.mv-account-panel) .mv-sa-clock {
+  opacity: 0;
 }

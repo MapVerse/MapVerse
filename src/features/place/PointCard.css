@@ -87,7 +87,7 @@
 
   position: absolute;
   right: 0;
-  bottom: 30px;
+  bottom: calc(30px + var(--safe-bottom));
   left: 0;
   z-index: 3;
   box-sizing: border-box;
@@ -291,7 +291,7 @@
    buttons stepping aside */
 @media (max-width: 640px) {
   .point-card {
-    bottom: calc(10px + env(safe-area-inset-bottom));
+    bottom: calc(10px + var(--safe-bottom));
     width: calc(100% - 20px);
   }
 
@@ -381,5 +381,23 @@
   to {
     opacity: 0;
     transform: translateY(14px) scale(0.97);
+  }
+}
+
+/* For a finger: room to hit the close button, and taller buttons */
+@media (pointer: coarse) {
+  .point-card-close {
+    width: 40px;
+    height: 40px;
+    margin: -10px -8px 0 0;
+  }
+
+  .point-card-actions button {
+    height: 44px;
+  }
+
+  .point-card-coordinates {
+    padding: 8px 0;
+    margin: -5px 0 -8px;
   }
 }

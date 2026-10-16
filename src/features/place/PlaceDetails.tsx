@@ -125,7 +125,8 @@ export default function PlaceDetails({
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
-  }, [place.key])
+    // Again as it goes to a peek, which has a button of its own
+  }, [place.key, peek])
 
   // Escape closes it
   useEffect(() => {
@@ -322,10 +323,11 @@ export default function PlaceDetails({
           <button
             type="button"
             className="place-panel-more"
+            aria-label="Ayrıntıları göster"
+            title="Ayrıntıları göster"
             onClick={() => onPeek?.(false)}
           >
-            <Icon name="chevronDown" size={18} />
-            Ayrıntılar
+            <Icon name="chevronDown" size={20} />
           </button>
         )}
       </div>

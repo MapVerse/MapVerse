@@ -6,15 +6,15 @@
   --dir-skeleton-glint: color-mix(in srgb, var(--mv-muted) 34%, transparent);
 
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: calc(12px + var(--safe-top));
+  left: calc(12px + var(--safe-left));
   z-index: 3;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: min(392px, calc(100% - 80px));
+  width: min(392px, calc(100% - 80px - var(--safe-left)));
   /* stop above the scale bar */
-  max-height: calc(100% - 72px);
+  max-height: calc(100% - 72px - var(--safe-top) - var(--safe-bottom));
   color: var(--mv-text);
   font-family: var(--mv-font);
   font-size: 14px;
@@ -137,6 +137,8 @@
   display: flex;
   align-items: center;
   gap: 11px;
+  /* As narrow as its column, whatever the field in it would like */
+  min-width: 0;
   height: 44px;
   padding: 0 12px;
   border-radius: 14px;
@@ -879,7 +881,8 @@
     box-sizing: border-box;
     width: auto;
     max-height: none;
-    padding: 10px 10px 0;
+    padding: calc(10px + var(--safe-top)) calc(10px + var(--safe-right)) 0
+      calc(10px + var(--safe-left));
     gap: 8px;
     pointer-events: none;
     animation: none;
@@ -961,7 +964,7 @@
   }
 
   .directions-steps {
-    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    padding-bottom: calc(10px + var(--safe-bottom));
   }
 
   .directions-steps-title button {
@@ -1016,7 +1019,7 @@
 
   .directions-picking-bar {
     right: 10px;
-    bottom: calc(14px + env(safe-area-inset-bottom));
+    bottom: calc(14px + var(--safe-bottom));
     left: 10px;
     flex-wrap: wrap;
     max-width: none;
@@ -1124,4 +1127,21 @@
 :root[data-map-design='san-andreas'] .route-destination::after,
 :root[data-map-design='san-andreas'] .route-origin::after {
   display: none;
+}
+
+/* For a finger: taller modes, and fields at 16px, below which a phone's
+   browser zooms in on a field as it is tapped */
+@media (pointer: coarse) {
+  .directions-icon-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .directions-modes button {
+    padding-block: 10px;
+  }
+
+  .directions-field input {
+    font-size: 16px;
+  }
 }

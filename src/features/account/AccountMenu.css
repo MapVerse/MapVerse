@@ -3,7 +3,7 @@
 .maplibregl-ctrl-top-right .maplibregl-ctrl.mv-account {
   position: relative;
   z-index: 1;
-  margin-top: 17px;
+  margin-top: calc(17px + var(--safe-top));
 }
 
 .mv-account .mv-account-toggle {
@@ -62,6 +62,8 @@
   box-sizing: border-box;
   width: min(312px, calc(100vw - 24px));
   max-height: calc(100vh - 100px);
+  /* The height a phone's browser leaves, its bars shown */
+  max-height: calc(100dvh - 100px - var(--safe-top));
   padding: 16px;
   overflow-y: auto;
   border-radius: 24px;
@@ -180,4 +182,11 @@
 .mv-account-panel.is-leaving {
   pointer-events: none;
   animation: mv-pop-out 170ms ease-in both;
+}
+
+/* At 16px, so a phone's browser doesn't zoom in on it as it is tapped */
+@media (pointer: coarse) {
+  .mv-sign-in input {
+    font-size: 16px;
+  }
 }

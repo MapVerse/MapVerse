@@ -18,7 +18,16 @@
 }
 
 .maplibregl-ctrl-top-right .maplibregl-ctrl {
-  margin: 12px 12px 0 0;
+  margin: calc(12px + var(--safe-top)) calc(12px + var(--safe-right)) 0 0;
+}
+
+/* The corners keep clear of a phone's rounded corners and home bar */
+.maplibregl-ctrl-bottom-right {
+  padding: 0 var(--safe-right) var(--safe-bottom) 0;
+}
+
+.maplibregl-ctrl-bottom-left {
+  padding: 0 0 var(--safe-bottom) var(--safe-left);
 }
 
 /* The profile corner: its menu opens over the buttons below */

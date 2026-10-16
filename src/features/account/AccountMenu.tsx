@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon } from '../../icons/Icon.tsx'
 import { usePresence } from '../../lib/presence.ts'
+import { onMap, swallowNextClick } from '../../lib/swallowClick.ts'
 import SettingsSections from '../settings/SettingsSections.tsx'
 import Avatar from './Avatar.tsx'
 import { setProfile, squarePhoto, useProfile } from './profile.ts'
@@ -47,7 +48,10 @@ export default function AccountMenu({
   useEffect(() => {
     if (!open) return
     const onPointerDown = (event: PointerEvent) => {
-      if (!slot.container.contains(event.target as Node)) setOpen(false)
+      if (slot.container.contains(event.target as Node)) return
+      setOpen(false)
+      // A press on the map that closes the menu does only that
+      if (onMap(event.target)) swallowNextClick()
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return

@@ -1,10 +1,10 @@
 .search {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: calc(12px + var(--safe-top));
+  left: calc(12px + var(--safe-left));
   z-index: 2;
   /* leave room for the map controls on the right */
-  width: min(392px, calc(100% - 80px));
+  width: min(392px, calc(100% - 80px - var(--safe-left) - var(--safe-right)));
   overflow: hidden;
   border-radius: 28px;
   color: var(--mv-text);
@@ -76,6 +76,19 @@
   width: 32px;
   height: 32px;
   color: var(--mv-muted);
+}
+
+/* A cut-off hint reads as broken: it fades out instead */
+.search-field input::placeholder {
+  text-overflow: ellipsis;
+}
+
+/* For a finger: a clear button as big as the others */
+@media (pointer: coarse) {
+  .search-clear {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 .search-divider {
@@ -234,4 +247,11 @@
   border-top: 1px solid var(--glass-line);
   color: var(--mv-muted);
   font-size: 14px;
+}
+
+/* For a finger: taller category chips */
+@media (pointer: coarse) {
+  .search-categories button {
+    height: 40px;
+  }
 }

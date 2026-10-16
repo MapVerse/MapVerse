@@ -1,5 +1,6 @@
 import { useMap } from '@vis.gl/react-maplibre'
 import {
+  useEffect,
   useId,
   useRef,
   useState,
@@ -7,6 +8,8 @@ import {
   type KeyboardEvent,
 } from 'react'
 import { Icon } from '../../icons/Icon.tsx'
+import { onMap, swallowNextClick } from '../../lib/swallowClick.ts'
+import { useMediaQuery } from '../../lib/useMediaQuery.ts'
 import CategoryBadge from '../place/CategoryBadge.tsx'
 import { distanceMeters, formatDistance } from '../place/place.ts'
 import { findMatch } from './match.ts'
@@ -47,6 +50,8 @@ export default function SearchBox({
   const { results, status } = usePlaceSearch(open && !nearby ? query : '')
   const recent = useRecentSearches()
   const listId = useId()
+  // On a narrow phone the full hint would be cut off
+  const narrow = useMediaQuery('(max-width: 440px)')
 
   const trimmed = query.trim()
   const typed = open && !nearby && trimmed.length >= MIN_QUERY_LENGTH
@@ -76,6 +81,17 @@ export default function SearchBox({
         : typed && status === 'done' && results.length === 0
           ? 'Sonuç bulunamadı.'
           : null
+  // While the box is in use, a press on the map only puts it away (and a
+  // phone's keyboard with it): it doesn't also open what is under it
+  useEffect(() => {
+    if (!open) return
+    const onPointerDown = (event: PointerEvent) => {
+      if (onMap(event.target)) swallowNextClick()
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    return () => document.removeEventListener('pointerdown', onPointerDown)
+  }, [open])
+
   // Nearby results are measured from where they were searched around
   const center = nearby?.center ?? map?.getCenter().toArray()
 
@@ -172,7 +188,7 @@ export default function SearchBox({
           aria-activedescendant={
             items.length > 0 && active >= 0 ? `${listId}-${active}` : undefined
           }
-          placeholder="Arama ve yer seçimi"
+          placeholder={narrow ? 'Burada ara' : 'Arama ve yer seçimi'}
           autoComplete="off"
           value={query}
           onChange={(event) => {

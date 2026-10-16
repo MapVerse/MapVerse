@@ -5,15 +5,15 @@
   --place-skeleton-glint: color-mix(in srgb, var(--mv-muted) 34%, transparent);
 
   position: absolute;
-  top: 76px;
-  left: 12px;
+  top: calc(76px + var(--safe-top));
+  left: calc(12px + var(--safe-left));
   z-index: 1;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   width: min(392px, calc(100% - 80px));
   /* stop above the scale bar */
-  max-height: calc(100% - 76px - 52px);
+  max-height: calc(100% - 76px - 52px - var(--safe-top) - var(--safe-bottom));
   overflow: hidden;
   border-radius: 24px;
   color: var(--mv-text);
@@ -325,9 +325,7 @@
   }
 
   .place-panel.is-peek {
-    transform: translateY(
-      calc(100% - var(--peek) - env(safe-area-inset-bottom, 0px))
-    );
+    transform: translateY(calc(100% - var(--peek) - var(--safe-bottom)));
   }
 
   .place-panel.is-leaving {
@@ -339,13 +337,15 @@
     min-height: 0;
     touch-action: pan-y;
     /* Clear of a phone's home bar */
-    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+    padding-bottom: calc(14px + var(--safe-bottom));
   }
 
   /* Room kept for whether it is open, so a peek is as tall before it is
      known as after */
   .place-panel-status-slot {
-    min-height: 24px;
+    /* Its own block, so the margins inside it stay inside */
+    display: flow-root;
+    height: 26px;
   }
 
   /* A grabber, as on a sheet */
@@ -357,6 +357,14 @@
     margin: 8px auto 0;
     border-radius: 2px;
     background: var(--glass-line);
+  }
+
+  /* Up to the rest: a round button at the end of the row */
+  .place-panel-actions .place-panel-more {
+    justify-content: center;
+    width: 42px;
+    margin-left: auto;
+    padding-inline: 0;
   }
 
   .place-panel-more svg {
@@ -392,5 +400,26 @@
   to {
     opacity: 0.4;
     transform: translateY(100%);
+  }
+}
+
+/* For a finger: room to hit the close button, the buttons, the hours to
+   unfold and the links, without the layout around them moving */
+@media (pointer: coarse) {
+  .place-panel-close {
+    width: 40px;
+    height: 40px;
+    margin: -8px -4px 0 0;
+  }
+
+  .place-panel-actions button {
+    padding-block: 11px;
+  }
+
+  .place-hours-toggle,
+  .place-facts a.place-fact-text,
+  .place-facts .place-copy {
+    padding-block: 7px;
+    margin-block: -7px;
   }
 }
