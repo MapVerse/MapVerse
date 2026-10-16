@@ -18,6 +18,7 @@ import {
   FALLBACK_CATEGORY,
   categoryInfo,
 } from '../features/place/categories.ts'
+import PlaceArea from '../features/place/PlaceArea.tsx'
 import PlaceCard from '../features/place/PlaceCard.tsx'
 import PlaceDetails from '../features/place/PlaceDetails.tsx'
 import PointCard from '../features/place/PointCard.tsx'
@@ -202,6 +203,7 @@ export default function MapView() {
         id: feature.id,
         name: feature.properties.name,
         class: feature.properties.class,
+        subclass: feature.properties.subclass,
       },
     }
   }
@@ -325,6 +327,17 @@ export default function MapView() {
       )}
       {place?.outline && place.osm && (
         <Boundary key={`outline:${place.key}`} osm={place.osm} />
+      )}
+      {/* The open place's own area, when it is one, such as a park */}
+      {details.map(({ key, item, leaving }) =>
+        item.place.outline ? null : (
+          <PlaceArea
+            key={`area:${key}`}
+            place={item.place}
+            kind={item.poi}
+            leaving={leaving}
+          />
+        ),
       )}
       {badges.map(({ key, item, leaving }) => (
         <SelectedPoi

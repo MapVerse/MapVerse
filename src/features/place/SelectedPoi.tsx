@@ -14,7 +14,12 @@ import { FALLBACK_CATEGORY, categoryInfo } from './categories.ts'
 import './SelectedPoi.css'
 
 /** Identifies the picked feature within the style's POI layers. */
-export type PoiMatch = { id?: string | number; name?: string; class?: string }
+export type PoiMatch = {
+  id?: string | number
+  name?: string
+  class?: string
+  subclass?: string
+}
 
 type Props = {
   lngLat: [number, number]

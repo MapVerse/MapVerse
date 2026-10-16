@@ -7,6 +7,15 @@ export type OverpassElement = {
   lon?: number
   /** For ways and relations asked for with `out center` */
   center?: { lat: number; lon: number }
+  /** For ways asked for with `out geom`: their points in turn */
+  geometry?: { lat: number; lon: number }[]
+  /** For relations asked for with `out geom`: their members, ways drawn */
+  members?: {
+    type: 'node' | 'way' | 'relation'
+    ref: number
+    role: string
+    geometry?: { lat: number; lon: number }[]
+  }[]
   tags?: Record<string, string>
 }
 
