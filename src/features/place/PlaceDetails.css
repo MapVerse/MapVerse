@@ -295,11 +295,12 @@
   color: inherit;
 }
 
-/* On a phone, a sheet from the bottom, its details shown at once. Pulled
-   down, it keeps only its top, its name and what can be done there;
-   pulled up again, or tapped, it shows the rest. Fixed in height, it
-   moves only by its transform, so following a finger or springing
-   between its heights stays smooth. */
+/* On a phone, a sheet from the bottom, standing at three heights: as it
+   opens, as much as its details need, up to a share of the screen; pulled
+   up, all of it, under the search box; pulled down, only its top, its
+   name and what can be done there. As tall as all of it, it moves between
+   them only by its transform, so following a finger or springing between
+   its heights stays smooth. */
 @media (max-width: 640px) {
   .place-panel {
     top: auto;
@@ -309,8 +310,8 @@
     /* Over the map's buttons and scale bar */
     z-index: 3;
     width: auto;
-    /* Its details at once, with the place left in sight above it */
-    height: min(64%, 580px);
+    /* All of it, short of the search box */
+    height: min(calc(100% - 92px - var(--safe-top)), 760px);
     max-height: none;
     /* Solid, so the map's buttons don't show through it */
     background: var(--mv-surface);
@@ -324,8 +325,16 @@
     animation-duration: 460ms;
   }
 
-  .place-panel.is-peek {
-    transform: translateY(calc(100% - var(--peek) - var(--safe-bottom)));
+  /* Below its full height, only as much shows as --shown */
+  .place-panel.is-part {
+    transform: translateY(calc(100% - var(--shown) - var(--safe-bottom)));
+  }
+
+  /* Its list scrolls only once it is all up; till then a finger on the
+     list pulls the sheet */
+  .place-panel.is-part .place-panel-body {
+    overflow: hidden;
+    touch-action: none;
   }
 
   .place-panel.is-leaving {
