@@ -12,6 +12,7 @@ import {
   setSatelliteEnabled,
   useSatelliteEnabled,
 } from '../../map/satelliteSetting.ts'
+import { setShortcutHelpOpen } from '../../map/shortcuts.ts'
 import { designSwatch } from '../../map/style.ts'
 import {
   setTerrainEnabled,
@@ -23,6 +24,7 @@ import {
   useThemePreference,
   type ThemePreference,
 } from '../../theme/theme.ts'
+import { HOVER_QUERY, useMediaQuery } from '../../lib/useMediaQuery.ts'
 import {
   clearRecentSearches,
   useRecentSearches,
@@ -101,8 +103,8 @@ function Switch({
 }
 
 /**
- * Theme, map design, 3D terrain, satellite imagery and recent searches,
- * shown in the account menu.
+ * Theme, map design, 3D terrain, satellite imagery, recent searches and,
+ * with a keyboard, its shortcuts, shown in the account menu.
  */
 export default function SettingsSections() {
   const { current: map } = useMap()
@@ -112,6 +114,8 @@ export default function SettingsSections() {
   const satellite = useSatelliteEnabled()
   const design = useMapDesign()
   const recent = useRecentSearches()
+  // A keyboard, most likely, where there is a mouse
+  const keyboard = useMediaQuery(HOVER_QUERY)
   const themeLabelId = useId()
   const designLabelId = useId()
 
@@ -206,6 +210,21 @@ export default function SettingsSections() {
           {recent.length > 0 ? 'Son aramaları temizle' : 'Kayıtlı arama yok'}
         </button>
       </div>
+
+      {keyboard && (
+        <div className="mv-settings-section">
+          <button
+            type="button"
+            className="mv-settings-link"
+            aria-haspopup="dialog"
+            onClick={() => setShortcutHelpOpen(true)}
+          >
+            <Icon name="keyboard" size={18} />
+            Klavye kısayolları
+            <kbd>?</kbd>
+          </button>
+        </div>
+      )}
     </>
   )
 }

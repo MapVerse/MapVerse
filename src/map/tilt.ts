@@ -5,6 +5,20 @@ const TILTED_PITCH = 60
 /** Buildings only rise from this zoom, so tilting zooms in at least this far. */
 const BUILDINGS_ZOOM = 16
 
+/** Tilts a flat map to show 3D buildings, or lays a tilted one flat. */
+export function toggleTilt(map: MapLibreMap) {
+  const tilted = map.getPitch() > 10
+  map.easeTo(
+    tilted
+      ? { pitch: 0, bearing: 0, duration: 900 }
+      : {
+          pitch: TILTED_PITCH,
+          zoom: Math.max(map.getZoom(), BUILDINGS_ZOOM),
+          duration: 900,
+        },
+  )
+}
+
 /**
  * A map button that tilts the view to show 3D buildings, and back. Like a
  * mode switch, it names the view it switches to: 3D on a flat map, 2D on a
@@ -20,23 +34,12 @@ export class TiltControl implements IControl {
     const tilted = (this.map?.getPitch() ?? 0) > 10
     const next = tilted ? '2D' : '3D'
     this.label.textContent = next
-    this.button.title = `${next} görünüme geç`
+    this.button.title = `${next} görünüme geç (3)`
     this.button.setAttribute('aria-label', `${next} görünüme geç`)
   }
 
   private readonly toggle = () => {
-    const map = this.map
-    if (!map) return
-    const tilted = map.getPitch() > 10
-    map.easeTo(
-      tilted
-        ? { pitch: 0, bearing: 0, duration: 900 }
-        : {
-            pitch: TILTED_PITCH,
-            zoom: Math.max(map.getZoom(), BUILDINGS_ZOOM),
-            duration: 900,
-          },
-    )
+    if (this.map) toggleTilt(this.map)
   }
 
   onAdd(map: MapLibreMap) {
@@ -44,6 +47,7 @@ export class TiltControl implements IControl {
     this.container.className = 'maplibregl-ctrl maplibregl-ctrl-group'
     this.button.type = 'button'
     this.button.className = 'mv-tilt'
+    this.button.setAttribute('aria-keyshortcuts', '3')
     // A cube, with the view's name under it
     this.button.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${STROKES.cube}"/></svg>`
     this.label.className = 'mv-tilt-label'

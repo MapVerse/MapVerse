@@ -53,6 +53,7 @@ import { useTheme } from '../theme/theme.ts'
 import SanAndreasHud from './SanAndreasHud.tsx'
 import './controls.css'
 import { useMapDesign } from './designSetting.ts'
+import KeyboardShortcuts from './KeyboardShortcuts.tsx'
 import MapControls from './MapControls.tsx'
 import MapNotices from './MapNotices.tsx'
 import { maplibre } from './maplibre.ts'
@@ -421,6 +422,7 @@ export default function MapView() {
     >
       <AccountMenu position="top-right" />
       <MapControls />
+      <KeyboardShortcuts />
       <ScaleControl position="bottom-left" />
       {design === 'san-andreas' && <SanAndreasHud />}
       {poiLayerIds.length > 0 && <AreaNames beforeId={poiLayerIds[0]} />}
