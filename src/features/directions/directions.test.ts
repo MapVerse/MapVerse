@@ -9,6 +9,7 @@ import {
   shapeBounds,
 } from './directions.ts'
 import {
+  AVOID_NOTHING,
   getRoutes,
   NoRouteError,
   noRouteReason,
@@ -245,9 +246,15 @@ describe('getRoutes', () => {
           new Response(JSON.stringify({ error_code: 154 }), { status: 400 }),
       ),
     )
-    const error = await getRoutes([29, 41], [32.8, 39.9], 'pedestrian').catch(
-      (e: unknown) => e,
-    )
+    const error = await getRoutes({
+      points: [
+        [29, 41],
+        [32.8, 39.9],
+      ],
+      mode: 'pedestrian',
+      avoid: AVOID_NOTHING,
+      when: { kind: 'now' },
+    }).catch((e: unknown) => e)
     expect(error).toBeInstanceOf(NoRouteError)
     expect((error as NoRouteError).reason).toBe('too-far')
   })

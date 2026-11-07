@@ -18,6 +18,10 @@ import { MapStartError } from '../app/appError.ts'
 import AccountMenu from '../features/account/AccountMenu.tsx'
 import AreaNames from '../features/areas/AreaNames.tsx'
 import Directions from '../features/directions/Directions.tsx'
+import {
+  takeSharedDirections,
+  type SharedDirections,
+} from '../features/directions/share.ts'
 import { resolveSignalImage } from '../features/traffic/signalImage.ts'
 import TrafficSignals from '../features/traffic/TrafficSignals.tsx'
 import Boundary from '../features/place/Boundary.tsx'
@@ -173,11 +177,16 @@ export default function MapView() {
   // A click on an empty spot, waiting to see if it is a double click
   const pointTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   // Open directions, to a place or (when null) to a point picked on the
-  // map, counted so each opening starts afresh
+  // map, counted so each opening starts afresh; a shared link opens them
+  // as it was shared
   const [directions, setDirections] = useState<{
     to: Place | null
+    shared?: SharedDirections
     opening: number
-  } | null>(null)
+  } | null>(() => {
+    const shared = takeSharedDirections()
+    return shared && { to: null, shared, opening: 0 }
+  })
   const openings = useRef(0)
   const openDirections = (to: Place | null) => {
     setDirections({ to, opening: ++openings.current })
@@ -495,6 +504,7 @@ export default function MapView() {
         <Directions
           key={key}
           to={item.to}
+          shared={item.shared}
           beforeId={labelLayerId}
           leaving={leaving}
           onClose={() => setDirections(null)}

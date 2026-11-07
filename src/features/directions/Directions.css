@@ -68,7 +68,7 @@
   position: relative;
   display: grid;
   flex: 1;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   padding: 3px;
   border-radius: 14px;
   background: var(--glass-fill);
@@ -81,7 +81,7 @@
   top: 3px;
   bottom: 3px;
   left: 3px;
-  width: calc((100% - 6px) / 3);
+  width: calc((100% - 6px) / 4);
   border-radius: 11px;
   background: var(--mv-raised);
   box-shadow: var(--mv-shadow-sm);
@@ -92,15 +92,25 @@
 .directions-modes button {
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 7px 4px;
+  gap: 1px;
+  min-width: 0;
+  padding: 5px 2px 4px;
   border-radius: 11px;
   color: var(--mv-muted);
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 500;
+  line-height: 1.2;
   transition: color 200ms;
+}
+
+.directions-modes button span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .directions-modes button[aria-selected='true'] {
@@ -134,13 +144,14 @@
 }
 
 .directions-field {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 6px;
   /* As narrow as its column, whatever the field in it would like */
   min-width: 0;
   height: 44px;
-  padding: 0 12px;
+  padding: 0 12px 0 0;
   border-radius: 14px;
   background: var(--glass-fill);
   box-shadow: inset 0 0 0 1px var(--glass-line);
@@ -153,6 +164,55 @@
 .directions-field.is-editing {
   background: var(--mv-surface);
   box-shadow: inset 0 0 0 2px var(--mv-accent);
+}
+
+/* Picked up by its handle, it follows the finger above the others */
+.directions-field.is-dragged {
+  z-index: 2;
+  background: var(--mv-surface);
+  box-shadow:
+    inset 0 0 0 1px var(--glass-line),
+    var(--mv-shadow);
+  transform: translateY(var(--drag, 0)) scale(1.02);
+  transition: none;
+}
+
+/* Where a field's dot stands, and what it is moved by when there are
+   stops */
+.directions-handle {
+  display: grid;
+  flex: none;
+  place-items: center;
+  align-self: stretch;
+  width: 36px;
+  margin-right: -6px;
+  padding: 0;
+}
+
+button.directions-handle {
+  border-radius: 14px 0 0 14px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.is-dragged button.directions-handle {
+  cursor: grabbing;
+}
+
+button.directions-handle:focus-visible {
+  outline: 2px solid var(--mv-accent);
+  outline-offset: -2px;
+}
+
+.directions-remove {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-right: -6px;
+  border-radius: 50%;
+  color: var(--mv-muted);
 }
 
 .directions-field input {
@@ -195,6 +255,19 @@
   background: var(--mv-surface);
 }
 
+.directions-dot-stop {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border: 2px solid var(--mv-muted);
+  background: var(--mv-surface);
+  color: var(--mv-text);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .directions-dot-destination {
   border: 2px solid var(--mv-surface);
   background: var(--mv-danger);
@@ -223,10 +296,322 @@
   cursor: default;
 }
 
+/* Stops, when and what to keep off, and sharing: small chips under the
+   fields, the choices opening in a panel below the card */
+.directions-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px -10px 0;
+  padding: 0 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.directions-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--glass-fill);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+  color: var(--mv-text);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color 160ms,
+    transform 160ms var(--mv-ease-out);
+}
+
+.directions-chip > svg {
+  color: var(--mv-muted);
+}
+
+.directions-chip:active {
+  transform: scale(0.95);
+}
+
+.directions-chip.is-set,
+.directions-chip[aria-expanded='true'] {
+  background: var(--mv-accent-soft);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--mv-accent) 35%, transparent);
+  color: var(--mv-accent-strong);
+}
+
+.directions-chip.is-set > svg,
+.directions-chip[aria-expanded='true'] > svg {
+  color: inherit;
+}
+
+.directions-chip.is-icon {
+  padding: 0 10px;
+}
+
+.directions-chip.is-share {
+  margin-left: auto;
+}
+
+.directions-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.directions-chip-count {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--mv-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .directions-notice {
   margin: 8px 6px 0;
-  color: var(--mv-danger);
+  color: var(--mv-muted);
   font-size: 12.5px;
+}
+
+.directions-notice.is-problem {
+  color: var(--mv-danger);
+}
+
+.directions-panel {
+  --glass-tint: var(--glass-tint-strong);
+
+  display: grid;
+  flex: none;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 22px;
+  transform-origin: 50% 0;
+  animation: mv-pop-in 260ms var(--mv-ease-out) backwards;
+}
+
+/* Now, leaving at or arriving by, the picked one marked as the modes are */
+.directions-segments {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 3px;
+  border-radius: 14px;
+  background: var(--glass-fill);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+}
+
+.directions-segments::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / 3);
+  border-radius: 11px;
+  background: var(--mv-raised);
+  box-shadow: var(--mv-shadow-sm);
+  transform: translateX(calc(var(--segment, 0) * 100%));
+  transition: transform 360ms var(--mv-spring);
+}
+
+.directions-segments button {
+  position: relative;
+  padding: 8px 4px;
+  border-radius: 11px;
+  color: var(--mv-muted);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.directions-segments button[aria-checked='true'] {
+  color: var(--mv-accent);
+  font-weight: 600;
+}
+
+.directions-when-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.directions-when-fields label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.directions-when-fields span {
+  padding-left: 4px;
+  color: var(--mv-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.directions-when-fields input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 14px;
+  outline: none;
+  background: var(--glass-fill);
+  box-shadow: inset 0 0 0 1px var(--glass-line);
+  color: var(--mv-text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.directions-when-fields input:focus-visible {
+  background: var(--mv-surface);
+  box-shadow: inset 0 0 0 2px var(--mv-accent);
+}
+
+.directions-avoids {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.directions-avoids label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 2px 4px 2px 6px;
+  cursor: pointer;
+}
+
+.directions-avoids label.is-off {
+  cursor: default;
+}
+
+.directions-avoid-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.is-off .directions-avoid-text {
+  color: var(--mv-muted);
+}
+
+.directions-avoid-text small {
+  color: var(--mv-subtle);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* A switch, its knob drawn as a dot that slides across */
+.directions-switch {
+  flex: none;
+  width: 44px;
+  height: 26px;
+  margin: 0;
+  border-radius: 13px;
+  background:
+    radial-gradient(circle, #fff 9px, transparent 9.5px) left 2px center / 22px
+      22px no-repeat,
+    color-mix(in srgb, var(--mv-muted) 40%, transparent);
+  cursor: pointer;
+  appearance: none;
+  transition:
+    background-position 220ms var(--mv-spring),
+    background-color 200ms;
+}
+
+.directions-switch:checked {
+  background:
+    radial-gradient(circle, #fff 9px, transparent 9.5px) right 2px center / 22px
+      22px no-repeat,
+    var(--mv-accent);
+}
+
+.directions-switch:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.directions-switch:focus-visible {
+  outline: 2px solid var(--mv-accent);
+  outline-offset: 2px;
+}
+
+.directions-done {
+  justify-self: end;
+  padding: 9px 20px;
+  border-radius: 999px;
+  background: var(--mv-primary) !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+/* Public transport, which opens in another app */
+.directions-results.directions-transit {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  padding: 16px;
+}
+
+.directions-transit-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--mv-accent-soft);
+  color: var(--mv-accent);
+}
+
+.directions-transit-text strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.directions-transit-text p {
+  margin: 4px 0 0;
+  color: var(--mv-muted);
+  font-size: 13px;
+}
+
+.directions-transit-note {
+  font-style: italic;
+}
+
+.directions-transit-link {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 11px 16px;
+  border-radius: 999px;
+  background: var(--mv-primary);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.directions-hint {
+  margin: 4px 16px 0;
+  color: var(--mv-muted);
+  font-size: 12px;
 }
 
 /* What to offer under the end being typed in */
@@ -394,6 +779,7 @@
 
 .directions-route-meta {
   color: var(--mv-muted);
+  overflow-wrap: anywhere;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
@@ -583,6 +969,15 @@
   border-radius: 50%;
   background: var(--mv-accent-soft);
   color: var(--mv-accent);
+}
+
+.directions-step-stop {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.directions-steps button.is-stop .directions-instruction {
+  font-weight: 600;
 }
 
 .directions-steps button[aria-current] .directions-step-icon {
@@ -835,6 +1230,25 @@
   background: #fff;
 }
 
+/* A stop on the way, numbered in order */
+.route-stop {
+  display: grid;
+  box-sizing: border-box;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #334155;
+  box-shadow: 0 2px 6px rgb(15 23 42 / 28%);
+  color: #fff;
+  font-family: var(--mv-font);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  animation: mv-poi-pop 420ms var(--mv-spring) backwards;
+}
+
 /* The turn picked in the list, on the map */
 .route-step {
   display: block;
@@ -879,7 +1293,9 @@
    would stay stuck on what was tapped */
 @media (hover: hover) {
   .directions-icon-button:hover,
-  .directions-swap:hover {
+  .directions-swap:hover,
+  .directions-remove:hover,
+  .directions-chip:not(:disabled, .is-set, [aria-expanded='true']):hover {
     background: var(--glass-hover);
     color: var(--mv-text);
   }
@@ -918,8 +1334,18 @@
     animation: dir-drop 380ms var(--mv-spring) backwards;
   }
 
-  .directions-suggestions {
+  .directions-suggestions,
+  .directions-panel {
     margin-bottom: 10px;
+  }
+
+  .directions-results.directions-transit {
+    max-height: none;
+    margin: auto -10px 0;
+    padding-bottom: calc(16px + var(--safe-bottom));
+    border-radius: 24px 24px 0 0;
+    background: var(--mv-surface);
+    box-shadow: 0 -8px 30px rgb(15 23 42 / 18%);
   }
 
   .directions-results {
@@ -1027,7 +1453,8 @@
   }
 
   .directions.is-leaving .directions-results,
-  .directions.is-leaving .directions-suggestions {
+  .directions.is-leaving .directions-suggestions,
+  .directions.is-leaving .directions-panel {
     animation: dir-sink 170ms ease-in both;
   }
 
@@ -1137,6 +1564,7 @@
 /* San Andreas: the ends of a route are radar blips, white where it starts
    and a red target where it ends */
 :root[data-map-design='san-andreas'] .route-origin,
+:root[data-map-design='san-andreas'] .route-stop,
 :root[data-map-design='san-andreas'] .route-destination {
   width: 16px;
   height: 16px;
@@ -1148,6 +1576,13 @@
 
 :root[data-map-design='san-andreas'] .route-destination {
   background: #e0302f;
+}
+
+:root[data-map-design='san-andreas'] .route-stop {
+  width: 20px;
+  height: 20px;
+  background: #ffd83a;
+  color: #000;
 }
 
 :root[data-map-design='san-andreas'] .route-destination::before,
@@ -1165,10 +1600,26 @@
   }
 
   .directions-modes button {
-    padding-block: 10px;
+    padding-block: 7px 6px;
   }
 
-  .directions-field input {
+  .directions-field input,
+  .directions-when-fields input {
     font-size: 16px;
+  }
+
+  .directions-chip {
+    height: 36px;
+  }
+}
+
+/* Too narrow for the modes' names: only their icons */
+@media (max-width: 380px) {
+  .directions-modes button span {
+    display: none;
+  }
+
+  .directions-modes button {
+    padding-block: 8px;
   }
 }
