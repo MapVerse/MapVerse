@@ -85,6 +85,17 @@ describe('buildRequest', () => {
     ).toEqual({ type: 2, value: '2026-11-08T18:30' })
     expect(buildRequest(base)).not.toHaveProperty('date_time')
   })
+
+  it('leads on the way the start is faced, when it is given', () => {
+    const request = buildRequest({ ...base, heading: -90 })
+    expect(request.locations[0]).toEqual({
+      lon: 32.85,
+      lat: 39.92,
+      heading: 270,
+      heading_tolerance: 45,
+    })
+    expect(request.locations[1]).toEqual({ lon: 32.8, lat: 39.95 })
+  })
 })
 
 // Reference encoder, to build fixtures (precision 6)
@@ -152,10 +163,52 @@ describe('parseRoutes with stops', () => {
     expect(route.maneuvers.map((m) => m.at)).toEqual([0, 1, 2, 3])
   })
 
+  it('says the arrival at a stop aloud as it is written', () => {
+    const [route] = parseRoutes(data)
+    expect(route.maneuvers[1].verbal).toEqual({
+      alert: '1. durak sağınızda kalacak.',
+      pre: '1. durak sağınızda.',
+    })
+    expect(route.maneuvers[0].verbal).toBeUndefined()
+  })
+
   it('takes the clock times it leaves and arrives at', () => {
     const [route] = parseRoutes(data)
     expect(route.departs).toBe('2026-11-08T08:27')
     expect(route.arrives).toBe('2026-11-08T09:00')
+  })
+})
+
+describe('parseRoutes aloud', () => {
+  it("takes Valhalla's spoken instructions", () => {
+    const [route] = parseRoutes({
+      trip: {
+        summary: { length: 1, time: 60 },
+        legs: [
+          {
+            shape: encode([from, to]),
+            maneuvers: [
+              {
+                instruction: 'Sağa dönün.',
+                type: 10,
+                length: 1,
+                time: 60,
+                verbal_transition_alert_instruction: 'Sağa dönün.',
+                verbal_pre_transition_instruction:
+                  'Atatürk Bulvarı caddesine sağa dönün.',
+                verbal_post_transition_instruction:
+                  '1 kilometre boyunca devam edin.',
+              },
+            ],
+          },
+        ],
+      },
+    })
+    expect(route.maneuvers[0].verbal).toEqual({
+      alert: 'Sağa dönün.',
+      pre: 'Atatürk Bulvarı caddesine sağa dönün.',
+      post: '1 kilometre boyunca devam edin.',
+    })
   })
 })
 

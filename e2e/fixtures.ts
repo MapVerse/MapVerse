@@ -45,7 +45,7 @@ const photonFeature = (place: Place) => ({
 })
 
 /** Google's encoded polyline at 6 digits, as Valhalla sends shapes. */
-function encodePolyline6(points: [number, number][]): string {
+export function encodePolyline6(points: [number, number][]): string {
   let out = ''
   let lastLat = 0
   let lastLng = 0
