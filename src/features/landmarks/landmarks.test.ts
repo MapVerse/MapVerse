@@ -331,9 +331,10 @@ describe('RAMS Park', () => {
 })
 
 describe('mosques', () => {
+  // Their shafts, rising from the ground
   const minarets = (mosque: Landmark) =>
     mosque.parts.filter(
-      (p) => p.kind === 'round' && p.material === 'stone' && p.sides === 16,
+      (p) => p.kind === 'round' && p.sides === 16 && p.outline[0][1] === 0,
     ).length
 
   it('have their minarets', () => {
@@ -341,6 +342,60 @@ describe('mosques', () => {
     expect(minarets(landmark('ayasofya'))).toBe(4)
     expect(minarets(landmark('selimiye'))).toBe(4)
     expect(minarets(landmark('kocatepe'))).toBe(4)
+    expect(minarets(landmark('ortakoy'))).toBe(2)
+    expect(minarets(landmark('bursa-ulu-camii'))).toBe(2)
+  })
+
+  it('roof Bursa Ulu Camii with twenty domes, five across and four deep', () => {
+    const domes = landmark('bursa-ulu-camii').parts.filter(
+      (p) =>
+        p.kind === 'round' && p.material === 'lead' && p.outline[0][0] === 5.9,
+    )
+    expect(domes).toHaveLength(20)
+    // Turned back onto the hall's own grid, 6.5° from east
+    const angle = (6.5 * Math.PI) / 180
+    const spots = domes.map((p) => (p.kind === 'round' ? p.at! : [0, 0]))
+    const across = (along: (x: number, y: number) => number) =>
+      new Set(spots.map(([x, y]) => Math.round(along(x, y)))).size
+    expect(across((x, y) => x * Math.cos(angle) + y * Math.sin(angle))).toBe(5)
+    expect(across((x, y) => y * Math.cos(angle) - x * Math.sin(angle))).toBe(4)
+  })
+})
+
+describe('Mevlana Müzesi', () => {
+  it('raises the turquoise Yeşil Kubbe over everything else', () => {
+    const { parts } = landmark('mevlana')
+    const top = (p: Part) =>
+      p.kind === 'block' ? p.top : Math.max(...p.outline.map(([, h]) => h))
+    const green = parts.filter((p) => p.material === 'turquoise')
+    expect(green.length).toBeGreaterThan(10)
+    const highest = Math.max(...green.map(top))
+    for (const part of parts) {
+      if (part.material !== 'turquoise' && part.material !== 'gold') {
+        expect(top(part)).toBeLessThan(highest)
+      }
+    }
+  })
+})
+
+describe('Hadrian Kapısı', () => {
+  const { parts } = landmark('hadrian-kapisi')
+  const angle = (-48.4 * Math.PI) / 180
+  const blocks = (u: number, low: boolean) => {
+    const at: [number, number] = [u * Math.cos(angle), u * Math.sin(angle)]
+    return parts.filter(
+      (p) =>
+        p.kind === 'block' &&
+        (low ? p.base < 4 : p.base >= 5) &&
+        within(at, p.footprint),
+    )
+  }
+
+  it('is open through its three arches, and closed over them', () => {
+    for (const u of [-5.6, 0, 5.6]) {
+      expect(blocks(u, true)).toHaveLength(0)
+      expect(blocks(u, false).length).toBeGreaterThan(0)
+    }
   })
 })
 

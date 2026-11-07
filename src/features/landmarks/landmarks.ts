@@ -35,6 +35,7 @@ export type Material =
   | 'gold'
   | 'water'
   | 'plaster'
+  | 'turquoise'
 
 /**
  * A piece of a landmark, in metres round its centre: either turned round
@@ -126,6 +127,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
     gold: '#e8b02a',
     water: '#9ccbe8',
     plaster: '#e5dacb',
+    turquoise: '#3fa89c',
   },
   // At night: stone and plaster floodlit in warm light, windows lit from
   // inside, lamps and the bridge's cables glowing
@@ -155,6 +157,7 @@ export const MATERIAL_COLORS: Record<Theme, Record<Material, string>> = {
     gold: '#a67c1c',
     water: '#1f4466',
     plaster: '#57534c',
+    turquoise: '#4bb3a5',
   },
 }
 

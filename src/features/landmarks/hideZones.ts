@@ -39,6 +39,8 @@ export const LANDMARK_HIDE_ZONES: readonly HideZone[] = [
   { center: [32.71334940297314, 39.96930392603848], within: 1, tallerThan: 0 },
   { center: [32.71351965303541, 39.96889705851726], within: 1, tallerThan: 0 },
   { center: [32.713698801866016, 39.96849641129521], within: 1, tallerThan: 0 },
+  // TBMM
+  { center: [32.851065, 39.911734], within: 1, tallerThan: 0 },
   // Galata Kulesi
   { center: [28.974213, 41.025634], within: 1, tallerThan: 30 },
   // Kız Kulesi
@@ -81,8 +83,32 @@ export const LANDMARK_HIDE_ZONES: readonly HideZone[] = [
     within: 41,
     tallerThan: 0,
   },
+  // Ortaköy Camii
+  { center: [29.026895, 41.047223], within: 1, tallerThan: 0 },
+  // Haydarpaşa Garı
+  { center: [29.01863, 40.99611], within: 1, tallerThan: 0 },
   // Konak Saat Kulesi
   { center: [27.128718, 38.418885], within: 3, tallerThan: 0 },
   // Selimiye Camii
   { center: [26.55936, 41.67795], within: 1, tallerThan: 0 },
+  // Bursa Ulu Camii
+  { center: [29.061882, 40.183923], within: 1, tallerThan: 0 },
+  // Mevlana Müzesi
+  {
+    center: [32.50482311275964, 37.8706340543709],
+    within: 30,
+    tallerThan: 0,
+  },
+  // Hadrian Kapısı
+  { center: [30.708548, 36.885265], within: 1, tallerThan: 0 },
+  {
+    center: [30.708427977824126, 36.88534332555491],
+    within: 1,
+    tallerThan: 0,
+  },
+  {
+    center: [30.708631026679807, 36.88516040282111],
+    within: 1,
+    tallerThan: 0,
+  },
 ]
