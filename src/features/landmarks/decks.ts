@@ -1,4 +1,5 @@
 import type { FeatureCollection, LineString, Polygon } from 'geojson'
+import type { ExpressionSpecification } from 'maplibre-gl'
 import { metres, offset, type XY } from './geometry.ts'
 import type { Landmark } from './landmarks.ts'
 
@@ -246,4 +247,52 @@ function ribbon(
       },
     }
   })
+}
+
+/** Where the map's own flat road runs under a deck, kept clear of its ends */
+const UNDER_DECK_MARGIN = 40
+/** How far from a deck's middle line the map's road may run, in metres */
+const UNDER_DECK_REACH = 8
+
+/**
+ * A filter that keeps the map's own bridge roads, and their names, off the
+ * stretch a landmark's deck carries, so they don't lie flat on the water
+ * under it. It matches only bridges, along the deck's middle line short of
+ * its ends, so the roads leading onto it stay.
+ */
+export function clearUnderDecks(
+  landmarks: readonly Landmark[],
+): ExpressionSpecification {
+  return [
+    'all',
+    true,
+    ...landmarks
+      .filter((l) => l.deck)
+      .map(({ near, deck }): ExpressionSpecification => {
+        const { angle, from, to, halfWidth } = deck!
+        const [c, s] = [Math.cos(angle), Math.sin(angle)]
+        const along = (u: number) => offset(near, [u * c, u * s])
+        return [
+          '!',
+          [
+            'all',
+            ['==', ['get', 'brunnel'], 'bridge'],
+            [
+              '<',
+              [
+                'distance',
+                {
+                  type: 'LineString',
+                  coordinates: [
+                    along(from + UNDER_DECK_MARGIN),
+                    along(to - UNDER_DECK_MARGIN),
+                  ],
+                },
+              ],
+              halfWidth + UNDER_DECK_REACH,
+            ],
+          ],
+        ]
+      }),
+  ] as ExpressionSpecification
 }

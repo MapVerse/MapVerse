@@ -5,6 +5,8 @@ import type {
   RasterDEMSourceSpecification,
   StyleSpecification,
 } from 'maplibre-gl'
+import { DECK_LANDMARKS } from '../features/landmarks/deckLandmarks.ts'
+import { clearUnderDecks } from '../features/landmarks/decks.ts'
 import { LANDMARK_HIDE_ZONES } from '../features/landmarks/hideZones.ts'
 import { hideBuildings } from '../features/landmarks/landmarks.ts'
 import type { Theme } from '../theme/theme.ts'
@@ -430,6 +432,9 @@ const ROAD_SORT: ExpressionSpecification = [
   1,
 ]
 
+/** The map's own roads, kept off what landmarks' decks carry */
+const CLEAR_UNDER_DECKS = clearUnderDecks(DECK_LANDMARKS)
+
 function roads(c: Palette, tunnel: boolean): LayerSpecification[] {
   const filter: FilterSpecification = [
     'all',
@@ -438,6 +443,8 @@ function roads(c: Palette, tunnel: boolean): LayerSpecification[] {
     tunnel
       ? ['==', ['get', 'brunnel'], 'tunnel']
       : ['!=', ['coalesce', ['get', 'brunnel'], ''], 'tunnel'],
+    // Once landmarks rise, a bridge's deck carries its own road
+    ['any', ['<', ['zoom'], RISE_ZOOM], CLEAR_UNDER_DECKS],
   ]
   const id = tunnel ? 'tunnel' : 'road'
   return [
@@ -940,7 +947,11 @@ function buildStyle(
         source: 'openmaptiles',
         'source-layer': 'transportation_name',
         minzoom: 13,
-        filter: isClass(...ROAD_CLASSES),
+        filter: [
+          'all',
+          isClass(...ROAD_CLASSES),
+          ['any', ['<', ['zoom'], RISE_ZOOM], CLEAR_UNDER_DECKS],
+        ],
         layout: {
           'symbol-placement': 'line',
           'text-field': NAME,
