@@ -56,6 +56,7 @@ import MapNotices from './MapNotices.tsx'
 import { maplibre } from './maplibre.ts'
 import { badgeSkin, poiImageId, resolvePoiImage } from './poiStyle.ts'
 import { mapStyle } from './style.ts'
+import { useSatelliteEnabled } from './satelliteSetting.ts'
 import { useTerrainEnabled } from './terrainSetting.ts'
 
 // Istanbul; the URL hash (#zoom/lat/lng) takes precedence when present.
@@ -162,6 +163,7 @@ export default function MapView() {
   const dataNoticeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const theme = useTheme()
   const terrain = useTerrainEnabled()
+  const satellite = useSatelliteEnabled()
   const design = useMapDesign()
   const [poiLayerIds, setPoiLayerIds] = useState<string[]>([])
   const [hoveringPoi, setHoveringPoi] = useState(false)
@@ -370,7 +372,7 @@ export default function MapView() {
       mapLib={maplibre}
       initialViewState={INITIAL_VIEW}
       ref={installImageResolver}
-      mapStyle={mapStyle(theme, terrain, design)}
+      mapStyle={mapStyle(theme, terrain, design, satellite)}
       locale={LOCALE}
       hash
       // Drops the default MapLibre link but keeps the data attribution the

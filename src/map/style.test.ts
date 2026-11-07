@@ -6,14 +6,18 @@ import { mapStyle } from './style.ts'
 
 const variants = MAP_DESIGNS.flatMap((design) =>
   (['light', 'dark'] as const).flatMap((theme) =>
-    [false, true].map((terrain) => [design, theme, terrain] as const),
+    [false, true].flatMap((terrain) =>
+      [false, true].map(
+        (satellite) => [design, theme, terrain, satellite] as const,
+      ),
+    ),
   ),
 )
 
 describe.each(variants)(
-  '%s %s map style, terrain %s',
-  (design, theme, terrain) => {
-    const style = mapStyle(theme, terrain, design)
+  '%s %s map style, terrain %s, satellite %s',
+  (design, theme, terrain, satellite) => {
+    const style = mapStyle(theme, terrain, design, satellite)
 
     it('passes the MapLibre style spec validator', () => {
       expect(validateStyleMin(style)).toEqual([])
@@ -61,5 +65,39 @@ describe('map styles', () => {
 
   it('returns the same object for the same options', () => {
     expect(mapStyle('dark', true)).toBe(mapStyle('dark', true))
+    expect(mapStyle('dark', true, 'vintage', true)).toBe(
+      mapStyle('dark', true, 'vintage', true),
+    )
+    expect(mapStyle('dark', true, 'vintage', true)).not.toBe(
+      mapStyle('dark', true, 'vintage'),
+    )
+  })
+
+  it('add satellite imagery only when asked, over the background', () => {
+    expect(mapStyle('light', false).sources.satellite).toBeUndefined()
+    expect(ids('light', false)).not.toContain('satellite')
+    const style = mapStyle('light', true, 'standard', true)
+    expect(style.sources.satellite).toMatchObject({
+      type: 'raster',
+      tileSize: 256,
+      attribution: expect.stringContaining('Esri'),
+    })
+    expect(style.layers.map((layer) => layer.id)).toEqual(
+      ids('light', true).toSpliced(1, 0, 'satellite'),
+    )
+  })
+
+  it('hide the fills the imagery shows, but keep roads and labels', () => {
+    const style = mapStyle('dark', false, 'san-andreas', true)
+    const visibility = (id: string) => {
+      const layer = style.layers.find((l) => l.id === id)
+      return layer && 'layout' in layer ? layer.layout?.visibility : undefined
+    }
+    for (const id of ['landcover', 'park', 'water', 'building-3d']) {
+      expect(visibility(id)).toBe('none')
+    }
+    for (const id of ['road-fill', 'road-name', 'poi-r1', 'place-city']) {
+      expect(visibility(id)).toBeUndefined()
+    }
   })
 })
