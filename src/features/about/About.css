@@ -1,0 +1,151 @@
+/* The profile menu's row that opens the dialog */
+.mv-account .mv-about-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: var(--mv-radius-sm);
+  font-weight: 600;
+  text-align: left;
+}
+
+.mv-account .mv-about-link:hover {
+  background-color: var(--glass-hover);
+}
+
+/* The dialog, over everything, its backdrop dimming the map */
+.mv-about {
+  box-sizing: border-box;
+  width: min(520px, calc(100vw - 24px));
+  max-height: calc(100dvh - 48px - var(--safe-top) - var(--safe-bottom));
+  padding: 0;
+  border: none;
+  border-radius: 24px;
+  color: var(--mv-text);
+  font-family: var(--mv-font);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.mv-about::backdrop {
+  background: rgb(15 23 42 / 40%);
+}
+
+.mv-about[open] {
+  animation: mv-rise 220ms var(--mv-ease-out);
+}
+
+.mv-about-body {
+  padding: 18px 20px 20px;
+}
+
+.mv-about-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mv-about-head h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.mv-about h3 {
+  margin: 18px 0 6px;
+  color: var(--mv-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.mv-about p {
+  margin: 10px 0 0;
+}
+
+.mv-about ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.mv-about li + li,
+.mv-about li ul {
+  margin-top: 4px;
+}
+
+.mv-about a {
+  color: var(--mv-accent);
+}
+
+.mv-about-version {
+  color: var(--mv-muted);
+  font-size: 12.5px;
+}
+
+.mv-about button {
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mv-about button:focus-visible {
+  outline: 2px solid var(--mv-accent);
+  outline-offset: 1px;
+}
+
+.mv-about .mv-about-close {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.mv-about .mv-about-close:hover {
+  background: var(--glass-hover);
+}
+
+.mv-about .mv-about-delete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--mv-radius-sm);
+  color: var(--mv-danger);
+  font-weight: 600;
+}
+
+.mv-about .mv-about-delete:hover {
+  background-color: color-mix(in srgb, var(--mv-danger) 10%, transparent);
+}
+
+.mv-about .mv-about-delete.is-confirm {
+  background: var(--mv-danger);
+  color: #fff;
+}
+
+.mv-about-confirm p {
+  margin: 0 0 10px;
+}
+
+.mv-about-confirm-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mv-about-confirm-actions button:not(.is-confirm) {
+  padding: 9px 12px;
+  border-radius: var(--mv-radius-sm);
+  font-weight: 600;
+}
+
+.mv-about-confirm-actions button:not(.is-confirm):hover {
+  background: var(--glass-hover);
+}
+
+.mv-about-status:empty {
+  margin: 0;
+}

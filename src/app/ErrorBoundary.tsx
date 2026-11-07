@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { errorKind, type AppErrorKind } from './appError.ts'
+import { reportError } from './errorReport.ts'
 import './ErrorBoundary.css'
 
 const MESSAGES: Record<AppErrorKind, { title: string; body: string }> = {
@@ -63,6 +64,7 @@ export default class ErrorBoundary extends Component<
 
   componentDidCatch(error: unknown, info: ErrorInfo) {
     console.error(error, info.componentStack)
+    reportError(error)
   }
 
   render() {

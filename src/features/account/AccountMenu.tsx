@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { Icon } from '../../icons/Icon.tsx'
 import { usePresence } from '../../lib/presence.ts'
 import { onMap, swallowNextClick } from '../../lib/swallowClick.ts'
+import AboutLink from '../about/AboutLink.tsx'
 import SettingsSections from '../settings/SettingsSections.tsx'
 import Avatar from './Avatar.tsx'
 import { setProfile, squarePhoto, useProfile } from './profile.ts'
@@ -190,6 +191,7 @@ export default function AccountMenu({
           )}
 
           <SettingsSections />
+          <AboutLink />
         </section>
       ))}
     </>,

@@ -1,0 +1,41 @@
+/* Over the top of the map, under the search box, out of the way */
+.mv-update {
+  position: fixed;
+  top: calc(76px + var(--safe-top));
+  right: 0;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 6px 6px 16px;
+  border-radius: 22px;
+  color: var(--mv-text);
+  font-family: var(--mv-font);
+  font-size: 0.9rem;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  margin: 0 auto;
+  animation: mv-rise 220ms var(--mv-ease-out);
+}
+
+.mv-update button {
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 17px;
+  background: var(--mv-primary);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mv-update button:hover {
+  background: var(--mv-primary-hover);
+}
+
+.mv-update button:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
