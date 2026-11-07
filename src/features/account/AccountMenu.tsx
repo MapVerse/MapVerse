@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom'
 import { Icon } from '../../icons/Icon.tsx'
 import { usePresence } from '../../lib/presence.ts'
 import { onMap, swallowNextClick } from '../../lib/swallowClick.ts'
+import SavedList from '../favorites/SavedList.tsx'
+import type { Place } from '../place/place.ts'
 import SettingsSections from '../settings/SettingsSections.tsx'
 import Avatar from './Avatar.tsx'
 import { setProfile, squarePhoto, useProfile } from './profile.ts'
@@ -26,19 +28,27 @@ class Slot implements IControl {
 
 /**
  * The profile button in the corner, and its menu: a profile (a name and a
- * photo, kept on this device only, not an account) and the app's settings.
+ * photo, kept on this device only, not an account), the saved places and
+ * the app's settings.
  */
 export default function AccountMenu({
   position,
+  showSaved = false,
+  onOpenPlace,
 }: {
   position: ControlPosition
+  /** Opens with the menu, at the saved places (a home screen shortcut) */
+  showSaved?: boolean
+  /** Opens a saved place, as a place or as a bare point */
+  onOpenPlace: (place: Place, point: boolean) => void
 }) {
   const slot = useControl(() => new Slot(), { position })
   const profile = useProfile()
   const toggleRef = useRef<HTMLButtonElement>(null)
   const photoRef = useRef<HTMLInputElement>(null)
   const panelRef = useRef<HTMLElement>(null)
-  const [open, setOpen] = useState(false)
+  const savedRef = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(showSaved)
   const [name, setName] = useState('')
   const panelId = useId()
   const title = profile ? profile.name : 'Profil oluştur'
@@ -83,6 +93,11 @@ export default function AccountMenu({
   useEffect(() => {
     if (open) panelRef.current?.focus({ preventScroll: true })
   }, [open])
+
+  // Opened for the saved places, it goes down to them
+  useEffect(() => {
+    if (showSaved) savedRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [showSaved])
 
   function createProfile(event: FormEvent) {
     event.preventDefault()
@@ -188,6 +203,14 @@ export default function AccountMenu({
               </p>
             </form>
           )}
+
+          <SavedList
+            ref={leaving ? undefined : savedRef}
+            onOpen={(place, point) => {
+              setOpen(false)
+              onOpenPlace(place, point)
+            }}
+          />
 
           <SettingsSections />
         </section>

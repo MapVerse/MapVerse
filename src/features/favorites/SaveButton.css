@@ -1,0 +1,184 @@
+/* The gold of a starred place, in the panels and on the map */
+:root {
+  --mv-star: #f59e0b;
+}
+
+:root[data-theme='dark'] {
+  --mv-star: #fbbf24;
+}
+
+/* Saved, the button's star fills in gold; home and work take the accent */
+.save-button.is-saved svg {
+  color: var(--mv-accent);
+}
+
+.save-button.is-star svg {
+  color: var(--mv-star);
+  fill: currentColor;
+}
+
+/* Only its icon, a round button at the end of a short row */
+.place-panel-actions .save-button.is-compact {
+  width: 42px;
+  aspect-ratio: auto;
+  padding: 9px 0;
+}
+
+.save-button.is-compact {
+  flex: none;
+  justify-content: center;
+  width: auto;
+  aspect-ratio: 1;
+  padding: 0;
+}
+
+/* On the narrowest phones only its icon, so the row stays one line */
+@media (max-width: 380px) {
+  .place-panel-actions .save-button {
+    justify-content: center;
+    width: 42px;
+    padding-inline: 0;
+  }
+
+  .place-panel-actions .save-button-label {
+    display: none;
+  }
+}
+
+/* The editor, a line of its own under the row it was opened from */
+.save-editor {
+  display: grid;
+  box-sizing: border-box;
+  flex: 1 0 100%;
+  gap: 10px;
+  margin-top: 2px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--glass-fill, var(--mv-hover));
+  box-shadow: inset 0 0 0 1px var(--glass-line, var(--mv-border));
+  font-size: 13.5px;
+  animation: mv-rise 260ms var(--mv-ease-out);
+}
+
+.save-editor .save-kinds {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--mv-hover);
+}
+
+.save-editor .save-kinds button {
+  display: flex;
+  flex: auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  box-shadow: none;
+  color: var(--mv-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.save-editor .save-kinds button[aria-pressed='true'] {
+  background: var(--mv-raised);
+  box-shadow: var(--mv-shadow-sm);
+  color: var(--mv-text);
+}
+
+.save-editor .save-kinds button[aria-pressed='true'] svg {
+  color: var(--mv-star);
+  fill: currentColor;
+}
+
+.save-editor .save-kinds button[aria-pressed='true']:not(:first-child) svg {
+  color: var(--mv-accent);
+  fill: none;
+}
+
+.save-name {
+  box-sizing: border-box;
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--glass-line, var(--mv-border));
+  border-radius: 10px;
+  outline: none;
+  background: var(--mv-surface);
+  color: var(--mv-text);
+  font: inherit;
+}
+
+.save-name:focus {
+  border-color: var(--mv-accent);
+}
+
+.save-editor .save-editor-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.save-editor .save-editor-actions button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  box-shadow: none;
+  color: var(--mv-accent);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.save-editor .save-editor-actions .save-remove {
+  color: var(--mv-danger);
+}
+
+.save-editor .save-editor-actions button:hover,
+.save-editor .save-kinds button[aria-pressed='false']:hover {
+  background: var(--mv-hover);
+  color: var(--mv-text);
+}
+
+.save-editor .save-editor-actions button:active,
+.save-editor .save-kinds button:active {
+  transform: none;
+}
+
+:root[data-map-design='san-andreas'] .save-editor,
+:root[data-map-design='san-andreas'] .save-editor button,
+:root[data-map-design='san-andreas'] .save-name,
+:root[data-map-design='san-andreas'] .save-kinds {
+  border-radius: 3px;
+}
+
+/* At 16px, so a phone's browser doesn't zoom in on it as it is tapped */
+@media (pointer: coarse) {
+  .place-panel-actions .save-button.is-compact {
+    padding-block: 11px;
+  }
+
+  .save-name {
+    height: 42px;
+    font-size: 16px;
+  }
+
+  .save-editor .save-kinds button {
+    height: 38px;
+  }
+}

@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { Icon } from '../../icons/Icon.tsx'
 import { useTheme } from '../../theme/theme.ts'
+import SaveButton from '../favorites/SaveButton.tsx'
 import { categoryInfo, labelColor } from './categories.ts'
 import CategoryBadge from './CategoryBadge.tsx'
 import {
@@ -33,7 +34,9 @@ import {
   parseHours,
   weekLines,
 } from './openingHours.ts'
+import { osmLetter } from './link.ts'
 import type { Place } from './place.ts'
+import PlacePhoto from './PlacePhoto.tsx'
 import { sharePlace } from './share.ts'
 import { useAddress } from './useAddress.ts'
 import { usePlaceDetails, usePlaceTime } from './usePlaceDetails.ts'
@@ -174,6 +177,8 @@ export default function PlaceDetails({
     measure()
     const watch = new ResizeObserver(measure)
     if (content.current) watch.observe(content.current)
+    // The save editor opens under the buttons
+    if (actions.current) watch.observe(actions.current)
     window.addEventListener('resize', measure)
     return () => {
       watch.disconnect()
@@ -262,8 +267,19 @@ export default function PlaceDetails({
   const offers = tags ? features(tags) : []
   const coordinates = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
 
+  // The element found for a place picked on the map, which came without
+  // one, and its address looked up: shared and saved with it
+  const found = details?.osm && osmLetter(details.osm.type)
+  const known: Place = {
+    ...place,
+    osm:
+      place.osm ??
+      (found && details ? { type: found, id: details.osm.id } : undefined),
+    address: place.address ?? address ?? undefined,
+  }
+
   async function share() {
-    const shared = await sharePlace(place)
+    const shared = await sharePlace(known)
     if (shared === 'copied' || shared === 'failed') {
       setCopied({ what: 'link', ok: shared === 'copied' })
     }
@@ -423,6 +439,11 @@ export default function PlaceDetails({
               ? 'Bağlantı kopyalandı'
               : 'Kopyalanamadı'}
         </button>
+        <SaveButton
+          place={known}
+          compact={peek}
+          onOpen={() => peek && goTo('half')}
+        />
         {peek && (
           <button
             type="button"
@@ -438,6 +459,7 @@ export default function PlaceDetails({
 
       <div ref={body} className="place-panel-body" inert={peek || undefined}>
         <div ref={content}>
+          {tags && <PlacePhoto tags={tags} name={place.name} />}
           <ul className="place-facts">
             {address !== null && (
               <li style={row(i++)}>

@@ -1,6 +1,7 @@
 import { Marker, useMap } from '@vis.gl/react-maplibre'
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../../icons/Icon.tsx'
+import SaveButton from '../favorites/SaveButton.tsx'
 import { describePoint, type PointDescription } from '../search/photon.ts'
 import { copyText } from './clipboard.ts'
 import { isFreeEscape } from './escape.ts'
@@ -219,6 +220,15 @@ export default function PointCard({
                 ? 'Bağlantı kopyalandı'
                 : 'Kopyalanamadı'}
           </button>
+          <SaveButton
+            place={{
+              ...place,
+              name: title ?? 'Seçilen nokta',
+              address: here?.detail || undefined,
+            }}
+            point
+            compact
+          />
         </div>
       </section>
     </>

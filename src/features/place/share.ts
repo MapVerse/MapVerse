@@ -1,9 +1,15 @@
 import { copyText } from './clipboard.ts'
-import type { Place } from './place.ts'
+import { placeQuery } from './link.ts'
+import type { OsmRef, Place } from './place.ts'
 
-/** A link to the map, centred close in on a place. */
-export function placeUrl({ lngLat: [lng, lat] }: Place): string {
-  return `${location.origin}${location.pathname}#17/${lat.toFixed(5)}/${lng.toFixed(5)}`
+/**
+ * A link to a place: it opens the place itself (see `link.ts`), the map
+ * centred close in on it. `osm` is the element found for it, where the
+ * place did not come with one, as places picked on the map don't.
+ */
+export function placeUrl(place: Place, osm?: OsmRef): string {
+  const [lng, lat] = place.lngLat
+  return `${location.origin}${location.pathname}?${placeQuery(place, osm)}#17/${lat.toFixed(5)}/${lng.toFixed(5)}`
 }
 
 /**
@@ -13,8 +19,9 @@ export function placeUrl({ lngLat: [lng, lat] }: Place): string {
  */
 export async function sharePlace(
   place: Place,
+  osm?: OsmRef,
 ): Promise<'shared' | 'copied' | 'failed' | null> {
-  const url = placeUrl(place)
+  const url = placeUrl(place, osm)
   if (navigator.share) {
     try {
       await navigator.share({ title: place.name, url })

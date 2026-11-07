@@ -172,12 +172,21 @@
   letter-spacing: 0.02em;
 }
 
-.search-results {
+/* The saved places, recent searches or results, scrolling as one */
+.search-lists {
   max-height: min(60vh, 420px);
+  overflow-y: auto;
+}
+
+.search-results {
   margin: 0;
   padding: 6px;
-  overflow-y: auto;
   list-style: none;
+}
+
+/* Under a heading, a list keeps close to it */
+.search-heading + .search-results {
+  padding-top: 4px;
 }
 
 .search-results li {
@@ -203,6 +212,13 @@
   border-radius: 32%;
   background: var(--glass-hover);
   color: var(--mv-muted);
+}
+
+/* Home and work in the accent; the starred in gold (see SavedList.css) */
+.search-saved-icon {
+  border-radius: 50%;
+  background: var(--mv-accent-soft);
+  color: var(--mv-accent);
 }
 
 .search-text {

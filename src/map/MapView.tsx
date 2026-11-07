@@ -18,6 +18,12 @@ import { MapStartError } from '../app/appError.ts'
 import AccountMenu from '../features/account/AccountMenu.tsx'
 import AreaNames from '../features/areas/AreaNames.tsx'
 import Directions from '../features/directions/Directions.tsx'
+import { favoritePlace } from '../features/favorites/favorites.ts'
+import { resolveSavedPlaceImage } from '../features/favorites/savedBadge.ts'
+import SavedPlaces, {
+  SAVED_PLACES_LAYER,
+} from '../features/favorites/SavedPlaces.tsx'
+import { useFavorites } from '../features/favorites/useFavorites.ts'
 import { resolveSignalImage } from '../features/traffic/signalImage.ts'
 import TrafficSignals from '../features/traffic/TrafficSignals.tsx'
 import Boundary from '../features/place/Boundary.tsx'
@@ -25,6 +31,8 @@ import {
   FALLBACK_CATEGORY,
   categoryInfo,
 } from '../features/place/categories.ts'
+import { takeLaunch } from '../features/place/launch.ts'
+import { isPointKey } from '../features/place/link.ts'
 import PlaceArea from '../features/place/PlaceArea.tsx'
 import PlaceCard from '../features/place/PlaceCard.tsx'
 import PlaceDetails from '../features/place/PlaceDetails.tsx'
@@ -77,11 +85,15 @@ const LOCALE = {
   'ScaleControl.Meters': 'm',
 }
 
-/** POI badges and traffic lights are drawn the first time the map needs each one. */
+/**
+ * POI badges, traffic lights and saved places' badges are drawn the first
+ * time the map needs each one.
+ */
 function installImageResolver(ref: MapRef | null) {
   const map = ref?.getMap()
   map?.setMissingStyleImageResolver((id) => {
-    if (!resolveSignalImage(map, id)) resolvePoiImage(map, id)
+    if (resolveSignalImage(map, id) || resolveSavedPlaceImage(map, id)) return
+    resolvePoiImage(map, id)
   })
 }
 
@@ -107,6 +119,10 @@ const LEAVING_MS = 200
  * in ms: a second click meanwhile makes it a double click, to zoom.
  */
 const DOUBLE_CLICK_MS = 260
+
+/** How a place opens: a bare point as a card, else in full. */
+const viewOf = (place: Place): View =>
+  isPointKey(place.key) ? 'point' : 'full'
 
 /** A point clicked on the map, as a place. */
 const pointAt = (lngLat: [number, number]): Place => ({
@@ -165,8 +181,26 @@ export default function MapView() {
   const design = useMapDesign()
   const [poiLayerIds, setPoiLayerIds] = useState<string[]>([])
   const [hoveringPoi, setHoveringPoi] = useState(false)
-  // The place picked, shown in full; and one the pointer rests on, glanced at
-  const [selection, setSelection] = useState<Selection | null>(null)
+  // What a link or a home screen shortcut opened the app with
+  const [launch] = useState(takeLaunch)
+  const [startCategory] = useState(
+    () =>
+      launch.category && {
+        category: launch.category,
+        locate: !launch.hasView,
+      },
+  )
+  const favorites = useFavorites()
+  // The place picked, shown in full (or one shared in a link, at once);
+  // and one the pointer rests on, glanced at
+  const [selection, setSelection] = useState<Selection | null>(() =>
+    launch.place
+      ? {
+          place: launch.place.place,
+          view: launch.place.point ? 'point' : 'full',
+        }
+      : null,
+  )
   const [hover, setHover] = useState<Selection | null>(null)
   const hoverKey = useRef<string | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -262,6 +296,10 @@ export default function MapView() {
       )
       return result ? { place: result } : null
     }
+    if (feature.layer.id === SAVED_PLACES_LAYER) {
+      const saved = favorites.find((f) => f.key === feature.properties.key)
+      return saved ? { place: favoritePlace(saved) } : null
+    }
     return {
       place: toPoi(feature, lngLat.toArray()),
       poi: {
@@ -307,7 +345,7 @@ export default function MapView() {
     const feature = event.features?.[0]
     const picked = selectionOf(feature, event.lngLat)
     if (picked) {
-      setSelection({ ...picked, view: 'full' })
+      setSelection({ ...picked, view: viewOf(picked.place) })
       return
     }
     // A result marker whose place is gone leaves things as they are
@@ -368,7 +406,17 @@ export default function MapView() {
   return (
     <Map
       mapLib={maplibre}
-      initialViewState={INITIAL_VIEW}
+      initialViewState={
+        // A place shared without a view (the link's #zoom/lat/lng) comes
+        // into view close in
+        launch.place && !launch.hasView
+          ? {
+              longitude: launch.place.place.lngLat[0],
+              latitude: launch.place.place.lngLat[1],
+              zoom: 17,
+            }
+          : INITIAL_VIEW
+      }
       ref={installImageResolver}
       mapStyle={mapStyle(theme, terrain, design)}
       locale={LOCALE}
@@ -377,7 +425,9 @@ export default function MapView() {
       // licenses require; it collapses to an ⓘ button once the map is moved.
       attributionControl={{ compact: true }}
       interactiveLayerIds={
-        directions ? [] : [SEARCH_RESULTS_LAYER, ...poiLayerIds]
+        directions
+          ? []
+          : [SEARCH_RESULTS_LAYER, SAVED_PLACES_LAYER, ...poiLayerIds]
       }
       // A pointer over a place only while a click would open it
       cursor={hoveringPoi && !selection && !directions ? 'pointer' : undefined}
@@ -400,12 +450,19 @@ export default function MapView() {
       onClick={onMapClick}
       onError={onMapError}
     >
-      <AccountMenu position="top-right" />
+      <AccountMenu
+        position="top-right"
+        showSaved={launch.saved}
+        onOpenPlace={(place, point) =>
+          setSelection({ place, view: point ? 'point' : 'full' })
+        }
+      />
       <MapControls />
       <ScaleControl position="bottom-left" />
       {design === 'san-andreas' && <SanAndreasHud />}
       {poiLayerIds.length > 0 && <AreaNames beforeId={poiLayerIds[0]} />}
       {poiLayerIds.length > 0 && <TrafficSignals beforeId={poiLayerIds[0]} />}
+      {poiLayerIds.length > 0 && <SavedPlaces />}
       {labelLayerId && (
         <Suspense>
           <LandmarkExtrusions beforeId={labelLayerId} />
@@ -414,11 +471,14 @@ export default function MapView() {
       )}
       <SearchBox
         hidden={!!directions}
-        onSelect={(result) => setSelection({ place: result, view: 'full' })}
+        onSelect={(result) =>
+          setSelection({ place: result, view: viewOf(result) })
+        }
         onClear={() => setSelection(null)}
         onDirections={() => openDirections(selection?.place ?? null)}
         nearby={categorySearch && { ...categorySearch, ...nearby }}
         onCategory={setCategorySearch}
+        startCategory={startCategory}
       />
       {categorySearch && !directions && (
         <SearchResults results={nearby.results} selectedKey={place?.key} />
