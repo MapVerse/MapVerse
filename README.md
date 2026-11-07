@@ -41,6 +41,7 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 - Ana ekrana eklenince uygulama simgesine basılı tutunca kısayollar çıkar: Yakındaki eczaneler, akaryakıt istasyonları ve ATM'ler (cihaz konumunu verirse onun çevresinde aranır) ve Kayıtlı yerler
 - Çevrimdışı da açılır: bir kez açıldıktan sonra uygulamanın dosyaları tarayıcıda saklanır, bağlantı yokken sayfa yine açılır ve çevrimdışı uyarısı görünür. Gezilen yerlerin harita karoları, yazı tipleri ve stil de saklanır (en fazla 2000 dosya, en uzun süredir bakılmayanlar önce silinir), daha önce bakılan yerler çevrimdışıyken de çizilir. Aramalar, mekân bilgileri, alan sınırları ve rotalar hiç saklanmaz, her seferinde sunucudan istenir. Yeni sürüm yayımlanınca üstte "Yeni sürüm hazır" notu çıkar, Yenile'ye basınca yeni sürüm açılır
 - Profil menüsünde Hakkında ve gizlilik: uygulamanın sürümü ve derlendiği commit, veri kaynakları ve atıflar, hangi bilginin hangi servise gittiğini sade Türkçeyle anlatan gizlilik notu (servislerin kendi politikalarına bağlantılarla) ve bu tarayıcıdaki tüm MapVerse verilerini (profil, ayarlar, favoriler, son aramalar) onay alarak silen "Bu cihazdaki verilerimi sil" düğmesi
+- Arayüz İngilizce de kullanılabilir: profil menüsündeki Dil ayarından Türkçe, English ya da tarayıcının diline uyan Sistem seçilir (tarayıcı Türkçe değilse İngilizce açılır); seçim hatırlanır ve diğer sekmelere de geçer. İngilizcede düğmeler, uyarılar, kategoriler, çalışma saatleri, sayılar ve saatler (`1.2 km`, tarayıcıya göre `10:30 PM`), Valhalla'nın yol tarifleri ve navigasyonun sesli anlatımı da İngilizcedir; harita ve arama sonuçları yerlerin İngilizce adlarını, varsa, gösterir. Kategoriler İngilizce yazılarak da aranır ("pharmacy", "gas station", "atm")
 
 ## Geliştirme
 
@@ -59,6 +60,10 @@ npm run e2e           # Playwright ile uçtan uca testler
 Uçtan uca testler (`e2e/`) üretim derlemesini `vite preview` ile açar ve dış istekleri küçük sahte yanıtlarla karşılar: boş bir harita, iki yer ve bir rota; internet gerekmez. İlk seferde tarayıcıyı `npx playwright install chromium` ile kur; başka bir Chromium kullanmak için yolunu `PLAYWRIGHT_CHROMIUM_PATH` ile ver.
 
 Service worker yalnızca üretim derlemesinde (`npm run build`, `npm run preview`) kaydedilir; `npm run dev` sırasında yoktur.
+
+### Çeviri
+
+Arayüzün metinleri `src/i18n/` altındadır: Türkçesi `tr.ts`, İngilizcesi `en.ts`, bileşenler onlara `t('anahtar', { değer })` ile ulaşır; sayı, saat ve tarih biçimleri `format.ts`'tedir. Kategori adları iki dilde `src/features/place/categories.ts`'te, kategori aramasının kelimeleri `src/features/search/categoryQuery.ts`'tedir. Yeni bir metin iki dile birden eklenir: `en.ts`'te eksik ya da fazla bir anahtar tip kontrolünde hata verir, birim testleri de iki sözlüğün aynı anahtarları ve aynı `{değer}`leri kullandığına bakar. Haritadan gelen veriler (yer ve sokak adları, adresler, açıklamalar) çevrilmez.
 
 ### Ortam değişkenleri
 
