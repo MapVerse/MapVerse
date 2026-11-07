@@ -1,5 +1,7 @@
 import { useControl } from '@vis.gl/react-maplibre'
+import { MeasureControl } from '../features/measure/MeasureControl.ts'
 import { ControlGroup } from './ControlGroup.ts'
+import { LocateControl } from './LocateControl.ts'
 import { TiltControl } from './tilt.ts'
 
 const position = { position: 'bottom-right' } as const
@@ -18,7 +20,10 @@ export default function MapControls() {
   useControl(
     ({ mapLib }) =>
       new ControlGroup('Konum', [
-        new mapLib.GeolocateControl({ trackUserLocation: true }),
+        // On a phone, with the way it points
+        new LocateControl(
+          new mapLib.GeolocateControl({ trackUserLocation: true }),
+        ),
       ]),
     position,
   )
@@ -30,6 +35,7 @@ export default function MapControls() {
           visualizePitch: true,
         }),
         new TiltControl(),
+        new MeasureControl(),
       ]),
     position,
   )

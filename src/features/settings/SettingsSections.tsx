@@ -8,6 +8,11 @@ import {
   useMapDesign,
   type MapDesign,
 } from '../../map/designSetting.ts'
+import {
+  setSatelliteEnabled,
+  useSatelliteEnabled,
+} from '../../map/satelliteSetting.ts'
+import { setShortcutHelpOpen } from '../../map/shortcuts.ts'
 import { designSwatch } from '../../map/style.ts'
 import {
   setTerrainEnabled,
@@ -19,6 +24,7 @@ import {
   useThemePreference,
   type ThemePreference,
 } from '../../theme/theme.ts'
+import { HOVER_QUERY, useMediaQuery } from '../../lib/useMediaQuery.ts'
 import {
   clearRecentSearches,
   useRecentSearches,
@@ -58,18 +64,60 @@ function DesignPreview({ design }: { design: MapDesign }) {
   )
 }
 
-/** Theme, map design, 3D terrain and recent searches, shown in the account menu. */
+/** An on/off row of the settings: icon, label with a note, and a switch. */
+function Switch({
+  icon,
+  label,
+  note,
+  checked,
+  onToggle,
+}: {
+  icon: StrokeName
+  label: string
+  note: string
+  checked: boolean
+  onToggle: () => void
+}) {
+  const labelId = useId()
+  const noteId = useId()
+  return (
+    <button
+      type="button"
+      role="switch"
+      className="mv-settings-switch"
+      aria-checked={checked}
+      aria-labelledby={labelId}
+      aria-describedby={noteId}
+      onClick={onToggle}
+    >
+      <Icon name={icon} size={20} />
+      <span className="mv-settings-switch-text">
+        <span id={labelId}>{label}</span>
+        <span id={noteId} className="mv-settings-note">
+          {note}
+        </span>
+      </span>
+      <span className="mv-settings-switch-track" aria-hidden="true" />
+    </button>
+  )
+}
+
+/**
+ * Theme, map design, 3D terrain, satellite imagery, recent searches and,
+ * with a keyboard, its shortcuts, shown in the account menu.
+ */
 export default function SettingsSections() {
   const { current: map } = useMap()
   const preference = useThemePreference()
   const theme = useTheme()
   const terrain = useTerrainEnabled()
+  const satellite = useSatelliteEnabled()
   const design = useMapDesign()
   const recent = useRecentSearches()
+  // A keyboard, most likely, where there is a mouse
+  const keyboard = useMediaQuery(HOVER_QUERY)
   const themeLabelId = useId()
   const designLabelId = useId()
-  const terrainLabelId = useId()
-  const terrainNoteId = useId()
 
   function toggleTerrain() {
     setTerrainEnabled(!terrain)
@@ -134,24 +182,20 @@ export default function SettingsSections() {
 
       <div className="mv-settings-section">
         <span className="mv-settings-label">Harita</span>
-        <button
-          type="button"
-          role="switch"
-          className="mv-settings-switch"
-          aria-checked={terrain}
-          aria-labelledby={terrainLabelId}
-          aria-describedby={terrainNoteId}
-          onClick={toggleTerrain}
-        >
-          <Icon name="mountain" size={20} />
-          <span className="mv-settings-switch-text">
-            <span id={terrainLabelId}>3B arazi</span>
-            <span id={terrainNoteId} className="mv-settings-note">
-              Dağlar ve tepeler kabartmalı görünür
-            </span>
-          </span>
-          <span className="mv-settings-switch-track" aria-hidden="true" />
-        </button>
+        <Switch
+          icon="mountain"
+          label="3B arazi"
+          note="Dağlar ve tepeler kabartmalı görünür"
+          checked={terrain}
+          onToggle={toggleTerrain}
+        />
+        <Switch
+          icon="satellite"
+          label="Uydu"
+          note="Yollar ve adlar uydu görüntüsünün üstünde"
+          checked={satellite}
+          onToggle={() => setSatelliteEnabled(!satellite)}
+        />
       </div>
 
       <div className="mv-settings-section">
@@ -166,6 +210,21 @@ export default function SettingsSections() {
           {recent.length > 0 ? 'Son aramaları temizle' : 'Kayıtlı arama yok'}
         </button>
       </div>
+
+      {keyboard && (
+        <div className="mv-settings-section">
+          <button
+            type="button"
+            className="mv-settings-link"
+            aria-haspopup="dialog"
+            onClick={() => setShortcutHelpOpen(true)}
+          >
+            <Icon name="keyboard" size={18} />
+            Klavye kısayolları
+            <kbd>?</kbd>
+          </button>
+        </div>
+      )}
     </>
   )
 }

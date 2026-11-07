@@ -192,3 +192,34 @@
 [aria-checked='true'] > .mv-settings-switch-track::after {
   transform: translateX(14px);
 }
+
+/* Opens the list of keyboard shortcuts, with the key that does the same */
+.mv-account .mv-settings-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: var(--mv-radius-sm);
+  color: var(--mv-text);
+  font-weight: 600;
+  text-align: left;
+}
+
+.mv-account .mv-settings-link:hover {
+  background-color: var(--glass-hover);
+}
+
+.mv-account .mv-settings-link > svg {
+  color: var(--mv-muted);
+}
+
+.mv-settings-link kbd {
+  margin-left: auto;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--glass-hover);
+  color: var(--mv-muted);
+  font-family: inherit;
+  font-size: 12px;
+}

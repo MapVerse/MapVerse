@@ -1,0 +1,156 @@
+/* The measuring panel, under the search box and as wide as it */
+.measure {
+  position: absolute;
+  top: calc(12px + 54px + 10px + var(--safe-top));
+  left: calc(12px + var(--safe-left));
+  z-index: 2;
+  box-sizing: border-box;
+  width: min(300px, calc(100% - 80px - var(--safe-left) - var(--safe-right)));
+  padding: 10px 12px 12px 14px;
+  border-radius: var(--mv-radius);
+  color: var(--mv-text);
+  font-family: var(--mv-font);
+  animation: mv-pop-in 220ms var(--mv-ease-out);
+  transform-origin: top left;
+}
+
+.measure-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mv-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.measure-title {
+  flex: 1;
+}
+
+.measure button {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.measure button:focus-visible {
+  outline: 2px solid var(--mv-accent);
+  outline-offset: 1px;
+}
+
+.measure .measure-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: -4px -6px -4px 0;
+  border-radius: 50%;
+  color: var(--mv-muted);
+}
+
+.measure .measure-close:hover {
+  background: var(--glass-hover);
+  color: var(--mv-text);
+}
+
+.measure-total {
+  display: block;
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.measure-hint {
+  margin: 2px 0 10px;
+  color: var(--mv-muted);
+  font-size: 12.5px;
+}
+
+.measure-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.measure .measure-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: var(--mv-radius-sm);
+  background: var(--glass-hover);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.measure .measure-actions button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--mv-text) 12%, transparent);
+}
+
+.measure .measure-actions button:disabled {
+  color: var(--mv-subtle);
+  cursor: default;
+}
+
+@media (pointer: coarse) {
+  .measure .measure-actions button {
+    min-height: 44px;
+  }
+
+  .measure .measure-close {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* A point of the path: a white dot ringed in the line's colour, inside a
+   larger target for a finger to drag it by */
+.measure-point {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.measure-point::after {
+  content: '';
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  border: 3px solid currentColor;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(15 23 42 / 35%);
+}
+
+.measure-point.is-first::after {
+  background: currentColor;
+  box-shadow:
+    0 0 0 2px #fff,
+    0 1px 4px rgb(15 23 42 / 35%);
+}
+
+.maplibregl-marker:active .measure-point {
+  cursor: grabbing;
+}
+
+/* San Andreas: square blips edged in black */
+:root[data-map-design='san-andreas'] .measure-point::after {
+  border-radius: 0;
+  border-color: #000;
+  background: currentColor;
+}
+
+:root[data-map-design='san-andreas'] .measure-point.is-first::after {
+  background: #fff;
+  box-shadow: none;
+}

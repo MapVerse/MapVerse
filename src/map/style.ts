@@ -3,6 +3,7 @@ import type {
   FilterSpecification,
   LayerSpecification,
   RasterDEMSourceSpecification,
+  RasterSourceSpecification,
   StyleSpecification,
 } from 'maplibre-gl'
 import { DECK_LANDMARKS } from '../features/landmarks/deckLandmarks.ts'
@@ -304,14 +305,51 @@ const PALETTES: Record<MapDesign, Record<Theme, Palette>> = {
   'san-andreas': { light: SAN_ANDREAS_DAY, dark: SAN_ANDREAS_NIGHT },
 }
 
+/**
+ * Over satellite imagery, labels turn light with a dark halo, as on a
+ * hybrid map, so they read over roofs, fields and sea alike; roads keep
+ * the design's daytime colours, which show on dark photos by night too.
+ */
+function hybrid(c: Palette, day: Palette): Palette {
+  return {
+    ...c,
+    road: day.road,
+    primary: day.primary,
+    motorway: day.motorway,
+    casing: day.casing,
+    majorCasing: day.majorCasing,
+    motorwayCasing: day.motorwayCasing,
+    label: '#ffffff',
+    labelSoft: '#f3f4f6',
+    labelMuted: '#e5e7eb',
+    labelSubtle: '#d1d5db',
+    waterLabel: '#cfe4ff',
+    areaLabel: '#f1e6cf',
+    halo: 'rgba(10, 12, 16, 0.82)',
+  }
+}
+
+function palette(theme: Theme, design: MapDesign, satellite: boolean) {
+  const c = PALETTES[design][theme]
+  return satellite ? hybrid(c, PALETTES[design].light) : c
+}
+
 /** Halo behind map labels, for layers added outside the style. */
-export function labelHalo(theme: Theme, design: MapDesign = 'standard') {
-  return PALETTES[design][theme].halo
+export function labelHalo(
+  theme: Theme,
+  design: MapDesign = 'standard',
+  satellite = false,
+) {
+  return palette(theme, design, satellite).halo
 }
 
 /** Colour for the names of estates and industrial areas. */
-export function areaLabelColor(theme: Theme, design: MapDesign = 'standard') {
-  return PALETTES[design][theme].areaLabel
+export function areaLabelColor(
+  theme: Theme,
+  design: MapDesign = 'standard',
+  satellite = false,
+) {
+  return palette(theme, design, satellite).areaLabel
 }
 
 /** A few of a design's colours, for its preview in the settings. */
@@ -390,10 +428,11 @@ const ROAD_CLASSES = [
   'busway',
 ]
 
-function roadWidth(casing: boolean): ExpressionSpecification {
+function roadWidth(casing: boolean, scale = 1): ExpressionSpecification {
   const stops = ROAD_ZOOMS.flatMap((zoom, i) => {
     const extra = casing ? CASING_EXTRA[i] : 0
-    const w = (group: keyof typeof ROAD_WIDTHS) => ROAD_WIDTHS[group][i] + extra
+    const w = (group: keyof typeof ROAD_WIDTHS) =>
+      (ROAD_WIDTHS[group][i] + extra) * scale
     return [
       zoom,
       [
@@ -439,7 +478,13 @@ const CLEAR_NAMES_UNDER_DECKS = clearUnderDecks(DECK_LANDMARKS, {
   bridgesOnly: false,
 })
 
-function roads(c: Palette, tunnel: boolean): LayerSpecification[] {
+function roads(
+  c: Palette,
+  tunnel: boolean,
+  satellite: boolean,
+): LayerSpecification[] {
+  // Over imagery, roads are drawn thinner and let it show through
+  const scale = satellite ? 0.6 : 1
   const filter: FilterSpecification = [
     'all',
     ['==', ['geometry-type'], 'LineString'],
@@ -474,8 +519,9 @@ function roads(c: Palette, tunnel: boolean): LayerSpecification[] {
           c.majorCasing,
           c.casing,
         ],
-        'line-width': roadWidth(true),
+        'line-width': roadWidth(true, scale),
         ...(tunnel && { 'line-dasharray': [1, 0.6] }),
+        ...(satellite && { 'line-opacity': 0.45 }),
       },
     },
     {
@@ -502,7 +548,8 @@ function roads(c: Palette, tunnel: boolean): LayerSpecification[] {
               c.primary,
               c.road,
             ],
-        'line-width': roadWidth(false),
+        'line-width': roadWidth(false, scale),
+        ...(satellite && { 'line-opacity': 0.7 }),
       },
     },
   ]
@@ -511,6 +558,7 @@ function roads(c: Palette, tunnel: boolean): LayerSpecification[] {
 function poiLayer(
   theme: Theme,
   design: MapDesign,
+  satellite: boolean,
   c: Palette,
   id: string,
   minzoom: number,
@@ -537,7 +585,8 @@ function poiLayer(
     },
     paint: {
       'icon-opacity': POI_ICON_OPACITY,
-      'text-color': c.poiLabel ?? poiLabelColor(theme),
+      // Over imagery, category colours as they read on a dark map
+      'text-color': c.poiLabel ?? poiLabelColor(satellite ? 'dark' : theme),
       'text-halo-color': c.halo,
       'text-halo-width': 1.5 * c.haloScale,
     },
@@ -613,13 +662,74 @@ function hillshade(c: Palette): LayerSpecification {
   }
 }
 
+// Esri World Imagery, under the roads and labels when satellite is on
+const SATELLITE_SOURCE: RasterSourceSpecification = {
+  type: 'raster',
+  tiles: [
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  ],
+  tileSize: 256,
+  maxzoom: 19,
+  attribution: 'Görüntü © Esri, Maxar, Earthstar Geographics',
+}
+
+/** The imagery, toned a little to sit with each design and theme. */
+function satelliteLayer(theme: Theme, design: MapDesign): LayerSpecification {
+  const dark = theme === 'dark'
+  return {
+    id: 'satellite',
+    type: 'raster',
+    source: 'satellite',
+    paint: {
+      // An old map's faded print; the game's washed-out sun; and dimmed by night
+      'raster-saturation':
+        design === 'vintage' ? -0.7 : design === 'san-andreas' ? -0.2 : 0,
+      'raster-contrast': design === 'vintage' ? -0.1 : 0,
+      'raster-brightness-max': dark ? 0.72 : 1,
+      'raster-fade-duration': 150,
+    },
+  }
+}
+
+/**
+ * The map's own fills make way for the imagery: land, parks, water and
+ * buildings, flat or raised, and the relief shading, which the photos
+ * already have. Landmarks still rise in 3D.
+ */
+const UNDER_SATELLITE = new Set([
+  'landcover',
+  'landuse',
+  'park',
+  'hillshade',
+  'water',
+  'waterway',
+  'aeroway',
+  'building',
+  'building-3d',
+  'tunnel-casing',
+  'tunnel-fill',
+])
+
+/** Hides what the imagery shows itself; ids stay, so lookups still work. */
+function overImagery(layers: LayerSpecification[]): LayerSpecification[] {
+  return layers.map((layer) =>
+    UNDER_SATELLITE.has(layer.id)
+      ? ({
+          ...layer,
+          layout: { ...layer.layout, visibility: 'none' },
+        } as LayerSpecification)
+      : layer,
+  )
+}
+
 function buildStyle(
   theme: Theme,
   terrain: boolean,
   design: MapDesign,
+  satellite: boolean,
 ): StyleSpecification {
-  const c = PALETTES[design][theme]
-  return {
+  const c = palette(theme, design, satellite)
+  const style: StyleSpecification = {
     version: 8,
     name: 'MapVerse',
     glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
@@ -635,6 +745,7 @@ function buildStyle(
         'terrain-dem': DEM_SOURCE,
         'hillshade-dem': DEM_SOURCE,
       }),
+      ...(satellite && { satellite: SATELLITE_SOURCE }),
     },
     ...(terrain && {
       terrain: { source: 'terrain-dem', exaggeration: 1.4 },
@@ -660,6 +771,7 @@ function buildStyle(
         type: 'background',
         paint: { 'background-color': c.land },
       },
+      ...(satellite ? [satelliteLayer(theme, design)] : []),
       {
         id: 'landcover',
         type: 'fill',
@@ -780,7 +892,7 @@ function buildStyle(
           ],
         },
       },
-      ...roads(c, true),
+      ...roads(c, true, satellite),
       {
         id: 'path',
         type: 'line',
@@ -798,7 +910,7 @@ function buildStyle(
           'line-dasharray': [2, 1.4],
         },
       },
-      ...roads(c, false),
+      ...roads(c, false, satellite),
       {
         id: 'rail',
         type: 'line',
@@ -987,17 +1099,17 @@ function buildStyle(
         },
       },
       // Like OpenMapTiles styles, show the most important POIs first
-      poiLayer(theme, design, c, 'poi-r1', 15, [
+      poiLayer(theme, design, satellite, c, 'poi-r1', 15, [
         '<=',
         ['coalesce', ['get', 'rank'], 99],
         6,
       ]),
-      poiLayer(theme, design, c, 'poi-r7', 16, [
+      poiLayer(theme, design, satellite, c, 'poi-r7', 16, [
         'all',
         ['>', ['coalesce', ['get', 'rank'], 99], 6],
         ['<=', ['coalesce', ['get', 'rank'], 99], 19],
       ]),
-      poiLayer(theme, design, c, 'poi-r20', 17, [
+      poiLayer(theme, design, satellite, c, 'poi-r20', 17, [
         '>',
         ['coalesce', ['get', 'rank'], 99],
         19,
@@ -1048,21 +1160,27 @@ function buildStyle(
       }),
     ],
   }
+  if (satellite) style.layers = overImagery(style.layers)
+  return style
 }
 
 const styles = new Map<string, StyleSpecification>()
 
-/** The map style for a theme and design, with or without 3D terrain. */
+/**
+ * The map style for a theme and design, with or without 3D terrain and
+ * satellite imagery.
+ */
 export function mapStyle(
   theme: Theme,
   terrain: boolean,
   design: MapDesign = 'standard',
+  satellite = false,
 ): StyleSpecification {
   // The same object each time, so the map only restyles on a real change
-  const key = `${design}:${theme}:${terrain}`
+  const key = `${design}:${theme}:${terrain}:${satellite}`
   let style = styles.get(key)
   if (!style) {
-    style = buildStyle(theme, terrain, design)
+    style = buildStyle(theme, terrain, design, satellite)
     styles.set(key, style)
   }
   return style
