@@ -620,6 +620,28 @@
   color: var(--mv-danger);
 }
 
+.directions-retry {
+  flex: none;
+  margin-left: auto;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mv-accent) 12%, transparent);
+  color: var(--mv-accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Told to screen readers, not shown */
+.directions-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* While routes are worked out, shimmering outlines of them */
 .directions-loading {
   display: grid;
@@ -914,6 +936,11 @@
 
   .directions-results.is-expanded {
     max-height: 78%;
+  }
+
+  /* Following the finger as it is pulled, then settling */
+  .directions-results.is-pulling {
+    transition: none;
   }
 
   /* The turns fade out under the sheet's edge until it is pulled up */

@@ -45,8 +45,35 @@ export type ValhallaResponse = {
 const API =
   import.meta.env.VITE_VALHALLA_URL ?? 'https://valhalla1.openstreetmap.de'
 
+/**
+ * Why there is no route: the points are too far apart for the server, one
+ * of them is nowhere near a road, or there is just no way between them.
+ */
+export type NoRouteReason = 'too-far' | 'off-road' | 'none'
+
 /** Valhalla found no way between the two points. */
-export class NoRouteError extends Error {}
+export class NoRouteError extends Error {
+  reason: NoRouteReason
+
+  constructor(message: string, reason: NoRouteReason = 'none') {
+    super(message)
+    this.reason = reason
+  }
+}
+
+/** The reason in a Valhalla error's body, by its error code. */
+export function noRouteReason(body: string): NoRouteReason {
+  let code: unknown
+  try {
+    code = (JSON.parse(body) as { error_code?: unknown }).error_code
+  } catch {
+    return 'none'
+  }
+  // https://valhalla.github.io/valhalla/api/turn-by-turn/api-reference/#http-status-codes-and-conditions
+  if (code === 154) return 'too-far'
+  if (code === 171) return 'off-road'
+  return 'none'
+}
 
 export async function getRoutes(
   from: [number, number],
@@ -65,7 +92,10 @@ export async function getRoutes(
     `${API}/route?json=${encodeURIComponent(JSON.stringify(request))}`,
     { signal },
   )
-  if (res.status === 400) throw new NoRouteError(await res.text())
+  if (res.status === 400) {
+    const body = await res.text()
+    throw new NoRouteError(body, noRouteReason(body))
+  }
   if (!res.ok) throw new Error(`Valhalla request failed: ${res.status}`)
   return parseRoutes((await res.json()) as ValhallaResponse)
 }

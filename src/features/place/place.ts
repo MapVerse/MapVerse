@@ -35,10 +35,15 @@ export function distanceMeters(
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(a))
 }
 
-const oneDecimal = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 })
+const oneDecimal = new Intl.NumberFormat('tr-TR', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+})
 const whole = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 })
 
 export function formatDistance(meters: number): string {
-  if (meters < 1000) return `${Math.max(10, Math.round(meters / 10) * 10)} m`
-  return `${(meters < 10_000 ? oneDecimal : whole).format(meters / 1000)} km`
+  // Rounded to tens first, so 995 m and up read as a kilometre
+  const tens = Math.max(10, Math.round(meters / 10) * 10)
+  if (tens < 1000) return `${tens} m`
+  return `${(meters < 9_950 ? oneDecimal : whole).format(meters / 1000)} km`
 }

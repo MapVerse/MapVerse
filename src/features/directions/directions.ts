@@ -27,12 +27,41 @@ export function decodePolyline6(encoded: string): [number, number][] {
   return points
 }
 
-/** Clock time after `seconds` from `now`, like 10:04. */
+/**
+ * Clock time after `seconds` from `now`, like 10:04, marked with the days
+ * on when it falls on a later day, like 00:47 (+1 gün).
+ */
 export function formatArrival(seconds: number, now = new Date()): string {
-  return new Date(now.getTime() + seconds * 1000).toLocaleTimeString('tr-TR', {
+  const at = new Date(now.getTime() + seconds * 1000)
+  const time = at.toLocaleTimeString('tr-TR', {
     hour: '2-digit',
     minute: '2-digit',
   })
+  // Calendar days apart (rounded, as a day may be an hour short or long)
+  const day = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const days = Math.round((day(at) - day(now)) / 86_400_000)
+  return days > 0 ? `${time} (+${days} gün)` : time
+}
+
+/** The south-west and north-east corners round a line's points. */
+export function shapeBounds(
+  shape: [number, number][],
+): [[number, number], [number, number]] | null {
+  if (!shape.length) return null
+  let [west, south] = shape[0]
+  let [east, north] = shape[0]
+  // A loop, not Math.min(...), which runs out of stack on a long route
+  for (const [lng, lat] of shape) {
+    if (lng < west) west = lng
+    if (lng > east) east = lng
+    if (lat < south) south = lat
+    if (lat > north) north = lat
+  }
+  return [
+    [west, south],
+    [east, north],
+  ]
 }
 
 export function formatDuration(seconds: number): string {

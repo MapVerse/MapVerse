@@ -9,6 +9,14 @@ describe('formatDistance', () => {
     expect(formatDistance(2345)).toBe('2,3 km')
     expect(formatDistance(351_400)).toBe('351 km')
   })
+
+  it('switches to kilometres once metres would round up to 1000', () => {
+    expect(formatDistance(994)).toBe('990 m')
+    expect(formatDistance(995)).toBe('1,0 km')
+    expect(formatDistance(999)).toBe('1,0 km')
+    expect(formatDistance(1000)).toBe('1,0 km')
+    expect(formatDistance(9_960)).toBe('10 km')
+  })
 })
 
 describe('distanceMeters', () => {

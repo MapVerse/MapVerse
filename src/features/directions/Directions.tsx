@@ -17,7 +17,7 @@ import { useMapDesign } from '../../map/designSetting.ts'
 import { RISE_ZOOM, rising } from '../../map/style.ts'
 import { useTheme, type Theme } from '../../theme/theme.ts'
 import { LANDMARKS } from '../landmarks/catalog.ts'
-import { routesOnDecks } from '../landmarks/decks.ts'
+import { placeOnDecks, splitOnDecks } from '../landmarks/decks.ts'
 import { useOnTerrain } from '../landmarks/useOnTerrain.ts'
 import CategoryBadge from '../place/CategoryBadge.tsx'
 import { distanceMeters, formatDistance, type Place } from '../place/place.ts'
@@ -29,6 +29,7 @@ import {
   maneuverIcon,
   routeLabels,
   routeVia,
+  shapeBounds,
 } from './directions.ts'
 import { useRoutes } from './useRoutes.ts'
 import type { TravelMode } from './valhalla.ts'
@@ -81,7 +82,9 @@ const ON_GROUND: ExpressionSpecification = [
 
 /**
  * The picked route drawn as far as `progress` along it (0 to 1), the rest
- * of it not yet: it is drawn in from its start when it comes.
+ * of it not yet: it is drawn in from its start when it comes. This runs on
+ * the whole route as one line, as the ground's pieces of it (split round
+ * bridges' decks) would each be drawn in from their own start at once.
  */
 function drawnTo(color: string, progress: number): ExpressionSpecification {
   const stops =
@@ -113,6 +116,12 @@ const isPhone = () => window.matchMedia('(max-width: 640px)').matches
 
 /** How tall the bottom sheet stands when only its routes show, in px. */
 const PEEK_PX = 188
+
+/** How far the sheet is pulled before it is taken as a pull, in px. */
+const PULL_PX = 24
+
+/** How often to bring arrival times up to date, in ms. */
+const CLOCK_MS = 30_000
 
 function whereAmI(): Promise<[number, number]> {
   return new Promise((resolve, reject) =>
@@ -162,7 +171,13 @@ export default function Directions({
   const resultsRef = useRef<HTMLElement>(null)
   const originInput = useRef<HTMLInputElement>(null)
   const destinationInput = useRef<HTMLInputElement>(null)
-  const sheetPull = useRef<{ from: number; by: number } | null>(null)
+  const sheetPull = useRef<{
+    from: number
+    by: number
+    height: number
+  } | null>(null)
+  // When a pull of the sheet last ended, so the click after it is let be
+  const sheetPulled = useRef(0)
   // How many times each end has been set
   const changes = useRef<Record<Target, number>>({ origin: 0, destination: 0 })
   const listId = useId()
@@ -191,7 +206,7 @@ export default function Directions({
   // On a phone, whether the sheet is pulled up to show the turns
   const [expanded, setExpanded] = useState(false)
 
-  const { routes, status } = useRoutes(
+  const { routes, status, reason, retry } = useRoutes(
     origin?.lngLat ?? null,
     destination?.lngLat ?? null,
     mode,
@@ -306,37 +321,45 @@ export default function Directions({
 
   /** Moves the map to show the whole of the picked route. */
   function fitRoute() {
-    if (!map || !route) return
-    const lngs = route.shape.map(([lng]) => lng)
-    const lats = route.shape.map(([, lat]) => lat)
-    map.fitBounds(
-      [
-        [Math.min(...lngs), Math.min(...lats)],
-        [Math.max(...lngs), Math.max(...lats)],
-      ],
-      { padding: padding(), duration: 800 },
-    )
+    const bounds = route && shapeBounds(route.shape)
+    if (!map || !bounds) return
+    map.fitBounds(bounds, { padding: padding(), duration: 800 })
   }
 
   // Fit each route as it comes, or is picked
   useEffect(fitRoute, [map, route]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Draw the picked route in from its start
+  // Draw the picked route in from its start: the whole of it as one line
+  // while it is drawn in, then its pieces on the ground as before
   useEffect(() => {
     const style = map?.getMap()
-    if (!style || !route) return
+    if (!style || !route || reducedMotion()) return
+    const drawing = (on: boolean) => {
+      if (style.getLayer('routes-drawing')) {
+        style.setLayoutProperty(
+          'routes-drawing',
+          'visibility',
+          on ? 'visible' : 'none',
+        )
+      }
+      if (style.getLayer('routes-selected')) {
+        style.setPaintProperty(
+          'routes-selected',
+          'line-opacity',
+          on ? 0 : ON_GROUND,
+        )
+      }
+    }
     const draw = (progress: number) => {
-      if (!style.getLayer('routes-selected')) return
+      if (!style.getLayer('routes-drawing')) return
       style.setPaintProperty(
-        'routes-selected',
+        'routes-drawing',
         'line-gradient',
         drawnTo(colors.selected, progress),
       )
     }
-    if (reducedMotion()) {
-      draw(1)
-      return
-    }
+    draw(0)
+    drawing(true)
     const start = performance.now()
     let frame = 0
     const tick = (now: number) => {
@@ -344,13 +367,22 @@ export default function Directions({
       const t = Math.min(1, Math.max(0, now - start) / DRAW_MS)
       draw(1 - (1 - t) ** 3)
       if (t < 1) frame = requestAnimationFrame(tick)
+      else drawing(false)
     }
     frame = requestAnimationFrame(tick)
     return () => {
       cancelAnimationFrame(frame)
-      draw(1)
+      drawing(false)
     }
   }, [map, route, colors.selected])
+
+  // Arrival times, kept up to the clock while routes show
+  const [, setClock] = useState(0)
+  useEffect(() => {
+    if (!route) return
+    const timer = setInterval(() => setClock((c) => c + 1), CLOCK_MS)
+    return () => clearInterval(timer)
+  }, [route])
 
   function focusStep(i: number) {
     const at = route?.shape[route.maneuvers[i]?.at]
@@ -424,9 +456,15 @@ export default function Directions({
     }
   }
 
+  /** The suggestions listed under an end, and each one in it. */
+  const listOf = (target: Target) => `${listId}-${target}`
+  const optionOf = (target: Target, i: number) => `${listOf(target)}-${i}`
+
   function field(target: Target) {
     const end = endOf(target)
     const isEditing = editing === target
+    // Its list stands open only while it is typed in
+    const open = isEditing && suggestions.length > 0
     return (
       <label className={`directions-field${isEditing ? ' is-editing' : ''}`}>
         <span className={`directions-dot directions-dot-${target}`} />
@@ -435,8 +473,11 @@ export default function Directions({
           type="text"
           role="combobox"
           aria-label={target === 'origin' ? 'Başlangıç' : 'Varış'}
-          aria-expanded={isEditing}
-          aria-controls={listId}
+          aria-expanded={open}
+          aria-controls={open ? listOf(target) : undefined}
+          aria-activedescendant={
+            open && suggestions[active] ? optionOf(target, active) : undefined
+          }
           aria-autocomplete="list"
           autoComplete="off"
           enterKeyHint="search"
@@ -468,48 +509,111 @@ export default function Directions({
     )
   }
 
-  // On a phone, pull the sheet up for the turns or down for just the routes
+  // On a phone, pull the sheet up for the turns or down for just the
+  // routes; it follows the finger meanwhile. A tap, a key or a screen
+  // reader works it as a button, by its click.
   function onSheetDown(event: PointerEvent<HTMLElement>) {
-    if (!isPhone()) return
-    sheetPull.current = { from: event.clientY, by: 0 }
+    const sheet = resultsRef.current
+    if (!isPhone() || !sheet) return
+    sheetPull.current = {
+      from: event.clientY,
+      by: 0,
+      height: sheet.getBoundingClientRect().height,
+    }
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   function onSheetMove(event: PointerEvent<HTMLElement>) {
-    if (sheetPull.current) {
-      sheetPull.current.by = event.clientY - sheetPull.current.from
-    }
+    const pull = sheetPull.current
+    const sheet = resultsRef.current
+    if (!pull || !sheet) return
+    pull.by = event.clientY - pull.from
+    if (Math.abs(pull.by) < PULL_PX / 2 && !sheet.style.maxHeight) return
+    // As high as it may stand when pulled up, at most
+    const room = (sheet.parentElement?.clientHeight ?? 0) * 0.78
+    const height = Math.min(Math.max(pull.height - pull.by, 120), room)
+    sheet.classList.add('is-pulling')
+    sheet.style.maxHeight = `${height}px`
+  }
+
+  /** Lets go of the sheet, to settle up or down. */
+  function letGo() {
+    const sheet = resultsRef.current
+    sheet?.classList.remove('is-pulling')
+    sheet?.style.removeProperty('max-height')
   }
 
   function onSheetUp() {
     const pulled = sheetPull.current
     sheetPull.current = null
-    if (!pulled) return
-    if (pulled.by < -24) setExpanded(true)
-    else if (pulled.by > 24) setExpanded(false)
-    else setExpanded((e) => !e)
+    letGo()
+    if (!pulled || Math.abs(pulled.by) <= PULL_PX) return
+    // A pull, not a tap: the click that follows is not to toggle it again
+    sheetPulled.current = performance.now()
+    setExpanded(pulled.by < 0)
+  }
+
+  function onSheetClick() {
+    if (performance.now() - sheetPulled.current < 400) return
+    setExpanded((e) => !e)
   }
 
   const message =
     status === 'none'
-      ? 'Bu iki nokta arasında rota bulunamadı.'
+      ? reason === 'too-far'
+        ? 'Bu iki nokta arası rota hesaplamak için fazla uzak.'
+        : reason === 'off-road'
+          ? 'Noktalardan biri bir yola yakın değil; yola daha yakın bir yer seç.'
+          : 'Bu iki nokta arasında rota bulunamadı.'
       : status === 'error'
         ? 'Rota şu anda hesaplanamıyor.'
         : null
   const showResults = !editing && (status === 'loading' || !!route || !!message)
 
-  // Along a bridge, routes run on its deck rather than the water below
-  const { ground, decks } = useMemo(() => {
-    const lines: FeatureCollection<LineString, { selected: boolean }> = {
+  // Along a bridge, routes run on its deck rather than the water below:
+  // each route split round the decks once, then drawn picked or not
+  const splits = useMemo(
+    () => routes.map((r) => splitOnDecks(r.shape, LANDMARKS)),
+    [routes],
+  )
+  const { ground, decks } = useMemo(
+    () =>
+      placeOnDecks(
+        splits.map((split, i) => ({
+          split,
+          properties: { selected: routes[i] === route },
+        })),
+      ),
+    [splits, routes, route],
+  )
+  // The picked route whole, to be drawn in from its start
+  const drawing = useMemo<FeatureCollection<LineString>>(
+    () => ({
       type: 'FeatureCollection',
-      features: routes.map((r) => ({
-        type: 'Feature',
-        geometry: { type: 'LineString', coordinates: r.shape },
-        properties: { selected: r === route },
-      })),
-    }
-    return routesOnDecks(lines, LANDMARKS)
-  }, [routes, route])
+      features: route
+        ? [
+            {
+              type: 'Feature',
+              geometry: { type: 'LineString', coordinates: route.shape },
+              properties: {},
+            },
+          ]
+        : [],
+    }),
+    [route],
+  )
+  // What a screen reader is told of the routes as they come
+  const announcement =
+    status === 'loading'
+      ? 'Rota hesaplanıyor…'
+      : (message ??
+        (route
+          ? `${routes.length > 1 ? `${routes.length} rota bulundu. ` : ''}${
+              labels[0] ? `${labels[0]}: ` : ''
+            }${formatDuration(routes[0].seconds)}, ${formatDistance(
+              routes[0].meters,
+            )}.`
+          : ''))
   const raised = useOnTerrain(decks)
   const center = map?.getCenter().toArray()
   const focused =
@@ -582,7 +686,9 @@ export default function Directions({
               <Icon name="swap" size={20} />
             </button>
           </div>
-          {notice && <p className="directions-notice">{notice}</p>}
+          <div role="status" aria-live="polite">
+            {notice && <p className="directions-notice">{notice}</p>}
+          </div>
         </section>
 
         {editing && (
@@ -592,7 +698,7 @@ export default function Directions({
             // Keep focus in the field, so a click on a suggestion lands
             onMouseDown={(event) => event.preventDefault()}
           >
-            <ul id={listId} role="listbox">
+            <ul id={listOf(editing)} role="listbox">
               {suggestions.map((suggestion, i) => (
                 <li
                   key={
@@ -600,6 +706,7 @@ export default function Directions({
                       ? `${suggestion.place.key}-${i}`
                       : suggestion.kind
                   }
+                  id={optionOf(editing, i)}
                   role="option"
                   aria-selected={i === active}
                   style={{ '--row': Math.min(i, 8) } as CSSProperties}
@@ -664,6 +771,10 @@ export default function Directions({
           </section>
         )}
 
+        <p className="directions-live" role="status" aria-live="polite">
+          {announcement}
+        </p>
+
         {showResults && (
           <section
             ref={resultsRef}
@@ -680,10 +791,14 @@ export default function Directions({
               onPointerDown={onSheetDown}
               onPointerMove={onSheetMove}
               onPointerUp={onSheetUp}
-              onPointerCancel={() => (sheetPull.current = null)}
+              onPointerCancel={() => {
+                sheetPull.current = null
+                letGo()
+              }}
+              onClick={onSheetClick}
             />
             {status === 'loading' && (
-              <div className="directions-loading" role="status">
+              <div className="directions-loading">
                 <span className="directions-skeleton-hint">
                   Rota hesaplanıyor…
                 </span>
@@ -696,10 +811,19 @@ export default function Directions({
               </div>
             )}
             {message && (
-              <p className="directions-message is-problem">
+              <div className="directions-message is-problem">
                 <Icon name="info" size={18} />
-                {message}
-              </p>
+                <span>{message}</span>
+                {status === 'error' && (
+                  <button
+                    type="button"
+                    className="directions-retry"
+                    onClick={retry}
+                  >
+                    Tekrar dene
+                  </button>
+                )}
+              </div>
             )}
             {route && step !== null && route.maneuvers[step] && (
               <div className="directions-stepper" aria-label="Adım">
@@ -868,7 +992,7 @@ export default function Directions({
         </div>
       )}
 
-      <Source id="routes" type="geojson" data={ground} lineMetrics>
+      <Source id="routes" type="geojson" data={ground}>
         <Layer
           id="routes-casing"
           type="line"
@@ -899,9 +1023,26 @@ export default function Directions({
           filter={['get', 'selected']}
           layout={{ 'line-join': 'round', 'line-cap': 'round' }}
           paint={{
-            'line-gradient': drawnTo(colors.selected, 1),
+            'line-color': colors.selected,
             'line-width': 7,
             'line-opacity': ON_GROUND,
+          }}
+        />
+      </Source>
+      <Source id="route-drawing" type="geojson" data={drawing} lineMetrics>
+        {/* Shown only while the picked route is drawn in */}
+        <Layer
+          id="routes-drawing"
+          type="line"
+          beforeId={beforeId}
+          layout={{
+            'line-join': 'round',
+            'line-cap': 'round',
+            visibility: 'none',
+          }}
+          paint={{
+            'line-gradient': drawnTo(colors.selected, 1),
+            'line-width': 7,
           }}
         />
       </Source>

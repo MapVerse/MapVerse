@@ -1,7 +1,7 @@
 import type { FeatureCollection, LineString } from 'geojson'
 import { describe, expect, it } from 'vitest'
 import { LANDMARKS } from './catalog.ts'
-import { routesOnDecks } from './decks.ts'
+import { placeOnDecks, routesOnDecks, splitOnDecks } from './decks.ts'
 import { offset } from './geometry.ts'
 
 const bridge = LANDMARKS.find((l) => l.id === '15-temmuz-koprusu')!
@@ -60,5 +60,55 @@ describe('routesOnDecks', () => {
     )
     expect(decks.features).toHaveLength(0)
     expect(ground.features).toHaveLength(1)
+  })
+})
+
+describe('splitOnDecks', () => {
+  it('keeps the points of a route that comes nowhere near a deck', () => {
+    const shape: [number, number][] = [
+      [32.85, 39.92],
+      [32.852, 39.921],
+      [32.86, 39.93],
+      [32.87, 39.925],
+    ]
+    const { runs, ribbons } = splitOnDecks(shape, LANDMARKS)
+    expect(ribbons).toHaveLength(0)
+    expect(runs).toEqual([{ coordinates: shape, onDeck: false }])
+  })
+
+  it('cuts a route into pieces only near the deck', () => {
+    // Along the shore to the bridge's end, over it, then on the far side
+    const shape = [
+      at(-3000, 2000),
+      at(-2000, 1000),
+      at(-1000, 6),
+      at(1000, 6),
+      at(2000, -1000),
+      at(3000, -2000),
+    ]
+    const { runs } = splitOnDecks(shape, LANDMARKS)
+    expect(runs.map((r) => r.onDeck)).toEqual([false, true, false])
+    // The far-off points stay as they were
+    expect(runs[0].coordinates.slice(0, 3)).toEqual(shape.slice(0, 3))
+    expect(runs[2].coordinates.slice(-3)).toEqual(shape.slice(-3))
+    expect(runs[0].coordinates.at(-1)).toEqual(runs[1].coordinates[0])
+  })
+})
+
+describe('placeOnDecks', () => {
+  it('lifts the selected route over the others on a deck', () => {
+    const split = splitOnDecks([at(-1000, 6), at(1000, 6)], LANDMARKS)
+    const { ground, decks } = placeOnDecks([
+      { split, properties: { selected: false } },
+      { split, properties: { selected: true } },
+    ])
+    expect(ground.features).toHaveLength(6)
+    const base = (selected: boolean) =>
+      decks.features.find(
+        (f) =>
+          f.properties!.selected === selected &&
+          f.properties!.part === 'casing',
+      )!.properties!.base as number
+    expect(base(true)).toBeGreaterThan(base(false))
   })
 })

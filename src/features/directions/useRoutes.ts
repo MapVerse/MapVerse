@@ -1,23 +1,42 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   getRoutes,
   NoRouteError,
+  type NoRouteReason,
   type Route,
   type TravelMode,
 } from './valhalla.ts'
 
 type Status = 'idle' | 'loading' | 'done' | 'none' | 'error'
-type Result = { key: string; routes: Route[]; status: Status }
+type Result = {
+  key: string
+  routes: Route[]
+  status: Status
+  /** Why there is no route, when there is none */
+  reason?: NoRouteReason
+}
+
+/** How long to wait for routes before giving up, in ms. */
+const TIMEOUT_MS = 20_000
 
 export function useRoutes(
   from: [number, number] | null,
   to: [number, number] | null,
   mode: TravelMode,
-): { routes: Route[]; status: Status } {
+): {
+  routes: Route[]
+  status: Status
+  reason?: NoRouteReason
+  /** Asks again, as after an error */
+  retry: () => void
+} {
   const [result, setResult] = useState<Result | null>(null)
+  // Bumped to ask again for the same routes
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => setAttempt((a) => a + 1), [])
   const [fromLng, fromLat] = from ?? []
   const [toLng, toLat] = to ?? []
-  const key = from && to && `${from}|${to}|${mode}`
+  const key = from && to && `${from}|${to}|${mode}|${attempt}`
 
   useEffect(() => {
     if (
@@ -28,19 +47,32 @@ export function useRoutes(
     ) {
       return
     }
-    const request = `${[fromLng, fromLat]}|${[toLng, toLat]}|${mode}`
+    const request = `${[fromLng, fromLat]}|${[toLng, toLat]}|${mode}|${attempt}`
     const controller = new AbortController()
+    // A request that hangs ends as an error, rather than loading for ever
+    let timedOut = false
+    const timer = setTimeout(() => {
+      timedOut = true
+      controller.abort()
+    }, TIMEOUT_MS)
     getRoutes([fromLng, fromLat], [toLng, toLat], mode, controller.signal)
       .then((routes) => setResult({ key: request, routes, status: 'done' }))
       .catch((error: unknown) => {
-        if (controller.signal.aborted) return
-        const status = error instanceof NoRouteError ? 'none' : 'error'
-        setResult({ key: request, routes: [], status })
+        if (controller.signal.aborted && !timedOut) return
+        setResult(
+          error instanceof NoRouteError
+            ? { key: request, routes: [], status: 'none', reason: error.reason }
+            : { key: request, routes: [], status: 'error' },
+        )
       })
-    return () => controller.abort()
-  }, [fromLng, fromLat, toLng, toLat, mode])
+      .finally(() => clearTimeout(timer))
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [fromLng, fromLat, toLng, toLat, mode, attempt])
 
-  if (!key) return { routes: [], status: 'idle' }
-  if (result?.key !== key) return { routes: [], status: 'loading' }
-  return result
+  if (!key) return { routes: [], status: 'idle', retry }
+  if (result?.key !== key) return { routes: [], status: 'loading', retry }
+  return { ...result, retry }
 }

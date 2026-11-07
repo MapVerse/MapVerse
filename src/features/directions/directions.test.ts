@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   decodePolyline6,
   formatArrival,
@@ -6,8 +6,15 @@ import {
   maneuverIcon,
   routeLabels,
   routeVia,
+  shapeBounds,
 } from './directions.ts'
-import { parseRoutes, type Route } from './valhalla.ts'
+import {
+  getRoutes,
+  NoRouteError,
+  noRouteReason,
+  parseRoutes,
+  type Route,
+} from './valhalla.ts'
 
 // Reference encoder, to build fixtures
 function encode(points: [number, number][]): string {
@@ -100,7 +107,39 @@ describe('formatArrival', () => {
   it('adds the travel time to the clock', () => {
     const now = new Date(2026, 8, 30, 9, 47)
     expect(formatArrival(1020, now)).toBe('10:04')
-    expect(formatArrival(60 * 60 * 15, now)).toBe('00:47')
+    expect(formatArrival(60 * 60 * 14, now)).toBe('23:47')
+  })
+
+  it('marks an arrival on a later day', () => {
+    const now = new Date(2026, 8, 30, 9, 47)
+    expect(formatArrival(60 * 60 * 15, now)).toBe('00:47 (+1 gün)')
+    expect(formatArrival(60 * 60 * 24, now)).toBe('09:47 (+1 gün)')
+    expect(formatArrival(60 * 60 * 62, now)).toBe('23:47 (+2 gün)')
+    // Just before midnight, a few minutes on is already tomorrow
+    expect(formatArrival(5 * 60, new Date(2026, 8, 30, 23, 58))).toBe(
+      '00:03 (+1 gün)',
+    )
+  })
+})
+
+describe('shapeBounds', () => {
+  it('finds the corners round a line', () => {
+    expect(shapeBounds(line)).toEqual([
+      [28.9612, 41.0082],
+      [28.977, 41.035],
+    ])
+    expect(shapeBounds([])).toBeNull()
+  })
+
+  it('copes with a very long route', () => {
+    const shape = Array.from(
+      { length: 300_000 },
+      (_, i) => [29 + i / 1e6, 41 - i / 1e6] as [number, number],
+    )
+    expect(shapeBounds(shape)).toEqual([
+      [29, 41 - 299_999 / 1e6],
+      [29 + 299_999 / 1e6, 41],
+    ])
   })
 })
 
@@ -181,5 +220,35 @@ describe('routeLabels', () => {
       undefined,
     ])
     expect(routeLabels([route(3000, [])])).toEqual([undefined])
+  })
+})
+
+describe('noRouteReason', () => {
+  it("reads why there is no route from Valhalla's error code", () => {
+    const body = (code: number) =>
+      JSON.stringify({ error_code: code, error: '', status_code: 400 })
+    expect(noRouteReason(body(154))).toBe('too-far')
+    expect(noRouteReason(body(171))).toBe('off-road')
+    expect(noRouteReason(body(442))).toBe('none')
+    expect(noRouteReason('Bad Request')).toBe('none')
+  })
+})
+
+describe('getRoutes', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('rejects a 400 with the reason there is no route', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ error_code: 154 }), { status: 400 }),
+      ),
+    )
+    const error = await getRoutes([29, 41], [32.8, 39.9], 'pedestrian').catch(
+      (e: unknown) => e,
+    )
+    expect(error).toBeInstanceOf(NoRouteError)
+    expect((error as NoRouteError).reason).toBe('too-far')
   })
 })
