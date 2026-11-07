@@ -1533,19 +1533,42 @@ function bridgeParts(): Part[] {
   return parts
 }
 
-/** Its lights on the water below, and at the towers' feet. */
+/** Its lights at the towers' feet. */
 function bridgeLights(): XY[] {
   const lights: XY[] = []
-  for (let u = -MAIN; u <= MAIN; u += 38) lights.push(bridge.at(u, 0))
   for (const u of [-MAIN, MAIN]) {
     for (const v of [-LEG, LEG]) lights.push(bridge.at(u, v))
   }
   return lights
 }
 
+/** Sideways and along, in metres, so the glints don't line up like a road */
+const SCATTER: XY[] = [
+  [-9, 4],
+  [6, -7],
+  [-3, 9],
+  [11, 2],
+  [-12, -5],
+  [2, 6],
+  [8, -10],
+  [-6, -2],
+]
+
+/** Its deck lamps glinting faintly on the water, scattered by the waves */
+function bridgeGlints(): XY[] {
+  const glints: XY[] = []
+  let i = 0
+  for (let u = -MAIN + 38; u < MAIN; u += 38) {
+    const [v, du] = SCATTER[i++ % SCATTER.length]
+    glints.push(bridge.at(u + du, v))
+  }
+  return glints
+}
+
 const BRIDGE: Landmark = {
   id: '15-temmuz-koprusu',
   lights: bridgeLights(),
+  glints: bridgeGlints(),
   name: '15 Temmuz Şehitler Köprüsü',
   near: [29.034368, 41.045537],
   terrain: 'sea',

@@ -94,6 +94,8 @@ export default function LandmarkExtrusions({
                 20,
                 145,
               ],
+              // Glints on the water fainter than lamps on the ground
+              'heatmap-weight': ['coalesce', ['get', 'weight'], 1],
               'heatmap-intensity': 1.3,
               'heatmap-color': [
                 'interpolate',

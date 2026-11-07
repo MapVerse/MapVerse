@@ -85,6 +85,8 @@ export type Landmark = {
   parts: Part[]
   /** Where its floodlights and lamps light the ground, at night */
   lights?: XY[]
+  /** Where its lamps glint faintly on water far below them, at night */
+  glints?: XY[]
   /** Searchlights that sweep the sky above it at night */
   searchlights?: Searchlight[]
   /**
@@ -349,19 +351,27 @@ export function onTerrain(
   }
 }
 
+/** How bright a glint on the water is, beside a lamp's glow on the ground */
+export const GLINT_WEIGHT = 0.3
+
 /** The spots the landmarks light at night, for a glow on the ground. */
 export function landmarkLights(
   landmarks: Landmark[],
 ): FeatureCollection<Point> {
   return {
     type: 'FeatureCollection',
-    features: landmarks.flatMap(({ near, lights = [] }) =>
-      lights.map((at) => ({
+    features: landmarks.flatMap(({ near, lights = [], glints = [] }) => [
+      ...lights.map((at) => ({
         type: 'Feature' as const,
         geometry: { type: 'Point' as const, coordinates: offset(near, at) },
         properties: {},
       })),
-    ),
+      ...glints.map((at) => ({
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: offset(near, at) },
+        properties: { weight: GLINT_WEIGHT },
+      })),
+    ]),
   }
 }
 

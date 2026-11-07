@@ -8,6 +8,7 @@ import {
   hideBuildings,
   hideZones,
   landmarkExtrusions,
+  GLINT_WEIGHT,
   landmarkLights,
   mix,
   onTerrain,
@@ -383,9 +384,20 @@ describe('deck landmarks', () => {
 
 describe('night lights', () => {
   it('puts a glow at every light of every landmark', () => {
-    const count = LANDMARKS.reduce((n, l) => n + (l.lights?.length ?? 0), 0)
+    const count = LANDMARKS.reduce(
+      (n, l) => n + (l.lights?.length ?? 0) + (l.glints?.length ?? 0),
+      0,
+    )
     expect(count).toBeGreaterThan(200)
     expect(landmarkLights(LANDMARKS).features).toHaveLength(count)
+  })
+
+  it('lets the bridge lamps only glint faintly on the water', () => {
+    const glints = landmarkLights(LANDMARKS).features.filter(
+      (f) => f.properties?.weight === GLINT_WEIGHT,
+    )
+    expect(glints.length).toBeGreaterThan(20)
+    expect(GLINT_WEIGHT).toBeLessThan(0.5)
   })
 
   it('mixes colours part way', () => {
