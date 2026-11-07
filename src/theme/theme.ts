@@ -44,6 +44,12 @@ function apply() {
 
 apply()
 systemDark.addEventListener('change', apply)
+// Picked in another tab, it changes here too
+window.addEventListener('storage', (event) => {
+  if (event.key !== STORAGE_KEY && event.key !== null) return
+  preference = loadPreference()
+  apply()
+})
 
 export function setThemePreference(next: ThemePreference) {
   preference = next

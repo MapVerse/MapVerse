@@ -1,15 +1,22 @@
 import {
   Map,
   ScaleControl,
+  type ErrorEvent,
   type MapLayerMouseEvent,
   type MapRef,
 } from '@vis.gl/react-maplibre'
 import type { LngLat, MapGeoJSONFeature } from 'maplibre-gl'
-import { useEffect, useRef, useState } from 'react'
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+} from 'react'
+import { MapStartError } from '../app/appError.ts'
 import AccountMenu from '../features/account/AccountMenu.tsx'
 import AreaNames from '../features/areas/AreaNames.tsx'
-import LandmarkExtrusions from '../features/landmarks/LandmarkExtrusions.tsx'
-import LandmarkSearchlights from '../features/landmarks/LandmarkSearchlights.tsx'
 import Directions from '../features/directions/Directions.tsx'
 import { resolveSignalImage } from '../features/traffic/signalImage.ts'
 import TrafficSignals from '../features/traffic/TrafficSignals.tsx'
@@ -34,12 +41,18 @@ import {
   type CategorySearch,
 } from '../features/search/useCategorySearch.ts'
 import { usePresence, usePresences, type Wanted } from '../lib/presence.ts'
-import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.ts'
+import {
+  HOVER_QUERY,
+  PHONE_QUERY,
+  useMediaQuery,
+} from '../lib/useMediaQuery.ts'
+import { useOnline } from '../lib/useOnline.ts'
 import { useTheme } from '../theme/theme.ts'
 import SanAndreasHud from './SanAndreasHud.tsx'
 import './controls.css'
 import { useMapDesign } from './designSetting.ts'
 import MapControls from './MapControls.tsx'
+import MapNotices from './MapNotices.tsx'
 import { maplibre } from './maplibre.ts'
 import { badgeSkin, poiImageId, resolvePoiImage } from './poiStyle.ts'
 import { mapStyle } from './style.ts'
@@ -109,13 +122,44 @@ const pointAt = (lngLat: [number, number]): Place => ({
 const GLANCE_MS = 380
 const GLANCE_LEAVE_MS = 140
 
-/** A pointer that can rest on things, as a mouse can and a finger can't. */
-const CAN_HOVER = window.matchMedia(
-  '(hover: hover) and (pointer: fine)',
-).matches
+/**
+ * The landmarks, loaded apart from the rest as their geometry is large,
+ * once the map is there to draw them on. Only something to look at: if
+ * they can't be loaded, the map goes on without them.
+ */
+const withoutIt = (): { default: ComponentType<{ beforeId?: string }> } => ({
+  default: () => null,
+})
+const LandmarkExtrusions = lazy(() =>
+  import('../features/landmarks/LandmarkExtrusions.tsx').catch(withoutIt),
+)
+const LandmarkSearchlights = lazy(() =>
+  import('../features/landmarks/LandmarkSearchlights.tsx').catch(withoutIt),
+)
+
+/**
+ * How long a note that the map's data failed to load stays, and how long
+ * after it another may show, in ms: a server down fails tile after tile.
+ */
+const DATA_NOTICE_MS = 6000
+const DATA_NOTICE_AGAIN_MS = 30_000
+
+/** Whether a failure of the map is only a request let go of, as it moved. */
+function isAbort({ error }: ErrorEvent) {
+  return error?.name === 'AbortError' || /aborted/i.test(error?.message ?? '')
+}
 
 export default function MapView() {
   const phone = useMediaQuery(PHONE_QUERY)
+  const canHover = useMediaQuery(HOVER_QUERY)
+  const online = useOnline()
+  // What stopped the map from starting, if anything: thrown to the error
+  // boundary round the app, which says so
+  const [startError, setStartError] = useState<MapStartError>()
+  // A note that the map's data failed to load, and when it was last shown
+  const [dataFailed, setDataFailed] = useState(false)
+  const dataNoticeAt = useRef(-Infinity)
+  const dataNoticeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const theme = useTheme()
   const terrain = useTerrainEnabled()
   const design = useMapDesign()
@@ -135,8 +179,11 @@ export default function MapView() {
     opening: number
   } | null>(null)
   const openings = useRef(0)
-  const openDirections = (to: Place | null) =>
+  const openDirections = (to: Place | null) => {
     setDirections({ to, opening: ++openings.current })
+    // The map's places stop taking the pointer, so it won't be told it left
+    setHoveringPoi(false)
+  }
   const [labelLayerId, setLabelLayerId] = useState<string>()
   // Places of a category near where the map was, picked from the search box
   const [categorySearch, setCategorySearch] = useState<CategorySearch | null>(
@@ -153,6 +200,23 @@ export default function MapView() {
     directions ? `directions:${directions.opening}` : null,
     LEAVING_MS,
   )
+  // Only one Directions at a time: each draws into the same source and
+  // layers on the map, which one going takes with it. So directions opened
+  // while the last are on their way out wait for them to go, and then a
+  // moment more, for the map to be rid of what they drew
+  const directionsLeaving = directionsShown.some((d) => d.leaving)
+  const [directionsClearing, setDirectionsClearing] = useState(false)
+  if (directionsLeaving && !directionsClearing) setDirectionsClearing(true)
+  useEffect(() => {
+    if (directionsLeaving || !directionsClearing) return
+    const timer = setTimeout(() => setDirectionsClearing(false))
+    return () => clearTimeout(timer)
+  }, [directionsLeaving, directionsClearing])
+  const directionsMounted = directionsLeaving
+    ? directionsShown.filter((d) => d.leaving)
+    : directionsClearing
+      ? []
+      : directionsShown
   // Each on screen, and a moment longer once let go of, on its way out:
   // the open place's details (on a phone, a sheet, in brief only its top),
   const open = directions ? null : selection
@@ -181,6 +245,7 @@ export default function MapView() {
     () => () => {
       clearTimeout(hoverTimer.current)
       clearTimeout(pointTimer.current)
+      clearTimeout(dataNoticeTimer.current)
     },
     [],
   )
@@ -232,6 +297,11 @@ export default function MapView() {
     }
     if (selection) {
       setSelection(null)
+      // Spent on closing it, as would be a second click straight after,
+      // making it a double click, to zoom: not one to show a point by
+      pointTimer.current = setTimeout(() => {
+        pointTimer.current = undefined
+      }, DOUBLE_CLICK_MS)
       return
     }
     const feature = event.features?.[0]
@@ -258,7 +328,7 @@ export default function MapView() {
   // and the glance goes. Not while the map is dragged or a place is open,
   // nor on a phone, where a tap opens a place at once.
   function onMapMouseMove(event: MapLayerMouseEvent) {
-    if (!CAN_HOVER || directions || selection) return
+    if (!canHover || directions || selection) return
     const candidate = event.originalEvent.buttons
       ? null
       : selectionOf(event.features?.[0], event.lngLat)
@@ -271,6 +341,29 @@ export default function MapView() {
       candidate ? GLANCE_MS : GLANCE_LEAVE_MS,
     )
   }
+
+  // The map failing: before it starts, so it can't, which stops the app;
+  // or as it goes, a tile, a font or the like failing to load, noted for a
+  // moment (once in a while, as a server down fails tile after tile)
+  function onMapError(event: ErrorEvent) {
+    if (!event.target) {
+      setStartError(new MapStartError(event.error))
+      return
+    }
+    if (isAbort(event)) return
+    console.warn('Map:', event.error)
+    const now = performance.now()
+    if (now - dataNoticeAt.current < DATA_NOTICE_AGAIN_MS) return
+    dataNoticeAt.current = now
+    setDataFailed(true)
+    clearTimeout(dataNoticeTimer.current)
+    dataNoticeTimer.current = setTimeout(
+      () => setDataFailed(false),
+      DATA_NOTICE_MS,
+    )
+  }
+
+  if (startError) throw startError
 
   return (
     <Map
@@ -287,7 +380,7 @@ export default function MapView() {
         directions ? [] : [SEARCH_RESULTS_LAYER, ...poiLayerIds]
       }
       // A pointer over a place only while a click would open it
-      cursor={hoveringPoi && !selection ? 'pointer' : undefined}
+      cursor={hoveringPoi && !selection && !directions ? 'pointer' : undefined}
       onLoad={(event) => {
         const style = event.target.getStyle()
         setPoiLayerIds(findPoiLayerIds(style))
@@ -305,6 +398,7 @@ export default function MapView() {
       }
       onMouseOut={stopGlance}
       onClick={onMapClick}
+      onError={onMapError}
     >
       <AccountMenu position="top-right" />
       <MapControls />
@@ -312,8 +406,12 @@ export default function MapView() {
       {design === 'san-andreas' && <SanAndreasHud />}
       {poiLayerIds.length > 0 && <AreaNames beforeId={poiLayerIds[0]} />}
       {poiLayerIds.length > 0 && <TrafficSignals beforeId={poiLayerIds[0]} />}
-      {labelLayerId && <LandmarkExtrusions beforeId={labelLayerId} />}
-      {labelLayerId && <LandmarkSearchlights beforeId={labelLayerId} />}
+      {labelLayerId && (
+        <Suspense>
+          <LandmarkExtrusions beforeId={labelLayerId} />
+          <LandmarkSearchlights beforeId={labelLayerId} />
+        </Suspense>
+      )}
       <SearchBox
         hidden={!!directions}
         onSelect={(result) => setSelection({ place: result, view: 'full' })}
@@ -389,7 +487,7 @@ export default function MapView() {
           onClose={() => setSelection(null)}
         />
       ))}
-      {directionsShown.map(({ key, item, leaving }) => (
+      {directionsMounted.map(({ key, item, leaving }) => (
         <Directions
           key={key}
           to={item.to}
@@ -398,6 +496,11 @@ export default function MapView() {
           onClose={() => setDirections(null)}
         />
       ))}
+      <MapNotices
+        online={online}
+        dataFailed={dataFailed}
+        onDismiss={() => setDataFailed(false)}
+      />
     </Map>
   )
 }

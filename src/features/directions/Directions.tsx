@@ -16,7 +16,7 @@ import type { StrokeName } from '../../icons/strokes.ts'
 import { useMapDesign } from '../../map/designSetting.ts'
 import { RISE_ZOOM, rising } from '../../map/style.ts'
 import { useTheme, type Theme } from '../../theme/theme.ts'
-import { LANDMARKS } from '../landmarks/catalog.ts'
+import { DECK_LANDMARKS } from '../landmarks/deckLandmarks.ts'
 import { placeOnDecks, splitOnDecks } from '../landmarks/decks.ts'
 import { useOnTerrain } from '../landmarks/useOnTerrain.ts'
 import CategoryBadge from '../place/CategoryBadge.tsx'
@@ -573,7 +573,7 @@ export default function Directions({
   // Along a bridge, routes run on its deck rather than the water below:
   // each route split round the decks once, then drawn picked or not
   const splits = useMemo(
-    () => routes.map((r) => splitOnDecks(r.shape, LANDMARKS)),
+    () => routes.map((r) => splitOnDecks(r.shape, DECK_LANDMARKS)),
     [routes],
   )
   const { ground, decks } = useMemo(

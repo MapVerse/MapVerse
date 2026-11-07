@@ -1,8 +1,7 @@
 import { Layer, Source } from '@vis.gl/react-maplibre'
 import type { FeatureCollection, Polygon } from 'geojson'
-import { useMemo } from 'react'
 import { RISE_ZOOM, rising } from '../../map/style.ts'
-import { useTheme } from '../../theme/theme.ts'
+import { useTheme, type Theme } from '../../theme/theme.ts'
 import { LANDMARKS } from './catalog.ts'
 import { landmarkExtrusions, landmarkLights } from './landmarks.ts'
 import { useOnTerrain } from './useOnTerrain.ts'
@@ -11,6 +10,36 @@ const LIGHTS = landmarkLights(LANDMARKS)
 
 /** Pieces this low are paving, drawn flat so the night glow lies on them. */
 const FLAT = 0.3
+
+type Built = [
+  ground: FeatureCollection<Polygon>,
+  raised: FeatureCollection<Polygon>,
+  groundColors: string[],
+]
+
+/**
+ * The landmarks' pieces in each theme's colours, built once a theme is
+ * first shown: some ten thousand of them, too many to build afresh each
+ * time the theme is switched back.
+ */
+const built = new Map<Theme, Built>()
+
+function build(theme: Theme): Built {
+  const cached = built.get(theme)
+  if (cached) return cached
+  const { features } = landmarkExtrusions(LANDMARKS, theme)
+  const collection = (
+    keep: (height: number) => boolean,
+  ): FeatureCollection<Polygon> => ({
+    type: 'FeatureCollection',
+    features: features.filter(({ properties }) => keep(properties!.height)),
+  })
+  const flat = collection((h) => h <= FLAT)
+  const colors = [...new Set(flat.features.map((f) => f.properties!.color))]
+  const result: Built = [flat, collection((h) => h > FLAT), colors as string[]]
+  built.set(theme, result)
+  return result
+}
 
 /**
  * Landmarks drawn with the map's own 3D extrusions, each where it stands,
@@ -23,18 +52,7 @@ export default function LandmarkExtrusions({
   beforeId?: string
 }) {
   const theme = useTheme()
-  const [ground, raised, groundColors] = useMemo(() => {
-    const { features } = landmarkExtrusions(LANDMARKS, theme)
-    const collection = (
-      keep: (height: number) => boolean,
-    ): FeatureCollection<Polygon> => ({
-      type: 'FeatureCollection',
-      features: features.filter(({ properties }) => keep(properties!.height)),
-    })
-    const flat = collection((h) => h <= FLAT)
-    const colors = [...new Set(flat.features.map((f) => f.properties!.color))]
-    return [flat, collection((h) => h > FLAT), colors as string[]]
-  }, [theme])
+  const [ground, raised, groundColors] = build(theme)
 
   const data = useOnTerrain(raised)
 

@@ -1,0 +1,71 @@
+/* In place of the app once something has stopped it: a card in the middle
+   of the page, in the interface's own colours, light or dark */
+.mv-app-error {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: calc(24px + var(--safe-top)) calc(16px + var(--safe-right))
+    calc(24px + var(--safe-bottom)) calc(16px + var(--safe-left));
+  color: var(--mv-text);
+  font-family: var(--mv-font);
+}
+
+.mv-app-error-card {
+  box-sizing: border-box;
+  width: min(420px, 100%);
+  padding: 28px 24px 24px;
+  border: 1px solid var(--mv-border);
+  border-radius: var(--mv-radius);
+  background: var(--mv-surface);
+  box-shadow: var(--mv-shadow);
+  text-align: center;
+}
+
+.mv-app-error-icon {
+  width: 40px;
+  height: 40px;
+  padding: 10px;
+  border-radius: 50%;
+  background: var(--mv-accent-soft);
+  color: var(--mv-accent);
+}
+
+.mv-app-error h1 {
+  margin: 14px 0 8px;
+  font-size: 1.15rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.mv-app-error p {
+  margin: 0 0 20px;
+  color: var(--mv-muted);
+  font-size: 0.925rem;
+  line-height: 1.5;
+}
+
+.mv-app-error button {
+  min-height: 44px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--mv-primary);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mv-app-error button:hover {
+  background: var(--mv-primary-hover);
+}
+
+.mv-app-error button:focus-visible {
+  outline: 2px solid var(--mv-accent);
+  outline-offset: 2px;
+}
+
+:root[data-map-design='san-andreas'] .mv-app-error button {
+  border-radius: var(--mv-radius-sm);
+}

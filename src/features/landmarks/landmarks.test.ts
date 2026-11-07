@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { LANDMARKS } from './catalog.ts'
+import { DECK_LANDMARKS } from './deckLandmarks.ts'
 import { metres } from './geometry.ts'
+import { LANDMARK_HIDE_ZONES } from './hideZones.ts'
 import {
   MATERIAL_COLORS,
   hideBuildings,
@@ -361,6 +363,21 @@ describe('hideZones', () => {
     const filter = hideBuildings(hideZones(LANDMARKS)) as unknown[]
     expect(filter[0]).toBe('all')
     expect(filter.length).toBe(2 + hideZones(LANDMARKS).length)
+  })
+
+  it('is written out for the map’s style just as the catalog has it', () => {
+    expect(LANDMARK_HIDE_ZONES).toEqual(hideZones(LANDMARKS))
+  })
+})
+
+describe('deck landmarks', () => {
+  it('are the catalog’s landmarks with a deck, as routes need them', () => {
+    const decked = LANDMARKS.filter((l) => l.deck)
+    expect(DECK_LANDMARKS.map((l) => l.id)).toEqual(decked.map((l) => l.id))
+    DECK_LANDMARKS.forEach((l, i) => {
+      const { near, deck, terrain } = decked[i]
+      expect(l).toMatchObject({ near, deck, terrain })
+    })
   })
 })
 

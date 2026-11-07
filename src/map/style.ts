@@ -5,8 +5,8 @@ import type {
   RasterDEMSourceSpecification,
   StyleSpecification,
 } from 'maplibre-gl'
-import { LANDMARKS } from '../features/landmarks/catalog.ts'
-import { hideBuildings, hideZones } from '../features/landmarks/landmarks.ts'
+import { LANDMARK_HIDE_ZONES } from '../features/landmarks/hideZones.ts'
+import { hideBuildings } from '../features/landmarks/landmarks.ts'
 import type { Theme } from '../theme/theme.ts'
 import type { MapDesign } from './designSetting.ts'
 import {
@@ -602,9 +602,6 @@ function hillshade(c: Palette): LayerSpecification {
   }
 }
 
-/** The map's own buildings that the landmarks are drawn in place of. */
-const LANDMARK_ZONES = hideZones(LANDMARKS)
-
 function buildStyle(
   theme: Theme,
   terrain: boolean,
@@ -832,7 +829,7 @@ function buildStyle(
         filter: [
           'any',
           ['<', ['zoom'], RISE_ZOOM],
-          hideBuildings(LANDMARK_ZONES),
+          hideBuildings(LANDMARK_HIDE_ZONES),
         ],
         paint: {
           'fill-color': c.building,
@@ -851,7 +848,7 @@ function buildStyle(
         filter: [
           'all',
           ['!=', ['get', 'hide_3d'], true],
-          hideBuildings(LANDMARK_ZONES),
+          hideBuildings(LANDMARK_HIDE_ZONES),
         ],
         paint: {
           'fill-extrusion-color': c.extrusion,

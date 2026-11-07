@@ -43,6 +43,18 @@ export function setMapDesign(next: MapDesign) {
   for (const listener of listeners) listener()
 }
 
+// Picked in another tab, it changes here too
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key !== STORAGE_KEY && event.key !== null) return
+    const next = load()
+    if (next === design) return
+    design = next
+    apply()
+    for (const listener of listeners) listener()
+  })
+}
+
 function subscribe(listener: () => void) {
   listeners.add(listener)
   return () => listeners.delete(listener)

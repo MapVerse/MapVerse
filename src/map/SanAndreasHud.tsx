@@ -65,6 +65,7 @@ export default function SanAndreasHud() {
     map.once('idle', update)
     return () => {
       map.off('moveend', update)
+      map.off('idle', update)
       clearTimeout(hide)
     }
   }, [map])

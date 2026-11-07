@@ -20,6 +20,19 @@ const WIDTH: [number, number] = [3, 40]
 const BRIGHTNESS = 0.55
 /** The zooms over which the beams come into view. */
 const FADE_IN: [number, number] = [13.5, 15]
+/** How long between frames as the beams sweep, in ms: about 30 a second. */
+const FRAME_MS = 1000 / 30
+/** How long the beams sweep on with nothing done on the map, in ms. */
+const IDLE_MS = 60_000
+/** What on the map, done by the user, keeps the beams sweeping. */
+const ACTIVITY = [
+  'movestart',
+  'move',
+  'mousedown',
+  'mousemove',
+  'touchstart',
+  'wheel',
+] as const
 
 /*
  * Each beam is drawn as a strip facing the camera from its foot to its tip,
@@ -67,14 +80,43 @@ void main() {
   color = vec4(u_color * a, a);
 }`
 
+/** A shader compiled from its source, or null (logged) if it won't compile. */
 function compile(gl: WebGL2RenderingContext, type: number, source: string) {
-  const shader = gl.createShader(type)!
+  const shader = gl.createShader(type)
+  if (!shader) return null
   gl.shaderSource(shader, source)
   gl.compileShader(shader)
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    throw new Error(gl.getShaderInfoLog(shader) ?? 'shader failed')
+    console.warn('Searchlight shader:', gl.getShaderInfoLog(shader))
+    gl.deleteShader(shader)
+    return null
   }
   return shader
+}
+
+/**
+ * The beams' program, or null (logged) if it can't be built: the map then
+ * goes on without them. Its shaders are let go once it is linked.
+ */
+function link(gl: WebGL2RenderingContext) {
+  const vertex = compile(gl, gl.VERTEX_SHADER, VERTEX)
+  const fragment = compile(gl, gl.FRAGMENT_SHADER, FRAGMENT)
+  const program = vertex && fragment ? gl.createProgram() : null
+  if (program) {
+    gl.attachShader(program, vertex!)
+    gl.attachShader(program, fragment!)
+    gl.linkProgram(program)
+    gl.detachShader(program, vertex!)
+    gl.detachShader(program, fragment!)
+  }
+  gl.deleteShader(vertex)
+  gl.deleteShader(fragment)
+  if (program && !gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.warn('Searchlight program:', gl.getProgramInfoLog(program))
+    gl.deleteProgram(program)
+    return null
+  }
+  return program
 }
 
 const smoothstep = (from: number, to: number, x: number) => {
@@ -112,6 +154,16 @@ function searchlightLayer(): CustomLayerInterface {
         ground: number[]
         groundAt: number
         still: boolean
+        /** How far the sweep has gone, in ms: only on while it is animated */
+        clock: number
+        lastFrame: number
+        /** When the user last did something on the map */
+        activeAt: number
+        /** The next frame asked for, waiting for its time */
+        frame?: ReturnType<typeof setTimeout>
+        reducedMotion: MediaQueryList
+        onMotionChange: () => void
+        onActivity: () => void
       }
     | undefined
 
@@ -120,10 +172,8 @@ function searchlightLayer(): CustomLayerInterface {
     type: 'custom',
     renderingMode: '3d',
     onAdd(map, gl) {
-      const program = gl.createProgram()!
-      gl.attachShader(program, compile(gl, gl.VERTEX_SHADER, VERTEX))
-      gl.attachShader(program, compile(gl, gl.FRAGMENT_SHADER, FRAGMENT))
-      gl.linkProgram(program)
+      const program = link(gl)
+      if (!program) return
       const vao = gl.createVertexArray()!
       gl.bindVertexArray(vao)
       const buffer = gl.createBuffer()!
@@ -143,6 +193,23 @@ function searchlightLayer(): CustomLayerInterface {
           (name) => [name, gl.getUniformLocation(program, name)],
         ),
       )
+      const reducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+      )
+      // Paused for a while with nothing done, the beams sweep on from where
+      // they stopped once something is
+      const onActivity = () => {
+        if (!state) return
+        const paused = performance.now() - state.activeAt > IDLE_MS
+        state.activeAt = performance.now()
+        if (paused) map.triggerRepaint()
+      }
+      const onMotionChange = () => {
+        if (!state) return
+        state.still = reducedMotion.matches
+        map.triggerRepaint()
+      }
+      const now = performance.now()
       state = {
         map,
         program,
@@ -151,11 +218,22 @@ function searchlightLayer(): CustomLayerInterface {
         uniforms,
         ground: LIGHTS.map(() => 0),
         groundAt: 0,
-        still: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        still: reducedMotion.matches,
+        clock: 0,
+        lastFrame: now,
+        activeAt: now,
+        reducedMotion,
+        onMotionChange,
+        onActivity,
       }
+      reducedMotion.addEventListener('change', onMotionChange)
+      for (const type of ACTIVITY) map.on(type, onActivity)
     },
-    onRemove(_map, gl) {
+    onRemove(map, gl) {
       if (!state) return
+      clearTimeout(state.frame)
+      state.reducedMotion.removeEventListener('change', state.onMotionChange)
+      for (const type of ACTIVITY) map.off(type, state.onActivity)
       gl.deleteProgram(state.program)
       gl.deleteVertexArray(state.vao)
       gl.deleteBuffer(state.buffer)
@@ -174,7 +252,12 @@ function searchlightLayer(): CustomLayerInterface {
           ({ at }) => map.queryTerrainElevation(at) ?? 0,
         )
       }
-      const seconds = state.still ? 0 : now / 1000
+      // The sweep goes on only while it is animated, and at most a tenth of
+      // a second a frame, so it carries on from where it stopped
+      const animated = !state.still && now - state.activeAt <= IDLE_MS
+      if (animated) state.clock += Math.min(now - state.lastFrame, 100)
+      state.lastFrame = now
+      const seconds = state.still ? 0 : state.clock / 1000
       const matrix = defaultProjectionData.mainMatrix
       const ratio = gl.drawingBufferWidth / map.getCanvas().clientWidth
 
@@ -212,7 +295,16 @@ function searchlightLayer(): CustomLayerInterface {
       gl.depthMask(true)
       gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
       gl.bindVertexArray(null)
-      if (!state.still) map.triggerRepaint()
+      // The next frame of the sweep, not sooner than its time: the whole
+      // map is drawn again for it
+      if (animated && state.frame === undefined) {
+        const wait = Math.max(0, FRAME_MS - (performance.now() - now))
+        state.frame = setTimeout(() => {
+          if (!state) return
+          state.frame = undefined
+          map.triggerRepaint()
+        }, wait)
+      }
     },
   }
 }

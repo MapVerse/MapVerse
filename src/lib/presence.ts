@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /** Something on screen, and whether it is on its way out. */
 export type Present<T> = { key: string; item: T; leaving: boolean }
@@ -35,6 +35,41 @@ const same = <T>(a: Wanted<T>[], b: Wanted<T>[]) =>
   a.length === b.length &&
   a.every((w, i) => w.key === b[i].key && w.item === b[i].item)
 
+type Timers = Map<string, ReturnType<typeof setTimeout>>
+
+/**
+ * Starts a timer for each thing that has just begun to leave, to `remove`
+ * it once `exitMs` is up, and stops those of things brought back or gone.
+ * Each keeps its own time: what else comes and goes meanwhile doesn't put
+ * off its going.
+ */
+export function syncExitTimers<T>(
+  timers: Timers,
+  shown: readonly Present<T>[],
+  exitMs: number,
+  remove: (key: string) => void,
+) {
+  const leaving = new Set(
+    shown.filter((present) => present.leaving).map(({ key }) => key),
+  )
+  for (const [key, timer] of timers) {
+    if (!leaving.has(key)) {
+      clearTimeout(timer)
+      timers.delete(key)
+    }
+  }
+  for (const key of leaving) {
+    if (timers.has(key)) continue
+    timers.set(
+      key,
+      setTimeout(() => {
+        timers.delete(key)
+        remove(key)
+      }, exitMs),
+    )
+  }
+}
+
 /**
  * Keeps what was on screen there for `exitMs` once it is gone or replaced,
  * marked as leaving, so it can animate out while what replaces it
@@ -54,19 +89,24 @@ export function usePresences<T>(
     shown = nextPresence(state.shown, wanted)
     setState({ wanted, shown })
   }
-  const leaving = shown.some((present) => present.leaving)
+  const timers = useRef<Timers>(new Map())
+  useEffect(() =>
+    syncExitTimers(timers.current, shown, exitMs, (key) =>
+      setState((s) => ({
+        ...s,
+        shown: s.shown.filter(
+          (present) => !(present.key === key && present.leaving),
+        ),
+      })),
+    ),
+  )
   useEffect(() => {
-    if (!leaving) return
-    const timer = setTimeout(
-      () =>
-        setState((s) => ({
-          ...s,
-          shown: s.shown.filter((present) => !present.leaving),
-        })),
-      exitMs,
-    )
-    return () => clearTimeout(timer)
-  }, [leaving, shown, exitMs])
+    const pending = timers.current
+    return () => {
+      for (const timer of pending.values()) clearTimeout(timer)
+      pending.clear()
+    }
+  }, [])
   return shown
 }
 

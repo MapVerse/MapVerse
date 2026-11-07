@@ -1,0 +1,81 @@
+/* Over the bottom of the map, above the scale and clear of the map
+   buttons, letting presses through to the map round them */
+.mv-notices {
+  position: absolute;
+  bottom: calc(44px + var(--safe-bottom));
+  left: 50%;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100% - 136px - var(--safe-left) - var(--safe-right));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.mv-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 20px;
+  color: var(--mv-text);
+  font-family: var(--mv-font);
+  font-size: 0.85rem;
+  line-height: 1.35;
+  pointer-events: auto;
+  animation: mv-rise 220ms var(--mv-ease-out);
+}
+
+.mv-notice-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mv-danger);
+}
+
+.mv-notice-dot.is-offline {
+  background: var(--mv-subtle);
+}
+
+.mv-notice button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -8px -4px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--mv-muted);
+  cursor: pointer;
+}
+
+.mv-notice button:hover {
+  background: var(--glass-hover);
+  color: var(--mv-text);
+}
+
+.mv-notice button:focus-visible {
+  outline: 2px solid var(--mv-accent);
+  outline-offset: 1px;
+}
+
+.mv-notice svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+:root[data-map-design='san-andreas'] .mv-notice {
+  border-radius: 4px;
+}
