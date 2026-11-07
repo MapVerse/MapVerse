@@ -18,6 +18,8 @@ import { MapStartError } from '../app/appError.ts'
 import AccountMenu from '../features/account/AccountMenu.tsx'
 import AreaNames from '../features/areas/AreaNames.tsx'
 import Directions from '../features/directions/Directions.tsx'
+import Measure from '../features/measure/Measure.tsx'
+import { useMeasuring } from '../features/measure/measureMode.ts'
 import { resolveSignalImage } from '../features/traffic/signalImage.ts'
 import TrafficSignals from '../features/traffic/TrafficSignals.tsx'
 import Boundary from '../features/place/Boundary.tsx'
@@ -170,6 +172,14 @@ export default function MapView() {
   // The place picked, shown in full; and one the pointer rests on, glanced at
   const [selection, setSelection] = useState<Selection | null>(null)
   const [hover, setHover] = useState<Selection | null>(null)
+  // Measuring a distance takes the map's clicks; starting it lets go of
+  // what was open
+  const measuring = useMeasuring()
+  const [wasMeasuring, setWasMeasuring] = useState(measuring)
+  if (measuring !== wasMeasuring) {
+    setWasMeasuring(measuring)
+    if (measuring) setSelection(null)
+  }
   const hoverKey = useRef<string | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   // A click on an empty spot, waiting to see if it is a double click
@@ -228,7 +238,7 @@ export default function MapView() {
   const point = open?.view === 'point' ? open : null
   const points = usePresence(point, point?.place.key ?? null, LEAVING_MS)
   // a glance at the one the pointer rests on, while none is open,
-  const glance = !directions && !selection && hover ? hover : null
+  const glance = !directions && !measuring && !selection && hover ? hover : null
   const glances = usePresence(glance, glance?.place.key ?? null, LEAVING_MS)
   // and the badge standing out for either, standing up as a pin for the
   // open one; a result marker stands out enough by itself
@@ -288,8 +298,9 @@ export default function MapView() {
   // even on another place; the next click picks anew. Dragging the map is
   // no click, and leaves it open.
   function onMapClick(event: MapLayerMouseEvent) {
-    // Directions handle their own clicks (picking either end of a route)
-    if (directions) return
+    // Directions handle their own clicks (picking either end of a route),
+    // and so does measuring
+    if (directions || measuring) return
     stopGlance()
     // The second click of a double click, which zooms: nothing to show
     if (pointTimer.current) {
@@ -330,7 +341,7 @@ export default function MapView() {
   // and the glance goes. Not while the map is dragged or a place is open,
   // nor on a phone, where a tap opens a place at once.
   function onMapMouseMove(event: MapLayerMouseEvent) {
-    if (!canHover || directions || selection) return
+    if (!canHover || directions || selection || measuring) return
     const candidate = event.originalEvent.buttons
       ? null
       : selectionOf(event.features?.[0], event.lngLat)
@@ -379,10 +390,16 @@ export default function MapView() {
       // licenses require; it collapses to an ⓘ button once the map is moved.
       attributionControl={{ compact: true }}
       interactiveLayerIds={
-        directions ? [] : [SEARCH_RESULTS_LAYER, ...poiLayerIds]
+        directions || measuring ? [] : [SEARCH_RESULTS_LAYER, ...poiLayerIds]
       }
       // A pointer over a place only while a click would open it
-      cursor={hoveringPoi && !selection && !directions ? 'pointer' : undefined}
+      cursor={
+        measuring
+          ? 'crosshair'
+          : hoveringPoi && !selection && !directions
+            ? 'pointer'
+            : undefined
+      }
       onLoad={(event) => {
         const style = event.target.getStyle()
         setPoiLayerIds(findPoiLayerIds(style))
@@ -502,6 +519,7 @@ export default function MapView() {
           onClose={() => setDirections(null)}
         />
       ))}
+      {measuring && <Measure />}
       <MapNotices
         online={online}
         dataFailed={dataFailed}

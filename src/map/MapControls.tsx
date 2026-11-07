@@ -1,4 +1,5 @@
 import { useControl } from '@vis.gl/react-maplibre'
+import { MeasureControl } from '../features/measure/MeasureControl.ts'
 import { ControlGroup } from './ControlGroup.ts'
 import { TiltControl } from './tilt.ts'
 
@@ -30,6 +31,7 @@ export default function MapControls() {
           visualizePitch: true,
         }),
         new TiltControl(),
+        new MeasureControl(),
       ]),
     position,
   )
