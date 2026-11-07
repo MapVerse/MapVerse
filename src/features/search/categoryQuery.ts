@@ -1,25 +1,58 @@
+import { t, type MessageKey } from '../../i18n/index.ts'
 import { QUICK_CATEGORIES, type QuickCategory } from './overpass.ts'
 
 /**
- * What each quick category is called when typed: its name and the other
- * words people use for it, and how a suggestion to search for it reads.
+ * What each quick category is called when typed, in either language: its
+ * name and the other words people use for it.
  */
-const WORDS: Record<string, { terms: string[]; nearby: string }> = {
+const WORDS: Record<string, { terms: string[] }> = {
   restaurant: {
-    terms: ['restoran', 'restorant', 'restaurant', 'lokanta', 'yemek yeri'],
-    nearby: 'Yakındaki restoranlar',
+    terms: [
+      'restoran',
+      'restorant',
+      'restaurant',
+      'lokanta',
+      'yemek yeri',
+      'restaurants',
+      'diner',
+    ],
   },
   cafe: {
-    terms: ['kafe', 'cafe', 'kafeterya', 'kahve', 'kahveci', 'kahvehane'],
-    nearby: 'Yakındaki kafeler',
+    terms: [
+      'kafe',
+      'cafe',
+      'kafeterya',
+      'kahve',
+      'kahveci',
+      'kahvehane',
+      'cafes',
+      'coffee',
+      'coffee shop',
+      'coffee shops',
+    ],
   },
   supermarket: {
-    terms: ['market', 'süpermarket', 'supermarket', 'bakkal', 'grocery'],
-    nearby: 'Yakındaki marketler',
+    terms: [
+      'market',
+      'süpermarket',
+      'supermarket',
+      'bakkal',
+      'grocery',
+      'supermarkets',
+      'groceries',
+      'grocery store',
+    ],
   },
   pharmacy: {
-    terms: ['eczane', 'eczahane', 'pharmacy', 'nöbetçi eczane'],
-    nearby: 'Yakındaki eczaneler',
+    terms: [
+      'eczane',
+      'eczahane',
+      'pharmacy',
+      'nöbetçi eczane',
+      'pharmacies',
+      'chemist',
+      'drugstore',
+    ],
   },
   fuel: {
     terms: [
@@ -34,30 +67,51 @@ const WORDS: Record<string, { terms: string[]; nearby: string }> = {
       'motorin',
       'mazot',
       'gas station',
+      'gas stations',
+      'petrol station',
+      'fuel',
+      'gas',
     ],
-    nearby: 'Yakındaki akaryakıt istasyonları',
   },
   atm: {
-    terms: ['atm', 'bankamatik', 'para çekme'],
-    nearby: "Yakındaki ATM'ler",
+    terms: ['atm', 'bankamatik', 'para çekme', 'atms', 'cash machine'],
   },
   hotel: {
-    terms: ['otel', 'hotel', 'hostel', 'pansiyon', 'motel', 'konaklama'],
-    nearby: 'Yakındaki oteller',
+    terms: [
+      'otel',
+      'hotel',
+      'hostel',
+      'pansiyon',
+      'motel',
+      'konaklama',
+      'hotels',
+    ],
   },
   hospital: {
-    terms: ['hastane', 'hospital', 'acil', 'acil servis', 'devlet hastanesi'],
-    nearby: 'Yakındaki hastaneler',
+    terms: [
+      'hastane',
+      'hospital',
+      'acil',
+      'acil servis',
+      'devlet hastanesi',
+      'hospitals',
+      'emergency room',
+    ],
   },
-  park: { terms: ['park'], nearby: 'Yakındaki parklar' },
-  museum: { terms: ['müze', 'museum'], nearby: 'Yakındaki müzeler' },
+  park: { terms: ['park', 'parks'] },
+  museum: { terms: ['müze', 'museum', 'museums'] },
   parking: {
-    terms: ['otopark', 'park yeri', 'parking', 'araba parkı'],
-    nearby: 'Yakındaki otoparklar',
+    terms: [
+      'otopark',
+      'park yeri',
+      'parking',
+      'araba parkı',
+      'car park',
+      'parking lot',
+    ],
   },
   mosque: {
-    terms: ['cami', 'camii', 'mescit', 'mescid', 'mosque'],
-    nearby: 'Yakındaki camiler',
+    terms: ['cami', 'camii', 'mescit', 'mescid', 'mosque', 'mosques'],
   },
 }
 
@@ -78,6 +132,8 @@ const FILLER = new Set(
     'near',
     'me',
     'nearby',
+    'nearest',
+    'closest',
   ].map(fold),
 )
 
@@ -108,7 +164,7 @@ function stems(word: string): string[] {
 
 /** The folded terms of each category, longest first. */
 const TERMS = QUICK_CATEGORIES.flatMap((category) =>
-  (WORDS[category.key]?.terms ?? [category.label]).map((term) => ({
+  (WORDS[category.key]?.terms ?? [category.key]).map((term) => ({
     category,
     term: fold(term),
   })),
@@ -143,4 +199,4 @@ export function matchCategory(query: string): QuickCategory | undefined {
 
 /** How a suggestion to search a category nearby reads. */
 export const nearbyLabel = (category: QuickCategory) =>
-  WORDS[category.key]?.nearby ?? `Yakındaki: ${category.label}`
+  t(`nearby.${category.key}` as MessageKey)

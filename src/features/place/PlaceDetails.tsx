@@ -7,6 +7,7 @@ import {
   type CSSProperties,
   type PointerEvent,
 } from 'react'
+import { t, useLocale } from '../../i18n/index.ts'
 import { Icon } from '../../icons/Icon.tsx'
 import { useTheme } from '../../theme/theme.ts'
 import SaveButton from '../favorites/SaveButton.tsx'
@@ -35,7 +36,7 @@ import {
   weekLines,
 } from './openingHours.ts'
 import { osmLetter } from './link.ts'
-import type { Place } from './place.ts'
+import { placeCategory, type Place } from './place.ts'
 import PlacePhoto from './PlacePhoto.tsx'
 import { sharePlace } from './share.ts'
 import { useAddress } from './useAddress.ts'
@@ -112,6 +113,7 @@ export default function PlaceDetails({
   onClose,
 }: Props) {
   const theme = useTheme()
+  useLocale()
   const { current: ref } = useMap()
   const panel = useRef<HTMLElement>(null)
   const actions = useRef<HTMLDivElement>(null)
@@ -266,6 +268,7 @@ export default function PlaceDetails({
   const wiki = tags && wikipedia(tags)
   const offers = tags ? features(tags) : []
   const coordinates = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+  const category = placeCategory(place)
 
   // The element found for a place picked on the map, which came without
   // one, and its address looked up: shared and saved with it
@@ -391,12 +394,12 @@ export default function PlaceDetails({
           <h2 ref={heading} tabIndex={-1}>
             {place.name}
           </h2>
-          {place.category && place.category !== place.name && (
+          {category && category !== place.name && (
             <p
               className="place-panel-kind"
               style={info && { color: labelColor(info.color, theme) }}
             >
-              {place.category}
+              {category}
             </p>
           )}
           <div className="place-panel-status-slot">
@@ -416,7 +419,7 @@ export default function PlaceDetails({
         <button
           type="button"
           className="place-panel-close"
-          aria-label="Ayrıntıları kapat"
+          aria-label={t('place.closeDetails')}
           onClick={onClose}
         >
           <Icon name="close" size={18} />
@@ -426,7 +429,7 @@ export default function PlaceDetails({
       <div ref={actions} className="place-panel-actions">
         <button type="button" className="is-primary" onClick={onDirections}>
           <Icon name="directions" size={18} />
-          Yol tarifi
+          {t('common.directions')}
         </button>
         <button type="button" onClick={share} aria-live="polite">
           <Icon
@@ -434,10 +437,10 @@ export default function PlaceDetails({
             size={18}
           />
           {!linkCopied
-            ? 'Paylaş'
+            ? t('common.share')
             : linkCopied.ok
-              ? 'Bağlantı kopyalandı'
-              : 'Kopyalanamadı'}
+              ? t('common.linkCopied')
+              : t('common.copyFailed')}
         </button>
         <SaveButton
           place={known}
@@ -448,8 +451,8 @@ export default function PlaceDetails({
           <button
             type="button"
             className="place-panel-more"
-            aria-label="Ayrıntıları göster"
-            title="Ayrıntıları göster"
+            aria-label={t('place.showDetails')}
+            title={t('place.showDetails')}
             onClick={() => goTo('half')}
           >
             <Icon name="chevronDown" size={20} />
@@ -468,7 +471,9 @@ export default function PlaceDetails({
                   <span className="place-fact-text">{address}</span>
                 ) : (
                   <span className="place-skeleton" role="status">
-                    <span className="place-skeleton-hint">Adres aranıyor…</span>
+                    <span className="place-skeleton-hint">
+                      {t('common.findingAddress')}
+                    </span>
                     <span />
                     <span />
                   </span>
@@ -496,8 +501,8 @@ export default function PlaceDetails({
                       onClick={() => setWeek((w) => !w)}
                     >
                       <span>
-                        Bugün
-                        {holidayToday ? ' (resmî tatil)' : ''}{' '}
+                        {t('place.today')}
+                        {holidayToday ? t('place.holidayToday') : ''}{' '}
                         {dayHours(hoursOn(parsed, wall, isHoliday))}
                       </span>
                       <Icon name="chevronDown" size={16} />
@@ -516,7 +521,7 @@ export default function PlaceDetails({
                     )}
                     {holidayNote && (
                       <p className="place-hours-note">
-                        Resmî tatillerde saatler farklı olabilir.
+                        {t('place.holidayNote')}
                       </p>
                     )}
                   </div>
@@ -575,7 +580,7 @@ export default function PlaceDetails({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Vikipedi: {wiki.label}
+                  {t('place.wikipedia', { title: wiki.label })}
                 </a>
               </li>
             )}
@@ -594,20 +599,20 @@ export default function PlaceDetails({
                 type="button"
                 className="place-fact-text place-copy"
                 onClick={copyCoordinates}
-                title="Koordinatları kopyala"
+                title={t('common.copyCoordinates')}
                 aria-live="polite"
               >
                 {!coordinatesCopied
                   ? coordinates
                   : coordinatesCopied.ok
-                    ? 'Kopyalandı'
-                    : 'Kopyalanamadı'}
+                    ? t('common.copied')
+                    : t('common.copyFailed')}
               </button>
             </li>
           </ul>
 
           {offers.length > 0 && (
-            <ul className="place-chips" aria-label="Olanaklar">
+            <ul className="place-chips" aria-label={t('place.amenities')}>
               {offers.map((offer, k) => (
                 <li key={offer} style={row(i + k)}>
                   {offer}
@@ -619,25 +624,23 @@ export default function PlaceDetails({
           {details === null &&
             (failed ? (
               <p className="place-panel-note place-panel-failed" role="status">
-                Bilgiler şu anda alınamadı.{' '}
+                {t('place.detailsFailed')}{' '}
                 <button type="button" onClick={retry}>
-                  Tekrar dene
+                  {t('common.retry')}
                 </button>
               </p>
             ) : (
-              <p className="place-panel-note">
-                OpenStreetMap'te bu yer için başka bilgi yok.
-              </p>
+              <p className="place-panel-note">{t('place.noDetails')}</p>
             ))}
           {details && (
             <p className="place-panel-note">
-              Bilgiler OpenStreetMap katkıcılarından ·{' '}
+              {t('place.fromOsm')}{' '}
               <a
                 href={osmUrl(details)}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                OpenStreetMap'te gör
+                {t('place.seeOnOsm')}
               </a>
             </p>
           )}

@@ -2,6 +2,7 @@ import { useControl } from '@vis.gl/react-maplibre'
 import type { ControlPosition, IControl } from 'maplibre-gl'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { t, useLocale } from '../../i18n/index.ts'
 import { Icon } from '../../icons/Icon.tsx'
 import { usePresence } from '../../lib/presence.ts'
 import { onMap, swallowNextClick } from '../../lib/swallowClick.ts'
@@ -44,6 +45,7 @@ export default function AccountMenu({
   onOpenPlace: (place: Place, point: boolean) => void
 }) {
   const slot = useControl(() => new Slot(), { position })
+  useLocale()
   const profile = useProfile()
   const toggleRef = useRef<HTMLButtonElement>(null)
   const photoRef = useRef<HTMLInputElement>(null)
@@ -52,7 +54,7 @@ export default function AccountMenu({
   const [open, setOpen] = useState(showSaved)
   const [name, setName] = useState('')
   const panelId = useId()
-  const title = profile ? profile.name : 'Profil oluştur'
+  const title = profile ? profile.name : t('account.createProfile')
   // Kept a moment once closed, to shrink back into the button
   const panels = usePresence(open || null, open ? 'panel' : null, 170)
 
@@ -125,7 +127,9 @@ export default function AccountMenu({
         className="mv-account-toggle mv-glass"
         title={title}
         aria-label={
-          profile ? `${profile.name}, profil ve ayarlar` : 'Profil ve ayarlar'
+          profile
+            ? t('account.menuOf', { name: profile.name })
+            : t('account.menu')
         }
         aria-expanded={open}
         aria-controls={panelId}
@@ -140,18 +144,18 @@ export default function AccountMenu({
           tabIndex={-1}
           id={leaving ? undefined : panelId}
           className={`mv-account-panel mv-glass${leaving ? ' is-leaving' : ''}`}
-          aria-label="Profil ve ayarlar"
+          aria-label={t('account.menu')}
           aria-hidden={leaving || undefined}
           inert={leaving || undefined}
         >
           <div className="mv-profile">
             <Avatar profile={profile} size={52} />
             <div className="mv-profile-text">
-              <p className="mv-profile-name">{profile?.name ?? 'Misafir'}</p>
+              <p className="mv-profile-name">
+                {profile?.name ?? t('account.guest')}
+              </p>
               <p className="mv-profile-note">
-                {profile
-                  ? 'Bu cihazdaki profilin'
-                  : 'Henüz profil oluşturmadın'}
+                {t(profile ? 'account.yourProfile' : 'account.noProfile')}
               </p>
             </div>
           </div>
@@ -161,18 +165,20 @@ export default function AccountMenu({
               <button
                 type="button"
                 // Short on screen, so it fits beside the remove button
-                title={profile.photo ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'}
-                aria-label={
-                  profile.photo ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'
-                }
+                title={t(
+                  profile.photo ? 'account.changePhoto' : 'account.addPhoto',
+                )}
+                aria-label={t(
+                  profile.photo ? 'account.changePhoto' : 'account.addPhoto',
+                )}
                 onClick={() => photoRef.current?.click()}
               >
                 <Icon name="camera" size={18} />
-                Fotoğraf
+                {t('account.photo')}
               </button>
               <button type="button" onClick={() => setProfile(null)}>
                 <Icon name="logout" size={18} />
-                Profili kaldır
+                {t('account.removeProfile')}
               </button>
               <input
                 ref={photoRef}
@@ -189,19 +195,17 @@ export default function AccountMenu({
             <form className="mv-sign-in" onSubmit={createProfile}>
               <input
                 type="text"
-                placeholder="Adın"
-                aria-label="Adın"
+                placeholder={t('account.yourName')}
+                aria-label={t('account.yourName')}
                 autoComplete="name"
                 maxLength={40}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
               />
               <button type="submit" disabled={!name.trim()}>
-                Profil oluştur
+                {t('account.createProfile')}
               </button>
-              <p className="mv-settings-hint">
-                Hesap gerekmez: profilin yalnızca bu cihazda saklanır.
-              </p>
+              <p className="mv-settings-hint">{t('account.noAccount')}</p>
             </form>
           )}
 

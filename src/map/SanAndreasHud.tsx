@@ -1,5 +1,6 @@
 import { useMap } from '@vis.gl/react-maplibre'
 import { useEffect, useState } from 'react'
+import { currentLocale } from '../i18n/index.ts'
 import './SanAndreasHud.css'
 
 /** Place labels whose name is shown on entering, smallest first. */
@@ -39,10 +40,12 @@ export default function SanAndreasHud() {
         map
           .queryRenderedFeatures({ layers: [layer] })
           .map((feature) => {
+            const p = feature.properties
+            // As the map's own label names it
             const name =
-              feature.properties['name:tr'] ??
-              feature.properties['name:latin'] ??
-              feature.properties.name
+              currentLocale() === 'en'
+                ? (p['name:en'] ?? p.name_en ?? p['name:latin'] ?? p.name)
+                : (p['name:tr'] ?? p['name:latin'] ?? p.name)
             const point =
               feature.geometry.type === 'Point'
                 ? map.project(feature.geometry.coordinates as [number, number])

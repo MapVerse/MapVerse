@@ -1,3 +1,4 @@
+import { translate, type Locale } from '../../i18n/index.ts'
 import { VALHALLA_URL } from '../../lib/endpoints.ts'
 import { decodePolyline6 } from './directions.ts'
 
@@ -111,6 +112,17 @@ export const AVOID_NOTHING: Avoid = {
  */
 export type When = { kind: 'now' } | { kind: 'depart' | 'arrive'; at: string }
 
+/** The languages Valhalla is asked to word a route's instructions in. */
+export type RouteLanguage = 'tr-TR' | 'en-US'
+
+/** The language to ask Valhalla for, for the interface's. */
+export const routeLanguage = (locale: Locale): RouteLanguage =>
+  locale === 'en' ? 'en-US' : 'tr-TR'
+
+/** The interface's language a route was worded in. */
+const localeOf = (language: RouteLanguage | undefined): Locale =>
+  language === 'en-US' ? 'en' : 'tr'
+
 export type RouteRequest = {
   /** From the start, through any stops, to the destination, as [lng, lat] */
   points: [number, number][]
@@ -122,6 +134,8 @@ export type RouteRequest = {
    * for on the move leads on rather than back (with no turning round)
    */
   heading?: number
+  /** What its instructions are worded in; Turkish if not said */
+  language?: RouteLanguage
 }
 
 /** Whether a way of travel can keep off a kind of road at all. */
@@ -136,6 +150,7 @@ export function buildRequest({
   avoid,
   when,
   heading,
+  language = 'tr-TR',
 }: RouteRequest) {
   // 0 keeps off them as far as there is another way (1 would prefer them)
   const options: Record<string, number> = {}
@@ -161,7 +176,7 @@ export function buildRequest({
     ...(when.kind !== 'now' && {
       date_time: { type: when.kind === 'depart' ? 1 : 2, value: when.at },
     }),
-    directions_options: { units: 'kilometers', language: 'tr-TR' },
+    directions_options: { units: 'kilometers', language },
   }
 }
 
@@ -177,24 +192,58 @@ export async function getRoutes(
     throw new NoRouteError(body, noRouteReason(body))
   }
   if (!res.ok) throw new Error(`Valhalla request failed: ${res.status}`)
-  return parseRoutes((await res.json()) as ValhallaResponse)
+  return parseRoutes(
+    (await res.json()) as ValhallaResponse,
+    localeOf(request.language),
+  )
 }
 
 /** Valhalla's arrival maneuvers: at, on the right of, on the left of. */
 const ARRIVALS = new Set([4, 5, 6])
 
 /** Arriving at a stop on the way, rather than at the destination. */
-export function stopArrival(type: number, stop: number): string {
-  if (type === 5) return `${stop}. durak sağınızda.`
-  if (type === 6) return `${stop}. durak solunuzda.`
-  return `${stop}. durağa vardınız.`
+export function stopArrival(
+  type: number,
+  stop: number,
+  locale: Locale = 'tr',
+): string {
+  const key =
+    type === 5 ? 'stop.onRight' : type === 6 ? 'stop.onLeft' : 'stop.arrived'
+  return translate(locale, key, { n: stop })
 }
 
 /** Said some way before a stop on the way. */
-export function stopAhead(type: number, stop: number): string {
-  if (type === 5) return `${stop}. durak sağınızda kalacak.`
-  if (type === 6) return `${stop}. durak solunuzda kalacak.`
-  return `${stop}. durağa varacaksınız.`
+export function stopAhead(
+  type: number,
+  stop: number,
+  locale: Locale = 'tr',
+): string {
+  const key =
+    type === 5
+      ? 'stop.aheadRight'
+      : type === 6
+        ? 'stop.aheadLeft'
+        : 'stop.ahead'
+  return translate(locale, key, { n: stop })
+}
+
+/**
+ * How Valhalla speaks of the destination, in each language: at a stop on
+ * the way, the stop is said by its number instead.
+ */
+const DESTINATION: Record<Locale, RegExp> = {
+  tr: /Hedefiniz/g,
+  en: /\b[Yy]our destination\b/g,
+}
+
+function asStop(text: string, stop: number, locale: Locale) {
+  return text.replace(DESTINATION[locale], (said) => {
+    const name = translate(locale, 'stop.name', { n: stop })
+    // Kept capitalised where it starts a sentence
+    return said[0] === said[0].toUpperCase()
+      ? name
+      : name[0].toLowerCase() + name.slice(1)
+  })
 }
 
 /** The instructions there are, without those that are missing. */
@@ -204,7 +253,10 @@ function clean(verbal: Verbal): Verbal {
   ) as Verbal
 }
 
-export function parseRoutes(data: ValhallaResponse): Route[] {
+export function parseRoutes(
+  data: ValhallaResponse,
+  locale: Locale = 'tr',
+): Route[] {
   return [data.trip, ...(data.alternates ?? []).map((a) => a.trip)].map(
     (trip) => {
       const shape: [number, number][] = []
@@ -219,18 +271,23 @@ export function parseRoutes(data: ValhallaResponse): Route[] {
           const atStop = stop !== undefined && ARRIVALS.has(m.type)
           // Valhalla speaks of the end of each leg as the destination
           const spoken = (text?: string) =>
-            stop === undefined
+            stop === undefined || text === undefined
               ? text
-              : text?.replace(/Hedefiniz/g, `${stop}. durak`)
+              : asStop(text, stop, locale)
           const verbal: Verbal = atStop
-            ? { alert: stopAhead(m.type, stop), pre: stopArrival(m.type, stop) }
+            ? {
+                alert: stopAhead(m.type, stop, locale),
+                pre: stopArrival(m.type, stop, locale),
+              }
             : {
                 alert: spoken(m.verbal_transition_alert_instruction),
                 pre: spoken(m.verbal_pre_transition_instruction),
                 post: m.verbal_post_transition_instruction,
               }
           maneuvers.push({
-            instruction: atStop ? stopArrival(m.type, stop) : m.instruction,
+            instruction: atStop
+              ? stopArrival(m.type, stop, locale)
+              : m.instruction,
             type: m.type,
             meters: m.length * 1000,
             seconds: m.time,

@@ -1,5 +1,6 @@
 import { Marker, useMap } from '@vis.gl/react-maplibre'
 import { useEffect, useRef, useState } from 'react'
+import { t, useLocale } from '../../i18n/index.ts'
 import { Icon } from '../../icons/Icon.tsx'
 import SaveButton from '../favorites/SaveButton.tsx'
 import { describePoint, type PointDescription } from '../search/photon.ts'
@@ -68,6 +69,7 @@ export default function PointCard({
   onClose,
 }: Props) {
   const { current: ref } = useMap()
+  useLocale()
   const card = useRef<HTMLElement>(null)
   const here = usePointDescription(place.lngLat)
   // What was copied, or tried to be, and whether it was
@@ -77,7 +79,8 @@ export default function PointCard({
   } | null>(null)
   const [lng, lat] = place.lngLat
   const coordinates = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
-  const title = here?.title ?? (here === null ? 'Seçilen nokta' : undefined)
+  const title =
+    here?.title ?? (here === null ? t('common.selectedPoint') : undefined)
 
   // Escape closes it, unless something nearer takes it first
   useEffect(() => {
@@ -143,7 +146,7 @@ export default function PointCard({
       <section
         ref={card}
         className={`point-card${leaving ? ' is-leaving' : ''}`}
-        aria-label={title ?? 'Seçilen nokta'}
+        aria-label={title ?? t('common.selectedPoint')}
         inert={leaving || undefined}
       >
         <div className="point-card-main">
@@ -155,28 +158,30 @@ export default function PointCard({
               <h2 title={title}>{title}</h2>
             ) : (
               <span className="point-card-skeleton is-title" role="status">
-                <span className="place-skeleton-hint">Adres aranıyor…</span>
+                <span className="place-skeleton-hint">
+                  {t('common.findingAddress')}
+                </span>
               </span>
             )}
             {here === undefined ? (
               <span className="point-card-skeleton" aria-hidden="true" />
             ) : (
               <p className="point-card-detail">
-                {here?.detail || 'Haritada seçilen nokta'}
+                {here?.detail || t('point.pickedOnMap')}
               </p>
             )}
             <button
               type="button"
               className="point-card-coordinates"
-              title="Koordinatları kopyala"
+              title={t('common.copyCoordinates')}
               onClick={copyCoordinates}
               aria-live="polite"
             >
               {!coordinatesCopied
                 ? coordinates
                 : coordinatesCopied.ok
-                  ? 'Kopyalandı'
-                  : 'Kopyalanamadı'}
+                  ? t('common.copied')
+                  : t('common.copyFailed')}
               <Icon
                 name={
                   !coordinatesCopied
@@ -192,7 +197,7 @@ export default function PointCard({
           <button
             type="button"
             className="point-card-close"
-            aria-label="Kapat"
+            aria-label={t('common.close')}
             onClick={onClose}
           >
             <Icon name="close" size={16} />
@@ -203,11 +208,14 @@ export default function PointCard({
             type="button"
             className="is-primary"
             onClick={() =>
-              onDirections({ ...place, name: title ?? 'Seçilen nokta' })
+              onDirections({
+                ...place,
+                name: title ?? t('common.selectedPoint'),
+              })
             }
           >
             <Icon name="directions" size={17} />
-            Yol tarifi
+            {t('common.directions')}
           </button>
           <button type="button" onClick={share} aria-live="polite">
             <Icon
@@ -215,15 +223,15 @@ export default function PointCard({
               size={17}
             />
             {!linkCopied
-              ? 'Paylaş'
+              ? t('common.share')
               : linkCopied.ok
-                ? 'Bağlantı kopyalandı'
-                : 'Kopyalanamadı'}
+                ? t('common.linkCopied')
+                : t('common.copyFailed')}
           </button>
           <SaveButton
             place={{
               ...place,
-              name: title ?? 'Seçilen nokta',
+              name: title ?? t('common.selectedPoint'),
               address: here?.detail || undefined,
             }}
             point

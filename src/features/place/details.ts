@@ -1,3 +1,4 @@
+import { currentLocale, t } from '../../i18n/index.ts'
 import { overpass, type OverpassElement } from '../../lib/overpass.ts'
 import { distanceMeters, type Place } from './place.ts'
 
@@ -175,18 +176,22 @@ const CUISINES: Record<string, string> = {
   home_style: 'Ev yemekleri',
 }
 
-/** What a place cooks, in Turkish where it is a common kind. */
+/**
+ * What a place cooks: in Turkish where it is a common kind; in English, as
+ * OpenStreetMap writes it, which is English already.
+ */
 export function cuisine(tags: Record<string, string>): string | undefined {
   if (!tags.cuisine) return undefined
+  const turkish = currentLocale() === 'tr'
   return tags.cuisine
     .split(';')
     .map((kind) => kind.trim().toLowerCase())
     .filter(Boolean)
     .map((kind) => {
-      const named = CUISINES[kind]
+      const named = turkish ? CUISINES[kind] : undefined
       if (named) return named
       const plain = kind.replace(/_/g, ' ')
-      return plain[0].toLocaleUpperCase('tr') + plain.slice(1)
+      return plain[0].toLocaleUpperCase(turkish ? 'tr' : 'en') + plain.slice(1)
     })
     .filter((kind, i, all) => all.indexOf(kind) === i)
     .join(', ')
@@ -198,26 +203,32 @@ const yes = (value: string | undefined) => value === 'yes' || value === 'only'
 export function features(tags: Record<string, string>): string[] {
   const list: string[] = []
   const wheelchair = tags.wheelchair
-  if (wheelchair === 'yes') list.push('Engelli erişimi')
-  if (wheelchair === 'limited') list.push('Kısmi engelli erişimi')
-  if (wheelchair === 'no') list.push('Engelli erişimi yok')
+  if (wheelchair === 'yes') list.push(t('feature.wheelchair'))
+  if (wheelchair === 'limited') list.push(t('feature.wheelchairLimited'))
+  if (wheelchair === 'no') list.push(t('feature.noWheelchair'))
   if (['wlan', 'yes', 'wifi'].includes(tags.internet_access ?? '')) {
-    list.push(tags['internet_access:fee'] === 'yes' ? 'Ücretli Wi-Fi' : 'Wi-Fi')
+    list.push(
+      t(
+        tags['internet_access:fee'] === 'yes'
+          ? 'feature.paidWifi'
+          : 'feature.wifi',
+      ),
+    )
   }
-  if (yes(tags.outdoor_seating)) list.push('Dış mekân')
-  if (yes(tags.takeaway)) list.push('Paket servis')
-  if (yes(tags.delivery)) list.push('Eve servis')
-  if (yes(tags.drive_through)) list.push('Arabaya servis')
+  if (yes(tags.outdoor_seating)) list.push(t('feature.outdoor'))
+  if (yes(tags.takeaway)) list.push(t('feature.takeaway'))
+  if (yes(tags.delivery)) list.push(t('feature.delivery'))
+  if (yes(tags.drive_through)) list.push(t('feature.driveThrough'))
   if (tags.reservation === 'yes' || tags.reservation === 'required') {
-    list.push('Rezervasyon')
+    list.push(t('feature.reservation'))
   }
-  if (yes(tags['diet:vegetarian'])) list.push('Vejetaryen seçenek')
-  if (yes(tags['diet:vegan'])) list.push('Vegan seçenek')
+  if (yes(tags['diet:vegetarian'])) list.push(t('feature.vegetarian'))
+  if (yes(tags['diet:vegan'])) list.push(t('feature.vegan'))
   if (yes(tags['payment:credit_cards']) || yes(tags['payment:cards'])) {
-    list.push('Kartla ödeme')
+    list.push(t('feature.cards'))
   }
-  if (yes(tags.air_conditioning)) list.push('Klima')
-  if (tags.smoking === 'no') list.push('Sigara içilmez')
-  if (yes(tags.toilets)) list.push('Tuvalet')
+  if (yes(tags.air_conditioning)) list.push(t('feature.airConditioning'))
+  if (tags.smoking === 'no') list.push(t('feature.noSmoking'))
+  if (yes(tags.toilets)) list.push(t('feature.toilets'))
   return list
 }

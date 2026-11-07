@@ -1,10 +1,11 @@
 import { useEffect, useId, useState, type KeyboardEvent } from 'react'
+import { t, useLocale } from '../../i18n/index.ts'
 import { Icon } from '../../icons/Icon.tsx'
 import type { Place } from '../place/place.ts'
 import {
   KIND_ICONS,
-  KIND_LABELS,
   LABEL_MAX,
+  kindLabel,
   type FavoriteKind,
 } from './favorites.ts'
 import {
@@ -33,10 +34,13 @@ type Props = {
  * take it off the list again.
  */
 export default function SaveButton({ place, point, compact, onOpen }: Props) {
+  useLocale()
   const saved = useFavorite(place)
   const [open, setOpen] = useState(false)
   const editorId = useId()
-  const label = saved ? `Kaydedildi: ${KIND_LABELS[saved.kind]}` : 'Kaydet'
+  const label = saved
+    ? t('saved.savedAs', { kind: kindLabel(saved.kind) })
+    : t('saved.save')
 
   useEffect(() => {
     if (open) onOpen?.()
@@ -85,7 +89,7 @@ export default function SaveButton({ place, point, compact, onOpen }: Props) {
         />
         {!compact && (
           <span className="save-button-label" aria-hidden="true">
-            {saved ? 'Kaydedildi' : 'Kaydet'}
+            {t(saved ? 'saved.saved' : 'saved.save')}
           </span>
         )}
       </button>
@@ -94,10 +98,10 @@ export default function SaveButton({ place, point, compact, onOpen }: Props) {
           id={editorId}
           className="save-editor"
           role="group"
-          aria-label="Kayıtlı yer"
+          aria-label={t('saved.one')}
           onKeyDown={onKeyDown}
         >
-          <div className="save-kinds" role="group" aria-label="Ne olarak">
+          <div className="save-kinds" role="group" aria-label={t('saved.as')}>
             {KINDS.map((kind) => (
               <button
                 key={kind}
@@ -106,7 +110,7 @@ export default function SaveButton({ place, point, compact, onOpen }: Props) {
                 onClick={() => pick(kind)}
               >
                 <Icon name={KIND_ICONS[kind]} size={16} />
-                {KIND_LABELS[kind]}
+                {kindLabel(kind)}
               </button>
             ))}
           </div>
@@ -114,8 +118,8 @@ export default function SaveButton({ place, point, compact, onOpen }: Props) {
             <input
               type="text"
               className="save-name"
-              aria-label="Kendi adın (isteğe bağlı)"
-              placeholder="Kendi adın (isteğe bağlı)"
+              aria-label={t('saved.ownName')}
+              placeholder={t('saved.ownName')}
               maxLength={LABEL_MAX}
               defaultValue={saved.label ?? ''}
               onChange={(event) =>
@@ -136,10 +140,10 @@ export default function SaveButton({ place, point, compact, onOpen }: Props) {
               }}
             >
               <Icon name="trash" size={16} />
-              Kaldır
+              {t('common.remove')}
             </button>
             <button type="button" onClick={() => setOpen(false)}>
-              Bitti
+              {t('saved.done')}
             </button>
           </div>
         </div>

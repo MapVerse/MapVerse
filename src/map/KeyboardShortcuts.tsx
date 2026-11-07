@@ -2,6 +2,7 @@ import { useMap } from '@vis.gl/react-maplibre'
 import { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { toggleMeasuring } from '../features/measure/measureMode.ts'
+import { t, useLocale } from '../i18n/index.ts'
 import { Icon } from '../icons/Icon.tsx'
 import './KeyboardShortcuts.css'
 import {
@@ -61,6 +62,7 @@ export default function KeyboardShortcuts() {
 function ShortcutHelp() {
   const dialog = useRef<HTMLDialogElement>(null)
   const titleId = useId()
+  useLocale()
 
   useEffect(() => {
     const element = dialog.current
@@ -99,11 +101,11 @@ function ShortcutHelp() {
     >
       <div className="mv-shortcuts-body">
         <div className="mv-shortcuts-head">
-          <h2 id={titleId}>Klavye kısayolları</h2>
+          <h2 id={titleId}>{t('shortcuts.title')}</h2>
           <button
             type="button"
             className="mv-shortcuts-close"
-            aria-label="Kapat"
+            aria-label={t('common.close')}
             onClick={() => setShortcutHelpOpen(false)}
           >
             <Icon name="close" size={18} />
@@ -117,7 +119,7 @@ function ShortcutHelp() {
                   <kbd key={key}>{key}</kbd>
                 ))}
               </dt>
-              <dd>{label}</dd>
+              <dd>{t(label)}</dd>
             </div>
           ))}
         </dl>

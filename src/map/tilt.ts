@@ -1,4 +1,5 @@
 import type { IControl, Map as MapLibreMap } from 'maplibre-gl'
+import { t } from '../i18n/index.ts'
 import { STROKES } from '../icons/strokes.ts'
 
 const TILTED_PITCH = 60
@@ -34,8 +35,8 @@ export class TiltControl implements IControl {
     const tilted = (this.map?.getPitch() ?? 0) > 10
     const next = tilted ? '2D' : '3D'
     this.label.textContent = next
-    this.button.title = `${next} görünüme geç (3)`
-    this.button.setAttribute('aria-label', `${next} görünüme geç`)
+    this.button.title = t('controls.tiltTitle', { view: next })
+    this.button.setAttribute('aria-label', t('controls.tilt', { view: next }))
   }
 
   private readonly toggle = () => {

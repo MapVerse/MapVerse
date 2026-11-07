@@ -1,3 +1,4 @@
+import { t } from '../../i18n/index.ts'
 import { categoryInfo } from './categories.ts'
 import type { OsmRef, Place } from './place.ts'
 
@@ -76,7 +77,7 @@ export function decodePlace(value: string | null): SharedPlace | null {
     : undefined
   if (!osm && !name) {
     return {
-      place: { key: pointKey(lngLat), name: 'Seçilen nokta', lngLat },
+      place: { key: pointKey(lngLat), name: t('common.selectedPoint'), lngLat },
       point: true,
     }
   }
@@ -84,7 +85,7 @@ export function decodePlace(value: string | null): SharedPlace | null {
   return {
     place: {
       key: osm ? `${osm.type}${osm.id}` : `shared:${lngLat.join()}:${name}`,
-      name: name || info?.label || 'Yer',
+      name: name || info?.label || t('common.place'),
       category: info?.label,
       categoryKey: info?.key,
       lngLat,

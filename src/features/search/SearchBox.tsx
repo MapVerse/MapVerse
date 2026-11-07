@@ -7,6 +7,7 @@ import {
   type CSSProperties,
   type KeyboardEvent,
 } from 'react'
+import { t, useLocale } from '../../i18n/index.ts'
 import { Icon } from '../../icons/Icon.tsx'
 import { onMap, swallowNextClick } from '../../lib/swallowClick.ts'
 import { HOVER_QUERY, useMediaQuery } from '../../lib/useMediaQuery.ts'
@@ -22,7 +23,7 @@ import CategoryBadge from '../place/CategoryBadge.tsx'
 import { distanceMeters, formatDistance } from '../place/place.ts'
 import { matchCategory, nearbyLabel } from './categoryQuery.ts'
 import { findMatch } from './match.ts'
-import { QUICK_CATEGORIES, type QuickCategory } from './overpass.ts'
+import { QUICK_CATEGORIES, quickLabel, type QuickCategory } from './overpass.ts'
 import type { SearchResult } from './photon.ts'
 import type { CategoryResults, CategorySearch } from './useCategorySearch.ts'
 import { MIN_QUERY_LENGTH, usePlaceSearch } from './usePlaceSearch.ts'
@@ -58,9 +59,9 @@ type Row =
 
 /** The parts of the list, each under its own heading. */
 const SECTIONS = [
-  { part: 'saved', heading: 'Kayıtlı yerler' },
-  { part: 'recent', heading: 'Son aramalar' },
-  { part: 'found', heading: '' },
+  { part: 'saved', heading: 'saved.title' },
+  { part: 'recent', heading: 'search.recent' },
+  { part: 'found', heading: null },
 ] as const
 
 const partOf = (row: Row) =>
@@ -96,6 +97,7 @@ export default function SearchBox({
   startCategory,
 }: Props) {
   const { current: map } = useMap()
+  useLocale()
   const inputRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -145,16 +147,16 @@ export default function SearchBox({
     ? null
     : nearby
       ? nearby.status === 'loading'
-        ? 'Yakındaki yerler aranıyor…'
+        ? t('search.searchingNearby')
         : nearby.status === 'error'
-          ? 'Arama şu anda yapılamıyor.'
+          ? t('common.searchFailed')
           : nearby.status === 'done' && nearby.results.length === 0
-            ? 'Yakında bu türde bir yer bulunamadı.'
+            ? t('search.noneNearby')
             : null
       : typed && status === 'error'
-        ? 'Arama şu anda yapılamıyor.'
+        ? t('common.searchFailed')
         : typed && status === 'done' && items.length === 0
-          ? 'Sonuç bulunamadı.'
+          ? t('common.noResults')
           : null
   // While the box is in use, a press on the map only puts it away (and a
   // phone's keyboard with it): it doesn't also open what is under it
@@ -190,7 +192,7 @@ export default function SearchBox({
     started.current = true
     const { category, locate } = startCategory
     const begin = (center: [number, number]) => {
-      setQuery(category.label)
+      setQuery(quickLabel(category))
       setActive(-1)
       onCategory({ category, center })
       // The list opens only where no keyboard comes up over it
@@ -253,7 +255,7 @@ export default function SearchBox({
   function pickCategory(category: QuickCategory) {
     const around = map?.getCenter().toArray()
     if (!around) return
-    setQuery(category.label)
+    setQuery(quickLabel(category))
     setActive(-1)
     setOpen(true)
     onClear()
@@ -313,7 +315,7 @@ export default function SearchBox({
           ref={inputRef}
           type="search"
           role="combobox"
-          aria-label="Arama ve yer seçimi"
+          aria-label={t('search.label')}
           aria-autocomplete="list"
           aria-expanded={popup}
           // Only while the list is there to point to
@@ -325,7 +327,7 @@ export default function SearchBox({
           aria-activedescendant={
             current >= 0 ? `${listId}-${current}` : undefined
           }
-          placeholder={narrow ? 'Burada ara' : 'Arama ve yer seçimi'}
+          placeholder={narrow ? t('search.short') : t('search.label')}
           aria-keyshortcuts="/"
           autoComplete="off"
           value={query}
@@ -345,7 +347,7 @@ export default function SearchBox({
           <button
             type="button"
             className="search-action search-clear"
-            aria-label="Aramayı temizle"
+            aria-label={t('search.clear')}
             onClick={clear}
           >
             <Icon name="close" size={18} />
@@ -354,8 +356,8 @@ export default function SearchBox({
         <button
           type="button"
           className="search-action"
-          aria-label="Ara"
-          title="Ara"
+          aria-label={t('search.search')}
+          title={t('search.search')}
           // Keep focus in the box so the open list is still there on click
           onMouseDown={(event) => event.preventDefault()}
           onClick={search}
@@ -366,8 +368,8 @@ export default function SearchBox({
         <button
           type="button"
           className="search-action"
-          aria-label="Yol tarifi"
-          title="Yol tarifi"
+          aria-label={t('common.directions')}
+          title={t('common.directions')}
           onClick={onDirections}
         >
           <Icon name="route" size={22} strokeWidth={1.9} />
@@ -383,7 +385,7 @@ export default function SearchBox({
             <div
               className="search-categories"
               role="group"
-              aria-label="Yakındakiler"
+              aria-label={t('search.nearby')}
               // Let a mouse wheel scroll the row sideways
               onWheel={(event) => {
                 if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
@@ -399,7 +401,7 @@ export default function SearchBox({
                   onClick={() => pickCategory(category)}
                 >
                   <CategoryBadge categoryKey={category.key} size={26} />
-                  {category.label}
+                  {quickLabel(category)}
                 </button>
               ))}
             </div>
@@ -408,11 +410,11 @@ export default function SearchBox({
             <div className="search-lists">
               {sections.map(({ part, heading, rows }) => (
                 <div key={part}>
-                  {heading && <p className="search-heading">{heading}</p>}
+                  {heading && <p className="search-heading">{t(heading)}</p>}
                   <ul
                     id={`${listId}-${part}`}
                     role="listbox"
-                    aria-label={heading || 'Arama sonuçları'}
+                    aria-label={t(heading ?? 'search.results')}
                     className="search-results"
                   >
                     {rows.map(({ row, index: i }) => (
@@ -476,7 +478,7 @@ function RowContent({
         <CategoryBadge categoryKey={row.category.key} size={36} />
         <span className="search-text">
           <span className="search-name">{nearbyLabel(row.category)}</span>
-          <span className="search-detail">En yakınları haritada göster</span>
+          <span className="search-detail">{t('search.showNearest')}</span>
         </span>
         <span className="search-distance">
           <Icon name="search" size={18} />

@@ -1,3 +1,4 @@
+import { t } from '../../i18n/index.ts'
 import type { Mode } from './transit.ts'
 import { parseLocal } from './when.ts'
 import type { Avoid, When } from './valhalla.ts'
@@ -89,7 +90,7 @@ function readPoint(value: unknown): SharedPoint | undefined {
     name:
       typeof name === 'string' && name.trim()
         ? name.slice(0, NAME_LENGTH)
-        : 'Paylaşılan nokta',
+        : t('directions.sharedPoint'),
     lngLat: [lng, lat],
   }
 }

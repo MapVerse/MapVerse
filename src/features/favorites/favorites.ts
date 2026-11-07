@@ -1,15 +1,25 @@
+import { DICTIONARIES, t, type MessageKey } from '../../i18n/index.ts'
 import type { StrokeName } from '../../icons/strokes.ts'
 import type { Place } from '../place/place.ts'
+import { categoryInfo } from '../place/categories.ts'
 import { distanceMeters } from '../place/place.ts'
 
 /** Home and work, one of each, and any number of starred places. */
 export type FavoriteKind = 'home' | 'work' | 'star'
 
-export const KIND_LABELS: Record<FavoriteKind, string> = {
-  home: 'Ev',
-  work: 'İş',
-  star: 'Yıldızlı',
+const KIND_KEYS: Record<FavoriteKind, MessageKey> = {
+  home: 'saved.home',
+  work: 'saved.work',
+  star: 'saved.star',
 }
+
+/** What a kind of saved place is called, in the language in use. */
+export const kindLabel = (kind: FavoriteKind) => t(KIND_KEYS[kind])
+
+/** What a point on the map is named, in any language, when nothing is known of it. */
+const POINT_NAMES = new Set(
+  Object.values(DICTIONARIES).map((d) => d['common.selectedPoint']),
+)
 
 export const KIND_ICONS: Record<FavoriteKind, StrokeName> = {
   home: 'home',
@@ -39,13 +49,14 @@ export type Favorite = {
 
 /** How a saved place reads in a list: its own name for it, or the place's. */
 export const favoriteTitle = (f: Favorite) =>
-  f.kind === 'star' ? f.label || f.name : KIND_LABELS[f.kind]
+  f.kind === 'star' ? f.label || f.name : kindLabel(f.kind)
 
 /** What a saved place is, under its name: the place's own name, or where. */
 export function favoriteDetail(f: Favorite): string {
   const own = f.kind !== 'star' || f.label ? f.name : undefined
-  const named = own && own !== 'Seçilen nokta' ? own : undefined
-  return [named, f.address ?? (named ? undefined : f.category)]
+  const named = own && !POINT_NAMES.has(own) ? own : undefined
+  const category = categoryInfo(f.categoryKey)?.label ?? f.category
+  return [named, f.address ?? (named ? undefined : category)]
     .filter(Boolean)
     .join(' · ')
 }

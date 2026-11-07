@@ -1,3 +1,5 @@
+import { currentLocale, translate, type Locale } from '../../i18n/index.ts'
+import { formatNumber } from '../../i18n/format.ts'
 import type { Maneuver, TravelMode } from '../directions/valhalla.ts'
 import { isArrival } from './course.ts'
 
@@ -14,21 +16,34 @@ export const STAGES: Record<TravelMode, [number, number, number]> = {
 /** What has been said of a maneuver: up to which stage, by index. */
 export type Said = { maneuver: number; stage: number }
 
-const kilometres = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 })
-
 /** A distance as it is said, rounded as one would: "450 metre",
- *  "1,5 kilometre". */
-export function spokenDistance(meters: number): string {
+ *  "1,5 kilometre"; in English, "450 meters", "1.5 kilometers". */
+export function spokenDistance(
+  meters: number,
+  locale: Locale = currentLocale(),
+): string {
   if (meters >= 950) {
-    return `${kilometres.format(Math.round(meters / 100) / 10)} kilometre`
+    const km = Math.round(meters / 100) / 10
+    return translate(locale, 'voice.kilometers', {
+      n: formatNumber(km, { maximumFractionDigits: 1 }, locale),
+      count: km,
+    })
   }
   const step = meters >= 300 ? 50 : 10
-  return `${Math.max(step, Math.round(meters / step) * step)} metre`
+  const n = Math.max(step, Math.round(meters / step) * step)
+  return translate(locale, 'voice.meters', { n })
 }
 
 /** "500 metre sonra, Atatürk Bulvarı caddesine doğru sağa dönün." */
-const inDistance = (meters: number, text: string) =>
-  `${spokenDistance(meters)} sonra, ${text}`
+function inDistance(meters: number, text: string, locale: Locale) {
+  // In English the instruction goes on the sentence: "In 500 meters, turn…"
+  const rest =
+    locale === 'en' ? text.charAt(0).toLowerCase() + text.slice(1) : text
+  return translate(locale, 'voice.inDistance', {
+    distance: spokenDistance(meters, locale),
+    text: rest,
+  })
+}
 
 /**
  * What to say now of the next maneuver, `toNext` metres ahead, if
@@ -43,6 +58,7 @@ export function announcement(
   toNext: number,
   mode: TravelMode,
   said: Said | null,
+  locale: Locale = currentLocale(),
 ): { text: string; said: Said } | null {
   const m = maneuvers[next]
   if (!m) return null
@@ -57,7 +73,11 @@ export function announcement(
     if (isArrival(m)) return null
     text = verbal.pre ?? m.instruction
   } else {
-    text = inDistance(toNext, verbal.alert ?? verbal.pre ?? m.instruction)
+    text = inDistance(
+      toNext,
+      verbal.alert ?? verbal.pre ?? m.instruction,
+      locale,
+    )
   }
   return { text, said: { maneuver: next, stage } }
 }

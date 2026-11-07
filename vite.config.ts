@@ -39,5 +39,9 @@ export default defineConfig({
   // maplibre-gl's worker is an ES module that imports a shared chunk
   worker: { format: 'es' },
   // e2e/ holds the Playwright tests, run by `npm run e2e`
-  test: { exclude: [...configDefaults.exclude, 'e2e/**'] },
+  test: {
+    exclude: [...configDefaults.exclude, 'e2e/**'],
+    // Unit tests read the interface in Turkish
+    setupFiles: ['src/i18n/testSetup.ts'],
+  },
 })

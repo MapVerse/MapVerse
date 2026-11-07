@@ -1,25 +1,19 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { t, useLocale, type MessageKey } from '../i18n/index.ts'
 import { errorKind, type AppErrorKind } from './appError.ts'
 import { reportError } from './errorReport.ts'
 import './ErrorBoundary.css'
 
-const MESSAGES: Record<AppErrorKind, { title: string; body: string }> = {
-  webgl: {
-    title: 'Harita bu tarayıcıda gösterilemiyor',
-    body: 'Haritayı çizmek için WebGL2 gerekiyor, ancak bu tarayıcıda ya da cihazda kullanılamıyor. Tarayıcı ayarlarından donanım hızlandırmayı açmayı ya da güncel bir tarayıcı kullanmayı deneyin.',
-  },
-  load: {
-    title: 'Harita yüklenemedi',
-    body: 'Haritanın dosyaları indirilemedi. İnternet bağlantınız kesilmiş ya da uygulama güncellenmiş olabilir. Bağlantınızı kontrol edip sayfayı yeniden yükleyin.',
-  },
-  other: {
-    title: 'Bir şeyler ters gitti',
-    body: 'Beklenmeyen bir hata oluştu. Sayfayı yeniden yüklemek çoğu zaman sorunu çözer.',
-  },
-}
+const MESSAGES: Record<AppErrorKind, { title: MessageKey; body: MessageKey }> =
+  {
+    webgl: { title: 'error.webglTitle', body: 'error.webglBody' },
+    load: { title: 'error.loadTitle', body: 'error.loadBody' },
+    other: { title: 'error.otherTitle', body: 'error.otherBody' },
+  }
 
 /** What shows in place of the app once something has stopped it. */
 function AppError({ kind }: { kind: AppErrorKind }) {
+  useLocale()
   const { title, body } = MESSAGES[kind]
   return (
     <main className="mv-app-error" role="alert">
@@ -38,10 +32,10 @@ function AppError({ kind }: { kind: AppErrorKind }) {
           <path d="M9 4v14M15 6v6" />
           <path d="M15 16v.01" strokeWidth="2.4" />
         </svg>
-        <h1>{title}</h1>
-        <p>{body}</p>
+        <h1>{t(title)}</h1>
+        <p>{t(body)}</p>
         <button type="button" onClick={() => window.location.reload()}>
-          Yeniden yükle
+          {t('error.reload')}
         </button>
       </div>
     </main>

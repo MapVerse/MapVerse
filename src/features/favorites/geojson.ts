@@ -1,4 +1,5 @@
 import type { Feature, FeatureCollection, Point } from 'geojson'
+import { t } from '../../i18n/index.ts'
 import {
   LABEL_MAX,
   mergeFavorites,
@@ -74,7 +75,7 @@ function fromFeature(feature: unknown, now: number): Favorite | undefined {
   const kind: FavoriteKind =
     p.kind === 'home' || p.kind === 'work' ? p.kind : 'star'
   const label = text(p.label, LABEL_MAX)
-  const name = text(p.name) ?? text(p.title) ?? label ?? 'Kayıtlı yer'
+  const name = text(p.name) ?? text(p.title) ?? label ?? t('saved.one')
   const typeLetter =
     typeof p.osm_type === 'string'
       ? ({ node: 'N', way: 'W', relation: 'R' }[p.osm_type] ??

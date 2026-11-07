@@ -1,5 +1,6 @@
 import { useMap } from '@vis.gl/react-maplibre'
 import { useEffect, useState } from 'react'
+import { useLocale } from '../../i18n/index.ts'
 import { searchPlaces, type SearchResult } from './photon.ts'
 
 export const MIN_QUERY_LENGTH = 3
@@ -9,7 +10,12 @@ type Status = 'idle' | 'loading' | 'done' | 'error'
 
 const NONE: SearchResult[] = []
 
-type Answer = { q: string; results: SearchResult[]; status: Status }
+type Answer = {
+  q: string
+  locale: string
+  results: SearchResult[]
+  status: Status
+}
 
 /** Debounced Photon search, biased towards the area currently on screen. */
 export function usePlaceSearch(query: string): {
@@ -22,6 +28,8 @@ export function usePlaceSearch(query: string): {
   const [answer, setAnswer] = useState<Answer>()
   const q = query.trim()
   const enabled = q.length >= MIN_QUERY_LENGTH
+  // Asked again in another language, as the names come in it
+  const locale = useLocale()
 
   useEffect(() => {
     if (q.length < MIN_QUERY_LENGTH) return
@@ -32,10 +40,12 @@ export function usePlaceSearch(query: string): {
         zoom: map?.getZoom(),
         signal: controller.signal,
       })
-        .then((places) => setAnswer({ q, results: places, status: 'done' }))
+        .then((places) =>
+          setAnswer({ q, locale, results: places, status: 'done' }),
+        )
         .catch(() => {
           if (!controller.signal.aborted) {
-            setAnswer({ q, results: [], status: 'error' })
+            setAnswer({ q, locale, results: [], status: 'error' })
           }
         })
     }, DEBOUNCE_MS)
@@ -43,10 +53,10 @@ export function usePlaceSearch(query: string): {
       clearTimeout(timer)
       controller.abort()
     }
-  }, [q, map])
+  }, [q, map, locale])
 
   if (!enabled) return { results: NONE, status: 'idle' }
-  return answer?.q === q
+  return answer?.q === q && answer.locale === locale
     ? { results: answer.results, status: answer.status }
     : { results: NONE, status: 'loading' }
 }

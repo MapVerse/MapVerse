@@ -4,6 +4,7 @@ import {
   type ErrorEvent,
   type MapLayerMouseEvent,
   type MapRef,
+  useMap,
 } from '@vis.gl/react-maplibre'
 import type { LngLat, MapGeoJSONFeature } from 'maplibre-gl'
 import {
@@ -15,6 +16,7 @@ import {
   type ComponentType,
 } from 'react'
 import { MapStartError } from '../app/appError.ts'
+import { t, useLocale } from '../i18n/index.ts'
 import AccountMenu from '../features/account/AccountMenu.tsx'
 import AreaNames from '../features/areas/AreaNames.tsx'
 import Directions from '../features/directions/Directions.tsx'
@@ -77,20 +79,43 @@ import { useTerrainEnabled } from './terrainSetting.ts'
 // Istanbul; the URL hash (#zoom/lat/lng) takes precedence when present.
 const INITIAL_VIEW = { longitude: 28.9784, latitude: 41.0082, zoom: 11 }
 
-/** Turkish text for MapLibre's own buttons and labels. */
-const LOCALE = {
-  'AttributionControl.ToggleAttribution': 'Atıfları göster',
-  'AttributionControl.MapFeedback': 'Harita hatası bildir',
-  'GeolocateControl.FindMyLocation': 'Konumumu bul',
-  'GeolocateControl.LocationNotAvailable': 'Konum kullanılamıyor',
-  'Map.Title': 'Harita',
-  'Marker.Title': 'İşaret',
-  'NavigationControl.ResetBearing': 'Kuzeyi yukarı çevir',
-  'NavigationControl.ZoomIn': 'Yakınlaştır',
-  'NavigationControl.ZoomOut': 'Uzaklaştır',
-  'Popup.Close': 'Kapat',
+/** MapLibre's own buttons and labels, in the language in use. */
+const maplibreLocale = () => ({
+  'AttributionControl.ToggleAttribution': t('maplibre.toggleAttribution'),
+  'AttributionControl.MapFeedback': t('maplibre.mapFeedback'),
+  'GeolocateControl.FindMyLocation': t('maplibre.findMyLocation'),
+  'GeolocateControl.LocationNotAvailable': t('maplibre.locationNotAvailable'),
+  'Map.Title': t('maplibre.map'),
+  'Marker.Title': t('maplibre.marker'),
+  'NavigationControl.ResetBearing': t('maplibre.resetBearing'),
+  'NavigationControl.ZoomIn': t('maplibre.zoomIn'),
+  'NavigationControl.ZoomOut': t('maplibre.zoomOut'),
+  'Popup.Close': t('common.close'),
   'ScaleControl.Kilometers': 'km',
   'ScaleControl.Meters': 'm',
+})
+
+/**
+ * Puts MapLibre's own strings into the language in use as it changes:
+ * MapLibre reads them as it adds a control, so the map's buttons are added
+ * again after this (see MapControls' key), and what is already up, the
+ * map itself and its attribution button, is renamed here.
+ */
+function MapLocale() {
+  const { current } = useMap()
+  const locale = useLocale()
+  useEffect(() => {
+    const map = current?.getMap()
+    if (!map) return
+    Object.assign(map._locale, maplibreLocale())
+    map.getCanvas().setAttribute('aria-label', t('maplibre.map'))
+    const attribution = map
+      .getContainer()
+      .querySelector('.maplibregl-ctrl-attrib-button')
+    attribution?.setAttribute('title', t('maplibre.toggleAttribution'))
+    attribution?.setAttribute('aria-label', t('maplibre.toggleAttribution'))
+  }, [current, locale])
+  return null
 }
 
 /**
@@ -135,7 +160,7 @@ const viewOf = (place: Place): View =>
 /** A point clicked on the map, as a place. */
 const pointAt = (lngLat: [number, number]): Place => ({
   key: `point:${lngLat.join()}`,
-  name: 'Seçilen nokta',
+  name: t('common.selectedPoint'),
   lngLat,
 })
 
@@ -188,6 +213,8 @@ export default function MapView() {
   const terrain = useTerrainEnabled()
   const satellite = useSatelliteEnabled()
   const design = useMapDesign()
+  const locale = useLocale()
+  const [initialLocale] = useState(maplibreLocale)
   const [poiLayerIds, setPoiLayerIds] = useState<string[]>([])
   const [hoveringPoi, setHoveringPoi] = useState(false)
   // What a link or a home screen shortcut opened the app with
@@ -441,8 +468,8 @@ export default function MapView() {
           : INITIAL_VIEW
       }
       ref={installImageResolver}
-      mapStyle={mapStyle(theme, terrain, design, satellite)}
-      locale={LOCALE}
+      mapStyle={mapStyle(theme, terrain, design, satellite, locale)}
+      locale={initialLocale}
       hash
       // Drops the default MapLibre link but keeps the data attribution the
       // licenses require; it collapses to an ⓘ button once the map is moved.
@@ -486,7 +513,9 @@ export default function MapView() {
           setSelection({ place, view: point ? 'point' : 'full' })
         }
       />
-      <MapControls />
+      <MapLocale />
+      {/* Added again in another language, as MapLibre names them as added */}
+      <MapControls key={locale} />
       <KeyboardShortcuts />
       <ScaleControl position="bottom-left" />
       {design === 'san-andreas' && <SanAndreasHud />}

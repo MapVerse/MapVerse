@@ -1,5 +1,13 @@
 import { useMap } from '@vis.gl/react-maplibre'
 import { useId } from 'react'
+import {
+  setLocalePreference,
+  t,
+  useLocale,
+  useLocalePreference,
+  type LocalePreference,
+  type MessageKey,
+} from '../../i18n/index.ts'
 import { Icon } from '../../icons/Icon.tsx'
 import type { StrokeName } from '../../icons/strokes.ts'
 import {
@@ -31,16 +39,30 @@ import {
 } from '../search/useRecentSearches.ts'
 import './Settings.css'
 
-const THEMES: { value: ThemePreference; label: string; icon: StrokeName }[] = [
-  { value: 'light', label: 'Açık', icon: 'sun' },
-  { value: 'dark', label: 'Koyu', icon: 'moon' },
-  { value: 'system', label: 'Sistem', icon: 'monitor' },
+const THEMES: {
+  value: ThemePreference
+  label: MessageKey
+  icon: StrokeName
+}[] = [
+  { value: 'light', label: 'settings.light', icon: 'sun' },
+  { value: 'dark', label: 'settings.dark', icon: 'moon' },
+  { value: 'system', label: 'settings.system', icon: 'monitor' },
 ]
 
-const DESIGN_LABELS: Record<MapDesign, string> = {
-  standard: 'Standart',
-  vintage: 'Eski harita',
-  'san-andreas': 'San Andreas',
+/**
+ * The languages, each named in itself so it can be found whatever the
+ * interface speaks; and the browser's own.
+ */
+const LANGUAGES: { value: LocalePreference; name?: string; lang?: string }[] = [
+  { value: 'tr', name: 'Türkçe', lang: 'tr' },
+  { value: 'en', name: 'English', lang: 'en' },
+  { value: 'system' },
+]
+
+const DESIGN_LABELS: Record<MapDesign, MessageKey> = {
+  standard: 'settings.designStandard',
+  vintage: 'settings.designVintage',
+  'san-andreas': 'settings.designSanAndreas',
 }
 
 /** A tiny map in a design's colours: ground, a park, water and two roads. */
@@ -103,7 +125,7 @@ function Switch({
 }
 
 /**
- * Theme, map design, 3D terrain, satellite imagery, recent searches and,
+ * Theme, language, map design, 3D terrain, satellite imagery, recent searches and,
  * with a keyboard, its shortcuts, shown in the account menu.
  */
 export default function SettingsSections() {
@@ -113,11 +135,14 @@ export default function SettingsSections() {
   const terrain = useTerrainEnabled()
   const satellite = useSatelliteEnabled()
   const design = useMapDesign()
+  const language = useLocalePreference()
+  useLocale()
   const recent = useRecentSearches()
   // A keyboard, most likely, where there is a mouse
   const keyboard = useMediaQuery(HOVER_QUERY)
   const themeLabelId = useId()
   const designLabelId = useId()
+  const languageLabelId = useId()
 
   function toggleTerrain() {
     setTerrainEnabled(!terrain)
@@ -131,7 +156,7 @@ export default function SettingsSections() {
     <>
       <div className="mv-settings-section">
         <span id={themeLabelId} className="mv-settings-label">
-          Tema
+          {t('settings.theme')}
         </span>
         <div
           className="mv-settings-themes"
@@ -146,20 +171,50 @@ export default function SettingsSections() {
               onClick={() => setThemePreference(option.value)}
             >
               <Icon name={option.icon} size={20} />
-              {option.label}
+              {t(option.label)}
             </button>
           ))}
         </div>
         {preference === 'system' && (
           <p className="mv-settings-hint">
-            Cihazının ayarına uyar, şu an {theme === 'dark' ? 'koyu' : 'açık'}.
+            {t(
+              theme === 'dark'
+                ? 'settings.themeFollowsDark'
+                : 'settings.themeFollowsLight',
+            )}
           </p>
         )}
       </div>
 
       <div className="mv-settings-section">
+        <span id={languageLabelId} className="mv-settings-label">
+          {t('settings.language')}
+        </span>
+        <div
+          className="mv-settings-themes"
+          role="group"
+          aria-labelledby={languageLabelId}
+        >
+          {LANGUAGES.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              lang={option.lang}
+              aria-pressed={language === option.value}
+              onClick={() => setLocalePreference(option.value)}
+            >
+              {option.name ?? t('settings.system')}
+            </button>
+          ))}
+        </div>
+        {language === 'system' && (
+          <p className="mv-settings-hint">{t('settings.languageFollows')}</p>
+        )}
+      </div>
+
+      <div className="mv-settings-section">
         <span id={designLabelId} className="mv-settings-label">
-          Harita tasarımı
+          {t('settings.design')}
         </span>
         <div
           className="mv-settings-designs"
@@ -174,32 +229,32 @@ export default function SettingsSections() {
               onClick={() => setMapDesign(option)}
             >
               <DesignPreview design={option} />
-              {DESIGN_LABELS[option]}
+              {t(DESIGN_LABELS[option])}
             </button>
           ))}
         </div>
       </div>
 
       <div className="mv-settings-section">
-        <span className="mv-settings-label">Harita</span>
+        <span className="mv-settings-label">{t('settings.map')}</span>
         <Switch
           icon="mountain"
-          label="3B arazi"
-          note="Dağlar ve tepeler kabartmalı görünür"
+          label={t('settings.terrain')}
+          note={t('settings.terrainNote')}
           checked={terrain}
           onToggle={toggleTerrain}
         />
         <Switch
           icon="satellite"
-          label="Uydu"
-          note="Yollar ve adlar uydu görüntüsünün üstünde"
+          label={t('settings.satellite')}
+          note={t('settings.satelliteNote')}
           checked={satellite}
           onToggle={() => setSatelliteEnabled(!satellite)}
         />
       </div>
 
       <div className="mv-settings-section">
-        <span className="mv-settings-label">Son aramalar</span>
+        <span className="mv-settings-label">{t('settings.recent')}</span>
         <button
           type="button"
           className="mv-settings-clear"
@@ -207,7 +262,7 @@ export default function SettingsSections() {
           onClick={clearRecentSearches}
         >
           <Icon name="trash" size={18} />
-          {recent.length > 0 ? 'Son aramaları temizle' : 'Kayıtlı arama yok'}
+          {t(recent.length > 0 ? 'settings.clearRecent' : 'settings.noRecent')}
         </button>
       </div>
 
@@ -220,7 +275,7 @@ export default function SettingsSections() {
             onClick={() => setShortcutHelpOpen(true)}
           >
             <Icon name="keyboard" size={18} />
-            Klavye kısayolları
+            {t('settings.shortcuts')}
             <kbd>?</kbd>
           </button>
         </div>

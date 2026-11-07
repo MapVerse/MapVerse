@@ -13,7 +13,8 @@
     />
     <meta name="theme-color" content="#ffffff" />
     <script>
-      // Apply the theme before the first paint; src/theme/theme.ts takes over
+      // Apply the theme and language before the first paint;
+      // src/theme/theme.ts and src/i18n/locale.ts take over
       ;(function () {
         var saved
         try {
@@ -29,6 +30,16 @@
             .querySelector('meta[name="theme-color"]')
             .setAttribute('content', '#1f2329')
         }
+        // The page's language, as src/i18n/locale.ts picks it
+        var lang
+        try {
+          lang = localStorage.getItem('mapverse:language')
+        } catch (e) {}
+        if (lang !== 'tr' && lang !== 'en') {
+          var first = (navigator.languages && navigator.languages[0]) || ''
+          lang = !first || /^tr(-|$)/i.test(first) ? 'tr' : 'en'
+        }
+        document.documentElement.lang = lang
       })()
     </script>
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />

@@ -3,6 +3,7 @@ import type {
   IControl,
   Map as MapLibreMap,
 } from 'maplibre-gl'
+import { t } from '../i18n/index.ts'
 import { compassHeading, easeHeading, shouldTurn } from './heading.ts'
 
 /** Safari on iOS asks before it shares the compass. */
@@ -205,9 +206,9 @@ export class LocateControl implements IControl {
     if (!button || !this.map) return
     button.classList.toggle('mv-heading-on', this.following)
     const label = this.following
-      ? 'Kuzeyi yukarı çevir, konumu kapat'
+      ? t('controls.northStopLocating')
       : this.heading !== null
-        ? 'Konumumu bul, yönüme göre çevir'
+        ? t('controls.locateAndTurn')
         : this.map._getUIString('GeolocateControl.FindMyLocation')
     button.title = label
     button.setAttribute('aria-label', label)

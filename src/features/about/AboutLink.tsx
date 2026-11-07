@@ -1,3 +1,4 @@
+import { t } from '../../i18n/index.ts'
 import { Icon } from '../../icons/Icon.tsx'
 import { setAboutOpen } from './aboutOpen.ts'
 import './About.css'
@@ -13,7 +14,7 @@ export default function AboutLink() {
         onClick={() => setAboutOpen(true)}
       >
         <Icon name="info" size={18} />
-        Hakkında ve gizlilik
+        {t('about.title')}
       </button>
     </div>
   )

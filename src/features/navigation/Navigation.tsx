@@ -1,6 +1,7 @@
 import { Layer, Marker, Source, useMap } from '@vis.gl/react-maplibre'
 import type { ExpressionSpecification, PaddingOptions } from 'maplibre-gl'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { t, useLocale, translate, type Locale } from '../../i18n/index.ts'
 import { Icon } from '../../icons/Icon.tsx'
 import { RISE_ZOOM, rising } from '../../map/style.ts'
 import {
@@ -80,7 +81,10 @@ const toFix = ({ coords, timestamp }: GeolocationPosition): Fix => ({
  */
 function ahead(m: Maneuver): string {
   if (!isArrival(m)) return m.instruction
-  return m.verbal?.alert ?? (m.stop ? `${m.stop}. durak` : 'Varış noktası')
+  return (
+    m.verbal?.alert ??
+    (m.stop ? t('stop.name', { n: m.stop }) : t('nav.destination'))
+  )
 }
 
 /** The icon for a maneuver, a stop's pin for a stop. */
@@ -114,7 +118,8 @@ function SpeakerIcon({ muted }: { muted: boolean }) {
  * maneuver in a banner at the top, the time and way left at the bottom,
  * the map following behind the position as an arrow, leaning ahead and
  * turned the way one goes. Off the route, the route is asked for again
- * from there; the turns are said aloud in Turkish, if the device can.
+ * from there; the turns are said aloud in the language the route is worded
+ * in, if the device can.
  */
 export default function Navigation({
   route,
@@ -124,7 +129,11 @@ export default function Navigation({
   onEnd,
 }: Props) {
   const { current: map } = useMap()
-  const { mode, avoid } = request
+  useLocale()
+  const { mode, avoid, language } = request
+  // What is said aloud is said in the route's own language, as Valhalla's
+  // instructions are
+  const voice: Locale = language === 'en-US' ? 'en' : 'tr'
   const [nav, setNav] = useState<Nav>(() =>
     startNavigation(
       prepareCourse(
@@ -153,20 +162,18 @@ export default function Navigation({
     mutedRef.current = muted
   })
   const say = (text: string) => {
-    if (!mutedRef.current) speak(text)
+    if (!mutedRef.current) speak(text, voice)
   }
 
   useWakeLock(!nav.arrived)
-  useEffect(() => watchVoices(setCanSpeak), [])
+  useEffect(() => watchVoices(setCanSpeak, voice), [voice])
 
   // The device's position as it comes, until arrived
   const arrived = nav.arrived
   useEffect(() => {
     if (arrived) return
     if (!('geolocation' in navigator)) {
-      onEndRef.current(
-        'Bu cihazda konum bulunamadığı için navigasyon başlatılamadı.',
-      )
+      onEndRef.current(t('nav.noGeolocation'))
       return
     }
     let fixed = false
@@ -178,11 +185,9 @@ export default function Navigation({
       },
       (error) => {
         if (error.code === error.PERMISSION_DENIED) {
-          onEndRef.current(
-            'Konumuna erişim izni verilmediği için navigasyon durduruldu.',
-          )
+          onEndRef.current(t('nav.denied'))
         } else if (!fixed) {
-          onEndRef.current('Konumun bulunamadığı için navigasyon durduruldu.')
+          onEndRef.current(t('nav.lost'))
         } else {
           // Lost for a while, as in a tunnel: on with the last known
           setSignalLost(true)
@@ -201,7 +206,7 @@ export default function Navigation({
     if (!mayReroute(lastReroute.current, now)) return
     lastReroute.current = now
     setRerouting(true)
-    say('Rota yeniden hesaplanıyor.')
+    say(translate(voice, 'nav.rerouteSaid'))
     const { stops, destination } = remaining(nav)
     const controller = new AbortController()
     reroute.current = controller
@@ -217,6 +222,7 @@ export default function Navigation({
         avoid,
         when: { kind: 'now' },
         ...(nav.heading !== null && { heading: nav.heading }),
+        ...(language && { language }),
       },
       controller.signal,
     )
@@ -251,6 +257,7 @@ export default function Navigation({
       progress.toNext,
       mode,
       said.current,
+      voice,
     )
     if (!next) return
     said.current = next.said
@@ -259,10 +266,10 @@ export default function Navigation({
   const reachedCount = reached.length
   useEffect(() => {
     const last = reached.at(-1)
-    if (last !== undefined) say(`${last}. durağa vardınız.`)
+    if (last !== undefined) say(translate(voice, 'stop.arrived', { n: last }))
   }, [reachedCount]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (arrived) say('Varış noktasına ulaştınız.')
+    if (arrived) say(translate(voice, 'nav.arrivedSaid'))
   }, [arrived]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (muted) hush()
@@ -371,11 +378,11 @@ export default function Navigation({
   }, [])
 
   const notice = rerouting
-    ? 'Rota yeniden hesaplanıyor…'
+    ? t('nav.rerouting')
     : signalLost
-      ? 'Konum sinyali bekleniyor…'
+      ? t('nav.signalLost')
       : !started
-        ? 'Konum bekleniyor…'
+        ? t('nav.waiting')
         : null
 
   return (
@@ -384,7 +391,7 @@ export default function Navigation({
         <section
           ref={bannerRef}
           className={`navigation-banner${arrived ? ' is-arrived' : ''}`}
-          aria-label="Sıradaki adım"
+          aria-label={t('nav.nextStep')}
         >
           {arrived ? (
             <div className="navigation-turn">
@@ -393,7 +400,7 @@ export default function Navigation({
               </span>
               <span className="navigation-turn-text">
                 <strong className="navigation-street">
-                  Varış noktasına ulaştınız
+                  {t('nav.arrived')}
                 </strong>
               </span>
             </div>
@@ -415,7 +422,7 @@ export default function Navigation({
               </div>
               {after && (
                 <p className="navigation-then">
-                  <span>Sonra:</span>
+                  <span>{t('nav.then')}</span>
                   <Icon name={iconOf(after)} size={16} strokeWidth={2} />
                   <span className="navigation-then-text">{ahead(after)}</span>
                 </p>
@@ -434,18 +441,18 @@ export default function Navigation({
             onClick={() => setFollowing(true)}
           >
             <Icon name="locate" size={18} />
-            Yeniden ortala
+            {t('nav.recenter')}
           </button>
         )}
 
         <section
           ref={barRef}
           className="navigation-bar mv-glass"
-          aria-label="Kalan yol"
+          aria-label={t('nav.remaining')}
         >
           {arrived ? (
             <div className="navigation-left">
-              <strong>Yolculuk tamamlandı</strong>
+              <strong>{t('nav.complete')}</strong>
             </div>
           ) : (
             <div className="navigation-left">
@@ -453,7 +460,7 @@ export default function Navigation({
                 {formatDuration(progress.seconds)}
               </strong>
               <span className="navigation-meta">
-                {formatDistance(progress.meters)} · Varış{' '}
+                {formatDistance(progress.meters)} · {t('nav.arrival')}{' '}
                 {formatArrival(progress.seconds, now)}
               </span>
             </div>
@@ -463,8 +470,8 @@ export default function Navigation({
               type="button"
               className="navigation-round"
               aria-pressed={muted}
-              aria-label="Sessiz"
-              title={muted ? 'Sesi aç' : 'Sesi kapat'}
+              aria-label={t('nav.mute')}
+              title={t(muted ? 'nav.unmuteTitle' : 'nav.muteTitle')}
               onClick={() => setMuted(!muted)}
             >
               <SpeakerIcon muted={muted} />
@@ -475,7 +482,7 @@ export default function Navigation({
             className="navigation-end"
             onClick={() => onEnd()}
           >
-            {arrived ? 'Tamam' : 'Bitir'}
+            {t(arrived ? 'common.done' : 'nav.end')}
           </button>
         </section>
       </div>

@@ -1,6 +1,7 @@
 import { Layer, Source } from '@vis.gl/react-maplibre'
 import type { FeatureCollection, MultiPolygon, Polygon } from 'geojson'
 import { useEffect, useState } from 'react'
+import { currentLocale } from '../../i18n/index.ts'
 import { NOMINATIM_URL } from '../../lib/endpoints.ts'
 import { useMapDesign } from '../../map/designSetting.ts'
 import type { OsmRef } from './place.ts'
@@ -77,6 +78,8 @@ async function lookup(
   const params = new URLSearchParams({
     osm_ids: `${osm.type}${osm.id}`,
     format: 'geojson',
+    // In English, English names; in Turkish, as the browser asks
+    ...(currentLocale() === 'en' && { 'accept-language': 'en' }),
     ...extra,
   })
   const res = await fetch(`${NOMINATIM}?${params}`, { signal })

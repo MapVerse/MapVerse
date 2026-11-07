@@ -1,3 +1,6 @@
+import { t } from '../../i18n/index.ts'
+import { formatMinutes } from '../../i18n/format.ts'
+
 /*
  * OpenStreetMap's `opening_hours`, in its everyday forms: `24/7`, or rules
  * such as `Mo-Fr 08:00-18:00; Sa 09:00-14:00; Su off; PH off`. Anything more
@@ -15,7 +18,8 @@ export type Week = Interval[][]
 export type Hours = { week: Week; holiday?: Interval[] }
 
 const DAY_KEYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
-export const DAY_NAMES = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
+/** The days' short names in the language in use, Monday first. */
+export const dayNames = () => t('days.short').split(',')
 const DAY = 24 * 60
 
 const DAYS = String.raw`(?:Mo|Tu|We|Th|Fr|Sa|Su|PH)(?:\s*-\s*(?:Mo|Tu|We|Th|Fr|Sa|Su))?`
@@ -267,10 +271,8 @@ export function openState(
   }
 }
 
-export const clock = (at: number) => {
-  const m = at === DAY ? DAY : at % DAY
-  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
-}
+/** A time of day in minutes, as the language in use writes it. */
+export const clock = (at: number) => formatMinutes(at === DAY ? DAY : at % DAY)
 
 /** A line saying whether a place is open now, and until or from when. */
 export function describeOpenState(
@@ -279,31 +281,37 @@ export function describeOpenState(
   isHoliday?: HolidayCheck,
 ): string {
   const state = openState(hours, wall, isHoliday)
-  if (state.always) return '24 saat açık'
-  if (!state.change) return state.open ? 'Açık' : 'Kapalı'
+  if (state.always) return t('hours.always')
+  if (!state.change) return t(state.open ? 'hours.open' : 'hours.closed')
   const { inDays, at } = state.change
-  const name = DAY_NAMES[(wall.weekday + inDays) % 7]
+  const day = dayNames()[(wall.weekday + inDays) % 7]
+  const time = clock(at)
   if (state.open) {
-    const when = inDays === 0 ? '' : inDays === 1 ? 'gece ' : `${name} `
-    return `Açık · Kapanış ${when}${clock(at)}`
+    const when =
+      inDays === 0
+        ? ''
+        : inDays === 1
+          ? t('hours.tonight')
+          : t('hours.onDay', { day })
+    return t('hours.openUntil', { when, time })
   }
   const when =
     inDays === 0
       ? ''
       : inDays === 1
-        ? 'yarın '
+        ? t('hours.tomorrow')
         : inDays === 7
-          ? `gelecek ${name} `
-          : `${name} `
-  return `Kapalı · Açılış ${when}${clock(at)}`
+          ? t('hours.nextWeek', { day })
+          : t('hours.onDay', { day })
+  return t('hours.closedUntil', { when, time })
 }
 
 /** A day's hours, as written out for reading. */
 export const dayHours = (day: Interval[]) =>
   day.length === 0
-    ? 'Kapalı'
+    ? t('hours.closed')
     : day.some(([from, to]) => from === 0 && to >= DAY)
-      ? '24 saat'
+      ? t('hours.allDay')
       : day.map(([from, to]) => `${clock(from)}–${clock(to)}`).join(', ')
 
 /**
@@ -315,16 +323,19 @@ export function weekLines(
   holiday?: Interval[],
 ): { days: string; hours: string }[] {
   const hours = week.map(dayHours)
+  const names = dayNames()
   const lines: { days: string; hours: string }[] = []
   for (let d = 0; d < 7;) {
     let end = d
     while (end + 1 < 7 && hours[end + 1] === hours[d]) end++
     lines.push({
-      days: end === d ? DAY_NAMES[d] : `${DAY_NAMES[d]}–${DAY_NAMES[end]}`,
+      days: end === d ? names[d] : `${names[d]}–${names[end]}`,
       hours: hours[d],
     })
     d = end + 1
   }
-  if (holiday) lines.push({ days: 'Resmî tatil', hours: dayHours(holiday) })
+  if (holiday) {
+    lines.push({ days: t('hours.holiday'), hours: dayHours(holiday) })
+  }
   return lines
 }

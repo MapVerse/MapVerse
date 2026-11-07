@@ -16,6 +16,7 @@ import {
   type KeyboardEvent,
   type PointerEvent,
 } from 'react'
+import { t, useLocale, type MessageKey } from '../../i18n/index.ts'
 import { Icon } from '../../icons/Icon.tsx'
 import type { StrokeName } from '../../icons/strokes.ts'
 import { useMapDesign } from '../../map/designSetting.ts'
@@ -48,6 +49,7 @@ import { googleTransitUrl, type Mode } from './transit.ts'
 import { useRoutes } from './useRoutes.ts'
 import {
   canAvoid,
+  routeLanguage,
   type Avoid,
   type Route,
   type RouteRequest,
@@ -75,23 +77,23 @@ type End = {
  *  by its id as it is moved. */
 type Slot = { id: number; end: End | null }
 
-const MODES: { mode: Mode; label: string; icon: StrokeName }[] = [
-  { mode: 'auto', label: 'Araba', icon: 'car' },
-  { mode: 'pedestrian', label: 'Yürüyüş', icon: 'walk' },
-  { mode: 'bicycle', label: 'Bisiklet', icon: 'bike' },
-  { mode: 'transit', label: 'Toplu taşıma', icon: 'bus' },
+const MODES: { mode: Mode; label: MessageKey; icon: StrokeName }[] = [
+  { mode: 'auto', label: 'directions.car', icon: 'car' },
+  { mode: 'pedestrian', label: 'directions.walk', icon: 'walk' },
+  { mode: 'bicycle', label: 'directions.bike', icon: 'bike' },
+  { mode: 'transit', label: 'directions.transit', icon: 'bus' },
 ]
 
-const AVOIDS: { key: keyof Avoid; label: string }[] = [
-  { key: 'tolls', label: 'Ücretli yollardan kaçın' },
-  { key: 'highways', label: 'Otoyoldan kaçın' },
-  { key: 'ferries', label: 'Feribottan kaçın' },
+const AVOIDS: { key: keyof Avoid; label: MessageKey }[] = [
+  { key: 'tolls', label: 'directions.avoidTolls' },
+  { key: 'highways', label: 'directions.avoidHighways' },
+  { key: 'ferries', label: 'directions.avoidFerries' },
 ]
 
-const WHENS: { kind: When['kind']; label: string }[] = [
-  { kind: 'now', label: 'Şimdi çık' },
-  { kind: 'depart', label: 'Çıkış saati' },
-  { kind: 'arrive', label: 'Varış saati' },
+const WHENS: { kind: When['kind']; label: MessageKey }[] = [
+  { kind: 'now', label: 'directions.leaveNow' },
+  { kind: 'depart', label: 'directions.departAt' },
+  { kind: 'arrive', label: 'directions.arriveBy' },
 ]
 
 // A white edge lifts routes off the light map; a dark one off the dark map
@@ -262,6 +264,7 @@ export default function Directions({
   // How many times each point has been set, by its field's id
   const changes = useRef(new Map<number, number>())
   const listId = useId()
+  const locale = useLocale()
   const theme = useTheme()
   const colors =
     useMapDesign() === 'san-andreas' ? SAN_ANDREAS_ROUTE : ROUTE_COLORS[theme]
@@ -324,6 +327,7 @@ export default function Directions({
         mode: mode as TravelMode,
         avoid,
         when,
+        language: routeLanguage(locale),
       }
     : null
   // While a field is dragged, the routes wait for where it is let go
@@ -357,12 +361,14 @@ export default function Directions({
     const current = () => (changes.current.get(id) ?? 0) === change
     whereAmI()
       .then((lngLat) => {
-        if (current()) setEnd(id, { name: 'Konumum', lngLat, mine: true })
+        if (current()) {
+          setEnd(id, { name: t('directions.myLocation'), lngLat, mine: true })
+        }
       })
       .catch(
         () =>
           current() &&
-          setNotice({ text: 'Konumuna erişilemedi.', problem: true }),
+          setNotice({ text: t('directions.noLocation'), problem: true }),
       )
       .finally(() => setLocating((t) => (t === id ? null : t)))
   }
@@ -375,7 +381,7 @@ export default function Directions({
 
   /** Sets a point to one picked on the map, named by its address. */
   function picked(id: number, lngLat: [number, number]) {
-    setEnd(id, { name: 'Haritada seçilen nokta', lngLat })
+    setEnd(id, { name: t('point.pickedOnMap'), lngLat })
     setPicking(null)
     reverseGeocode(lngLat)
       .then((address) => {
@@ -647,9 +653,17 @@ export default function Directions({
     setSlots(next)
     freshRoutes()
     setMoved(
-      `${slot.end?.name ?? 'Boş alan'}, ${to + 1}. sıraya taşındı (${
-        to === 0 ? 'başlangıç' : to === slots.length - 1 ? 'varış' : 'durak'
-      }).`,
+      t('directions.movedTo', {
+        name: slot.end?.name ?? t('directions.emptyField'),
+        n: to + 1,
+        where: t(
+          to === 0
+            ? 'directions.movedStart'
+            : to === slots.length - 1
+              ? 'directions.movedDestination'
+              : 'directions.movedStop',
+        ),
+      }),
     )
   }
 
@@ -764,10 +778,10 @@ export default function Directions({
 
   /** What a field is called, by where it stands. */
   function fieldName(index: number, id: number): string {
-    if (index === 0) return 'Başlangıç'
-    if (index === slots.length - 1) return 'Varış'
+    if (index === 0) return t('directions.start')
+    if (index === slots.length - 1) return t('directions.destination')
     const n = stopNumber.get(id)
-    return n ? `${n}. durak` : 'Durak'
+    return n ? t('directions.stopN', { n }) : t('directions.stop')
   }
 
   function field(slot: Slot, index: number) {
@@ -811,9 +825,9 @@ export default function Directions({
             }}
             type="button"
             className="directions-handle"
-            aria-label={`${name}: taşı`}
-            aria-description="Yukarı ve aşağı ok tuşlarıyla sırasını değiştir"
-            title="Sürükleyerek sırala"
+            aria-label={t('directions.moveOf', { name })}
+            aria-description={t('directions.moveHint')}
+            title={t('directions.dragToSort')}
             onPointerDown={(event) => onHandleDown(id, event)}
             onPointerMove={(event) => onHandleMove(id, event)}
             onPointerUp={onHandleUp}
@@ -844,12 +858,12 @@ export default function Directions({
           enterKeyHint="search"
           placeholder={
             locating === id
-              ? 'Konum alınıyor…'
+              ? t('directions.locating')
               : index === 0
-                ? 'Nereden?'
+                ? t('directions.from')
                 : isStop
-                  ? 'Nereye uğranacak?'
-                  : 'Nereye?'
+                  ? t('directions.via')
+                  : t('directions.to')
           }
           value={isEditing ? query : (end?.name ?? '')}
           onFocus={(event) => {
@@ -873,8 +887,8 @@ export default function Directions({
           <button
             type="button"
             className="directions-remove"
-            aria-label={`${name}: kaldır`}
-            title="Durağı kaldır"
+            aria-label={t('directions.removeOf', { name })}
+            title={t('directions.removeStop')}
             onClick={() => removeStop(id)}
           >
             <Icon name="close" size={16} />
@@ -889,7 +903,7 @@ export default function Directions({
     const points: SharedPoint[] = filled.map(({ end }, i) => {
       if (end!.mine && i === 0 && origin) return null
       return {
-        name: end!.mine ? 'Paylaşan kişinin konumu' : end!.name,
+        name: end!.mine ? t('directions.sharerLocation') : end!.name,
         lngLat: end!.lngLat,
       }
     })
@@ -903,7 +917,10 @@ export default function Directions({
     const url = directionsUrl(toShare())
     if (navigator.share) {
       try {
-        await navigator.share({ title: `${destination.name} yol tarifi`, url })
+        await navigator.share({
+          title: t('directions.shareTitle', { name: destination.name }),
+          url,
+        })
       } catch {
         // Dismissed
       }
@@ -911,8 +928,8 @@ export default function Directions({
     }
     setNotice(
       (await copyText(url))
-        ? { text: 'Bağlantı kopyalandı.' }
-        : { text: 'Bağlantı kopyalanamadı.', problem: true },
+        ? { text: t('directions.linkCopied') }
+        : { text: t('directions.linkFailed'), problem: true },
     )
   }
 
@@ -965,16 +982,19 @@ export default function Directions({
     setExpanded((e) => !e)
   }
 
-  const between = stopCount > 0 ? 'Bu noktalar' : 'Bu iki nokta'
+  const between = t(stopCount > 0 ? 'directions.these' : 'directions.theseTwo')
   const message =
     status === 'none'
       ? reason === 'too-far'
-        ? `${between} arası rota hesaplamak için fazla uzak.`
+        ? t('directions.tooFar', { between })
         : reason === 'off-road'
-          ? 'Noktalardan biri bir yola yakın değil; yola daha yakın bir yer seç.'
-          : `${between} arasında rota bulunamadı.`
+          ? t('directions.offRoad')
+          : t('directions.noRoute', {
+              between:
+                locale === 'tr' ? between : between.toLocaleLowerCase('en'),
+            })
       : status === 'error'
-        ? 'Rota şu anda hesaplanamıyor.'
+        ? t('directions.failed')
         : null
   const transit = mode === 'transit'
   const showResults =
@@ -1021,10 +1041,10 @@ export default function Directions({
   const announcement =
     moved ||
     (status === 'loading'
-      ? 'Rota hesaplanıyor…'
+      ? t('directions.loading')
       : (message ??
         (route
-          ? `${routes.length > 1 ? `${routes.length} rota bulundu. ` : ''}${
+          ? `${routes.length > 1 ? t('directions.found', { count: routes.length }) : ''}${
               labels[0] ? `${labels[0]}: ` : ''
             }${formatDuration(routes[0].seconds)}, ${formatDistance(
               routes[0].meters,
@@ -1038,21 +1058,24 @@ export default function Directions({
   /** When a route leaves and arrives, as its card says it. */
   function routeTime(r: (typeof routes)[number]): string {
     const { departs, arrives } = routeTimes(r, when, now)
-    if (when.kind === 'now') return `Varış ${formatClock(arrives, now)}`
-    if (when.kind === 'depart') {
-      return `Çıkış ${formatClock(departs, departs)} · Varış ${formatClock(arrives, departs)}`
+    if (when.kind === 'now') {
+      return t('directions.arrivesAt', { time: formatClock(arrives, now) })
     }
-    return `Çıkış ${formatClock(departs, arrives)} · Varış ${formatClock(arrives, arrives)}`
+    const day = when.kind === 'depart' ? departs : arrives
+    return t('directions.departsArrives', {
+      departs: formatClock(departs, day),
+      arrives: formatClock(arrives, day),
+    })
   }
 
   const pickingName =
     picking === null
       ? ''
       : indexOf(picking) === 0
-        ? 'Başlangıç noktasını seç'
+        ? t('directions.pickStart')
         : indexOf(picking) === slots.length - 1
-          ? 'Varış noktasını seç'
-          : 'Durağı seç'
+          ? t('directions.pickDestination')
+          : t('directions.pickStop')
 
   if (navigation) {
     return (
@@ -1077,13 +1100,13 @@ export default function Directions({
         <section
           ref={plannerRef}
           className="directions-planner mv-glass"
-          aria-label="Yol tarifi"
+          aria-label={t('common.directions')}
         >
           <div className="directions-top">
             <button
               type="button"
               className="directions-icon-button"
-              aria-label="Yol tarifini kapat"
+              aria-label={t('directions.close')}
               onClick={onClose}
             >
               <Icon name="back" size={20} />
@@ -1091,7 +1114,7 @@ export default function Directions({
             <div
               className="directions-modes"
               role="tablist"
-              aria-label="Nasıl gidilecek"
+              aria-label={t('directions.how')}
               style={
                 {
                   '--mode': MODES.findIndex((m) => m.mode === mode),
@@ -1104,15 +1127,15 @@ export default function Directions({
                   type="button"
                   role="tab"
                   aria-selected={m.mode === mode}
-                  aria-label={m.label}
-                  title={m.label}
+                  aria-label={t(m.label)}
+                  title={t(m.label)}
                   onClick={() => {
                     setMode(m.mode)
                     freshRoutes()
                   }}
                 >
                   <Icon name={m.icon} size={19} />
-                  <span>{m.label}</span>
+                  <span>{t(m.label)}</span>
                 </button>
               ))}
             </div>
@@ -1127,10 +1150,14 @@ export default function Directions({
               className="directions-swap"
               aria-label={
                 stopCount > 0
-                  ? 'Rotayı ters çevir'
-                  : 'Başlangıç ile varışı değiştir'
+                  ? t('directions.reverse')
+                  : t('directions.swapEnds')
               }
-              title={stopCount > 0 ? 'Ters çevir' : 'Yer değiştir'}
+              title={t(
+                stopCount > 0
+                  ? 'directions.reverseShort'
+                  : 'directions.swapShort',
+              )}
               disabled={!origin && !destination}
               onClick={swap}
             >
@@ -1146,7 +1173,7 @@ export default function Directions({
                 onClick={addStop}
               >
                 <Icon name="plus" size={16} />
-                Durak ekle
+                {t('directions.addStop')}
               </button>
             )}
             {!transit && (
@@ -1156,7 +1183,9 @@ export default function Directions({
                   when.kind !== 'now' ? ' is-set' : ''
                 }`}
                 aria-expanded={panel === 'when'}
-                aria-label={`Ne zaman: ${whenLabel(when, now)}`}
+                aria-label={t('directions.whenOf', {
+                  when: whenLabel(when, now),
+                })}
                 onClick={() => togglePanel('when')}
               >
                 <Icon name="clock" size={16} />
@@ -1167,11 +1196,13 @@ export default function Directions({
               <button
                 type="button"
                 className={`directions-chip is-icon${avoided ? ' is-set' : ''}`}
-                title="Seçenekler"
+                title={t('directions.options')}
                 aria-expanded={panel === 'avoid'}
-                aria-label={`Rota seçenekleri${
-                  avoided ? `: ${avoided} seçili` : ''
-                }`}
+                aria-label={
+                  avoided
+                    ? t('directions.routeOptionsSet', { count: avoided })
+                    : t('directions.routeOptions')
+                }
                 onClick={() => togglePanel('avoid')}
               >
                 <Icon name="sliders" size={16} />
@@ -1183,8 +1214,8 @@ export default function Directions({
             <button
               type="button"
               className="directions-chip is-icon is-share"
-              aria-label="Yol tarifini paylaş"
-              title="Paylaş"
+              aria-label={t('directions.share')}
+              title={t('common.share')}
               disabled={!destination}
               onClick={share}
             >
@@ -1205,11 +1236,14 @@ export default function Directions({
         </section>
 
         {panel === 'when' && (
-          <section className="directions-panel mv-glass" aria-label="Ne zaman">
+          <section
+            className="directions-panel mv-glass"
+            aria-label={t('directions.when')}
+          >
             <div
               className="directions-segments"
               role="radiogroup"
-              aria-label="Ne zaman"
+              aria-label={t('directions.when')}
               style={
                 {
                   '--segment': WHENS.findIndex(
@@ -1235,14 +1269,14 @@ export default function Directions({
                     )
                   }
                 >
-                  {w.label}
+                  {t(w.label)}
                 </button>
               ))}
             </div>
             {whenDraft.kind !== 'now' && (
               <div className="directions-when-fields">
                 <label>
-                  <span>Tarih</span>
+                  <span>{t('directions.date')}</span>
                   <input
                     type="date"
                     value={whenDraft.at.slice(0, 10)}
@@ -1259,7 +1293,11 @@ export default function Directions({
                 </label>
                 <label>
                   <span>
-                    {whenDraft.kind === 'depart' ? 'Çıkış' : 'Varış'} saati
+                    {t(
+                      whenDraft.kind === 'depart'
+                        ? 'directions.departTime'
+                        : 'directions.arriveTime',
+                    )}
                   </span>
                   <input
                     type="time"
@@ -1282,7 +1320,7 @@ export default function Directions({
               className="directions-done"
               onClick={closePanel}
             >
-              Tamam
+              {t('common.done')}
             </button>
           </section>
         )}
@@ -1290,7 +1328,7 @@ export default function Directions({
         {panel === 'avoid' && (
           <section
             className="directions-panel mv-glass"
-            aria-label="Rota seçenekleri"
+            aria-label={t('directions.routeOptions')}
           >
             <ul className="directions-avoids">
               {AVOIDS.map(({ key, label }) => {
@@ -1299,8 +1337,8 @@ export default function Directions({
                   <li key={key}>
                     <label className={can ? undefined : 'is-off'}>
                       <span className="directions-avoid-text">
-                        {label}
-                        {!can && <small>Yalnızca araba için</small>}
+                        {t(label)}
+                        {!can && <small>{t('directions.carOnly')}</small>}
                       </span>
                       <input
                         type="checkbox"
@@ -1325,7 +1363,7 @@ export default function Directions({
               className="directions-done"
               onClick={closePanel}
             >
-              Tamam
+              {t('common.done')}
             </button>
           </section>
         )}
@@ -1333,7 +1371,7 @@ export default function Directions({
         {editing !== null && (
           <section
             className="directions-suggestions mv-glass"
-            aria-label="Öneriler"
+            aria-label={t('directions.suggestions')}
             // Keep focus in the field, so a click on a suggestion lands
             onMouseDown={(event) => event.preventDefault()}
           >
@@ -1357,8 +1395,8 @@ export default function Directions({
                         <Icon name="locate" size={18} />
                       </span>
                       <span className="directions-suggestion-text">
-                        <strong>Konumum</strong>
-                        <small>Bulunduğun yer</small>
+                        <strong>{t('directions.myLocation')}</strong>
+                        <small>{t('directions.whereYouAre')}</small>
                       </span>
                     </>
                   ) : suggestion.kind === 'map' ? (
@@ -1367,8 +1405,8 @@ export default function Directions({
                         <Icon name="pin" size={18} />
                       </span>
                       <span className="directions-suggestion-text">
-                        <strong>Haritadan seç</strong>
-                        <small>Haritada bir noktaya dokun</small>
+                        <strong>{t('directions.pickOnMap')}</strong>
+                        <small>{t('directions.tapOnMap')}</small>
                       </span>
                     </>
                   ) : (
@@ -1402,10 +1440,10 @@ export default function Directions({
               </div>
             )}
             {typed && search.status === 'done' && !search.results.length && (
-              <p className="directions-message">Sonuç bulunamadı.</p>
+              <p className="directions-message">{t('common.noResults')}</p>
             )}
             {typed && search.status === 'error' && (
-              <p className="directions-message">Arama şu anda yapılamıyor.</p>
+              <p className="directions-message">{t('common.searchFailed')}</p>
             )}
           </section>
         )}
@@ -1417,21 +1455,20 @@ export default function Directions({
         {showResults && transit && destination && (
           <section
             className="directions-results directions-transit mv-glass"
-            aria-label="Toplu taşıma"
+            aria-label={t('directions.transit')}
           >
             <span className="directions-transit-icon">
               <Icon name="bus" size={22} />
             </span>
             <div className="directions-transit-text">
-              <strong>Toplu taşıma başka bir uygulamada açılır</strong>
+              <strong>{t('directions.transitElsewhere')}</strong>
               <p>
-                Otobüs, metro ve vapur saatlerini burada hesaplayamıyoruz. Aynı
-                yolculuğu toplu taşıma tarifleri veren Google Haritalar'da aç
-                {origin ? '' : '; başlangıç bulunduğun yer olur'}.
+                {t('directions.transitBody')}
+                {origin ? '' : t('directions.transitFromHere')}.
               </p>
               {stops.length > 0 && (
                 <p className="directions-transit-note">
-                  Duraklar bu bağlantıya eklenmez.
+                  {t('directions.transitStops')}
                 </p>
               )}
             </div>
@@ -1444,7 +1481,7 @@ export default function Directions({
               target="_blank"
               rel="noopener noreferrer"
             >
-              Google Haritalar'da aç
+              {t('directions.openGoogle')}
               <Icon name="external" size={16} />
             </a>
           </section>
@@ -1456,12 +1493,14 @@ export default function Directions({
             className={`directions-results mv-glass${
               expanded ? ' is-expanded' : ''
             }${step !== null ? ' is-stepping' : ''}`}
-            aria-label="Rotalar"
+            aria-label={t('directions.routes')}
           >
             <button
               type="button"
               className="directions-grabber"
-              aria-label={expanded ? 'Adımları gizle' : 'Adımları göster'}
+              aria-label={t(
+                expanded ? 'directions.hideSteps' : 'directions.showSteps',
+              )}
               aria-expanded={expanded}
               onPointerDown={onSheetDown}
               onPointerMove={onSheetMove}
@@ -1475,7 +1514,7 @@ export default function Directions({
             {status === 'loading' && (
               <div className="directions-loading">
                 <span className="directions-skeleton-hint">
-                  Rota hesaplanıyor…
+                  {t('directions.loading')}
                 </span>
                 {[0, 1].map((k) => (
                   <div key={k} className="directions-route-skeleton">
@@ -1495,17 +1534,20 @@ export default function Directions({
                     className="directions-retry"
                     onClick={retry}
                   >
-                    Tekrar dene
+                    {t('common.retry')}
                   </button>
                 )}
               </div>
             )}
             {route && step !== null && route.maneuvers[step] && (
-              <div className="directions-stepper" aria-label="Adım">
+              <div
+                className="directions-stepper"
+                aria-label={t('directions.step')}
+              >
                 <button
                   type="button"
                   className="directions-icon-button"
-                  aria-label="Önceki adım"
+                  aria-label={t('directions.previousStep')}
                   disabled={step === 0}
                   onClick={() => focusStep(step - 1)}
                 >
@@ -1525,7 +1567,10 @@ export default function Directions({
                   <span className="directions-stepper-text">
                     <strong>{route.maneuvers[step].instruction}</strong>
                     <small>
-                      {step + 1}/{route.maneuvers.length}. adım
+                      {t('directions.stepOf', {
+                        n: step + 1,
+                        count: route.maneuvers.length,
+                      })}
                       {route.maneuvers[step].meters > 0 &&
                         ` · ${formatDistance(route.maneuvers[step].meters)}`}
                     </small>
@@ -1534,7 +1579,7 @@ export default function Directions({
                 <button
                   type="button"
                   className="directions-icon-button"
-                  aria-label="Sonraki adım"
+                  aria-label={t('directions.nextStep')}
                   disabled={step === route.maneuvers.length - 1}
                   onClick={() => focusStep(step + 1)}
                 >
@@ -1546,13 +1591,16 @@ export default function Directions({
                   onClick={overview}
                 >
                   <Icon name="route" size={16} />
-                  Tüm rota
+                  {t('directions.overview')}
                 </button>
               </div>
             )}
             {route && (
               <>
-                <ul className="directions-routes" aria-label="Rotalar">
+                <ul
+                  className="directions-routes"
+                  aria-label={t('directions.routes')}
+                >
                   {routes.map((r, i) => {
                     const via = routeVia(r)
                     return (
@@ -1582,7 +1630,7 @@ export default function Directions({
                           </span>
                           {via && (
                             <span className="directions-route-via">
-                              {via} üzerinden
+                              {t('directions.viaStreet', { street: via })}
                             </span>
                           )}
                         </button>
@@ -1597,14 +1645,14 @@ export default function Directions({
                     onClick={navigate}
                   >
                     <Icon name="directions" size={18} />
-                    Başlat
+                    {t('directions.go')}
                   </button>
                 </div>
                 {when.kind !== 'now' &&
                   routes.length === 1 &&
                   filled.length === 2 && (
                     <p className="directions-hint">
-                      Belirli bir saat için tek rota hesaplanır.
+                      {t('directions.oneRoute')}
                     </p>
                   )}
                 <h3 className="directions-steps-title">
@@ -1613,12 +1661,19 @@ export default function Directions({
                     aria-expanded={expanded}
                     onClick={() => setExpanded((e) => !e)}
                   >
-                    Adım adım tarif
-                    <span>{route.maneuvers.length} adım</span>
+                    {t('directions.steps')}
+                    <span>
+                      {t('directions.stepCount', {
+                        count: route.maneuvers.length,
+                      })}
+                    </span>
                     <Icon name="chevronDown" size={16} />
                   </button>
                 </h3>
-                <ol className="directions-steps" aria-label="Adım adım tarif">
+                <ol
+                  className="directions-steps"
+                  aria-label={t('directions.steps')}
+                >
                   {route.maneuvers.map((m, i) => (
                     <li
                       key={i}
@@ -1665,15 +1720,13 @@ export default function Directions({
             <span className="directions-picking-text">
               <strong>{pickingName}</strong>
               <small>
-                <span className="on-wide">Haritada bir yere tıkla</span>
-                <span className="on-phone">
-                  Haritayı iğnenin altına kaydır ya da bir yere dokun
-                </span>
+                <span className="on-wide">{t('directions.clickOnMap')}</span>
+                <span className="on-phone">{t('directions.moveUnderPin')}</span>
               </small>
             </span>
             <div className="directions-picking-actions">
               <button type="button" onClick={() => setPicking(null)}>
-                Vazgeç
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -1683,7 +1736,7 @@ export default function Directions({
                   if (at && slotOf(picking)) picked(picking, at)
                 }}
               >
-                Bu noktayı seç
+                {t('directions.pickThis')}
               </button>
             </div>
           </div>

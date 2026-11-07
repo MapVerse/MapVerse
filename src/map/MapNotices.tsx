@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.ts'
 import './MapNotices.css'
 
 /**
@@ -18,14 +19,18 @@ export default function MapNotices({
       {!online ? (
         <p className="mv-notice mv-glass">
           <span className="mv-notice-dot is-offline" aria-hidden="true" />
-          Çevrimdışısınız. Bağlantı gelince harita güncellenecek.
+          {t('notice.offline')}
         </p>
       ) : (
         dataFailed && (
           <p className="mv-notice mv-glass">
             <span className="mv-notice-dot" aria-hidden="true" />
-            Harita verileri yüklenemedi.
-            <button type="button" onClick={onDismiss} aria-label="Kapat">
+            {t('notice.dataFailed')}
+            <button
+              type="button"
+              onClick={onDismiss}
+              aria-label={t('common.close')}
+            >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 6l12 12M18 6 6 18" />
               </svg>

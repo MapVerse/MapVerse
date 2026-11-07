@@ -1,5 +1,6 @@
 import { useMap } from '@vis.gl/react-maplibre'
 import { useId, useRef, useState, type Ref } from 'react'
+import { t, useLocale } from '../../i18n/index.ts'
 import { Icon } from '../../icons/Icon.tsx'
 import type { Place } from '../place/place.ts'
 import {
@@ -17,8 +18,6 @@ import {
 } from './useFavorites.ts'
 import './SavedList.css'
 
-const FILE_NAME = 'mapverse-kayitli-yerler.geojson'
-
 type Props = {
   /** Opens a saved place, as a place or as a bare point */
   onOpen: (place: Place, point: boolean) => void
@@ -32,6 +31,7 @@ type Props = {
  */
 export default function SavedList({ onOpen, ref }: Props) {
   const { current: map } = useMap()
+  useLocale()
   const favorites = useFavorites()
   const fileRef = useRef<HTMLInputElement>(null)
   const [note, setNote] = useState<string | null>(null)
@@ -49,7 +49,7 @@ export default function SavedList({ onOpen, ref }: Props) {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = FILE_NAME
+    link.download = t('saved.fileName')
     link.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
     setNote(null)
@@ -58,7 +58,7 @@ export default function SavedList({ onOpen, ref }: Props) {
   async function importFile(file: File | undefined) {
     if (!file) return
     if (file.size > MAX_FILE_BYTES) {
-      setNote('Dosya çok büyük.')
+      setNote(t('saved.fileTooBig'))
       return
     }
     let found: Favorite[] | null = null
@@ -67,15 +67,11 @@ export default function SavedList({ onOpen, ref }: Props) {
     } catch {
       found = null
     }
-    if (!found) setNote('Bu dosya okunamadı; GeoJSON olmalı.')
-    else if (!found.length) setNote('Dosyada kaydedilecek nokta yok.')
+    if (!found) setNote(t('saved.fileUnreadable'))
+    else if (!found.length) setNote(t('saved.fileEmpty'))
     else {
       const added = importFavorites(found)
-      setNote(
-        added
-          ? `${added} yer eklendi.`
-          : 'Dosyadaki yerlerin hepsi zaten kayıtlı.',
-      )
+      setNote(added ? t('saved.added', { count: added }) : t('saved.allSaved'))
     }
   }
 
@@ -87,7 +83,7 @@ export default function SavedList({ onOpen, ref }: Props) {
       aria-labelledby={labelId}
     >
       <span id={labelId} className="mv-settings-label">
-        Kayıtlı yerler
+        {t('saved.title')}
       </span>
       {favorites.length > 0 ? (
         <ul className="mv-saved-list">
@@ -113,8 +109,8 @@ export default function SavedList({ onOpen, ref }: Props) {
                 <button
                   type="button"
                   className="mv-saved-remove"
-                  aria-label={`${favoriteTitle(f)}: kaldır`}
-                  title="Kaldır"
+                  aria-label={t('saved.removeOf', { name: favoriteTitle(f) })}
+                  title={t('common.remove')}
                   onClick={() => removeFavorite(f.key)}
                 >
                   <Icon name="trash" size={16} />
@@ -124,10 +120,7 @@ export default function SavedList({ onOpen, ref }: Props) {
           })}
         </ul>
       ) : (
-        <p className="mv-settings-hint">
-          Bir yerin panelindeki Kaydet düğmesiyle onu ev, iş ya da yıldızlı yer
-          olarak kaydedebilirsin.
-        </p>
+        <p className="mv-settings-hint">{t('saved.empty')}</p>
       )}
       <div className="mv-saved-files">
         <button
@@ -136,11 +129,11 @@ export default function SavedList({ onOpen, ref }: Props) {
           onClick={exportFile}
         >
           <Icon name="download" size={17} />
-          Dışa aktar
+          {t('saved.export')}
         </button>
         <button type="button" onClick={() => fileRef.current?.click()}>
           <Icon name="upload" size={17} />
-          İçe aktar
+          {t('saved.import')}
         </button>
         <input
           ref={fileRef}
@@ -154,7 +147,7 @@ export default function SavedList({ onOpen, ref }: Props) {
         />
       </div>
       <p className="mv-settings-hint mv-saved-note" aria-live="polite">
-        {note ?? 'GeoJSON dosyası olarak; yalnızca bu cihazda saklanır.'}
+        {note ?? t('saved.fileNote')}
       </p>
     </div>
   )

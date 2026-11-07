@@ -1,6 +1,7 @@
 import { Layer, Marker, Source, useMap } from '@vis.gl/react-maplibre'
 import type { MapMouseEvent } from 'maplibre-gl'
 import { useEffect, useMemo, useState } from 'react'
+import { t, useLocale } from '../../i18n/index.ts'
 import { Icon } from '../../icons/Icon.tsx'
 import { useMediaQuery } from '../../lib/useMediaQuery.ts'
 import { useMapDesign } from '../../map/designSetting.ts'
@@ -28,6 +29,7 @@ export default function Measure() {
   const theme = useTheme()
   const design = useMapDesign()
   const touch = useMediaQuery('(pointer: coarse)')
+  useLocale()
   const [points, setPoints] = useState<LngLat[]>([])
   const total = pathLength(points)
   const data = useMemo(() => measureFeatures(points), [points])
@@ -77,10 +79,10 @@ export default function Measure() {
   const color = lineColor(theme === 'dark', design === 'san-andreas')
   const hint =
     points.length === 0
-      ? `Ölçmek için haritada bir yere ${touch ? 'dokun' : 'tıkla'}`
+      ? t(touch ? 'measure.firstTap' : 'measure.firstClick')
       : points.length === 1
-        ? `Sonraki noktaya ${touch ? 'dokun' : 'tıkla'}`
-        : `${points.length} nokta · noktaları sürükleyerek taşı`
+        ? t(touch ? 'measure.nextTap' : 'measure.nextClick')
+        : t('measure.points', { count: points.length })
 
   return (
     <>
@@ -124,15 +126,15 @@ export default function Measure() {
           />
         </Marker>
       ))}
-      <section className="measure mv-glass" aria-label="Mesafe ölç">
+      <section className="measure mv-glass" aria-label={t('measure.title')}>
         <div className="measure-head">
           <Icon name="ruler" size={18} />
-          <span className="measure-title">Mesafe ölç</span>
+          <span className="measure-title">{t('measure.title')}</span>
           <button
             type="button"
             className="measure-close"
-            aria-label="Ölçmeyi kapat"
-            title="Kapat (Esc)"
+            aria-label={t('measure.close')}
+            title={t('measure.closeTitle')}
             onClick={() => setMeasuring(false)}
           >
             <Icon name="close" size={18} />
@@ -147,10 +149,10 @@ export default function Measure() {
             type="button"
             disabled={points.length === 0}
             onClick={undo}
-            title="Son noktayı geri al (Backspace)"
+            title={t('measure.undoTitle')}
           >
             <Icon name="undo" size={18} />
-            Geri al
+            {t('measure.undo')}
           </button>
           <button
             type="button"
@@ -158,7 +160,7 @@ export default function Measure() {
             onClick={() => setPoints([])}
           >
             <Icon name="trash" size={18} />
-            Temizle
+            {t('measure.clear')}
           </button>
         </div>
       </section>

@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react'
+import type { MessageKey } from '../i18n/index.ts'
 
 /** What a key does on the map. */
 export type ShortcutAction =
@@ -45,19 +46,16 @@ export function shortcutFor(event: KeyPress): ShortcutAction | null {
 }
 
 /** The keys listed in the help, in the order shown. */
-export const SHORTCUTS: { keys: string[]; label: string }[] = [
-  { keys: ['/'], label: 'Aramaya git' },
-  { keys: ['+', '−'], label: 'Yakınlaştır, uzaklaştır' },
-  { keys: ['3'], label: '2B ve 3B görünüm arasında geç' },
-  { keys: ['M'], label: 'Mesafe ölç' },
-  { keys: ['Backspace'], label: 'Ölçerken son noktayı geri al' },
-  { keys: ['←', '↑', '→', '↓'], label: 'Haritayı kaydır (harita seçiliyken)' },
-  {
-    keys: ['Shift', '←', '→'],
-    label: 'Haritayı döndür (harita seçiliyken)',
-  },
-  { keys: ['Esc'], label: 'Açık olanı kapat' },
-  { keys: ['?'], label: 'Bu listeyi aç' },
+export const SHORTCUTS: { keys: string[]; label: MessageKey }[] = [
+  { keys: ['/'], label: 'shortcuts.search' },
+  { keys: ['+', '−'], label: 'shortcuts.zoom' },
+  { keys: ['3'], label: 'shortcuts.tilt' },
+  { keys: ['M'], label: 'shortcuts.measure' },
+  { keys: ['Backspace'], label: 'shortcuts.undo' },
+  { keys: ['←', '↑', '→', '↓'], label: 'shortcuts.pan' },
+  { keys: ['Shift', '←', '→'], label: 'shortcuts.rotate' },
+  { keys: ['Esc'], label: 'shortcuts.escape' },
+  { keys: ['?'], label: 'shortcuts.help' },
 ]
 
 // Whether the list of shortcuts is open, from a key or the profile menu

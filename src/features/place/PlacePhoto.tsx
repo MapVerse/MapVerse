@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { t } from '../../i18n/index.ts'
 import {
   fetchPhoto,
   knownPhoto,
@@ -71,7 +72,7 @@ export default function PlacePhoto({
       {photo && (
         <figcaption>
           <a href={photo.page} target="_blank" rel="noopener noreferrer">
-            {credit ? `Fotoğraf: ${credit}` : 'Wikimedia Commons'}
+            {credit ? t('place.photoBy', { credit }) : 'Wikimedia Commons'}
           </a>
         </figcaption>
       )}

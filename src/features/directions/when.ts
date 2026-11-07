@@ -1,3 +1,5 @@
+import { currentLocale, t } from '../../i18n/index.ts'
+import { formatDate, formatTime } from '../../i18n/format.ts'
 import type { Route, When } from './valhalla.ts'
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -36,10 +38,10 @@ function daysApart(from: Date, to: Date): number {
 /** A clock time like 09:00, marked with the days off a given day, like
  *  00:16 (+1 gün). */
 export function formatClock(at: Date, day: Date): string {
-  const time = `${pad(at.getHours())}:${pad(at.getMinutes())}`
+  const time = formatTime(at)
   const days = daysApart(day, at)
-  if (days > 0) return `${time} (+${days} gün)`
-  if (days < 0) return `${time} (−${-days} gün)`
+  if (days > 0) return t('time.laterDay', { time, days })
+  if (days < 0) return t('time.earlierDay', { time, days: -days })
   return time
 }
 
@@ -82,17 +84,23 @@ const MONTHS = [
 export function dayLabel(date: Date, now = new Date()): string {
   const days = daysApart(now, date)
   if (days === 0) return ''
-  if (days === 1) return 'yarın'
-  if (days === -1) return 'dün'
+  if (days === 1) return t('day.tomorrow')
+  if (days === -1) return t('day.yesterday')
+  if (currentLocale() !== 'tr') {
+    return formatDate(date, { day: 'numeric', month: 'short' })
+  }
   return `${date.getDate()} ${MONTHS[date.getMonth()]}`
 }
 
 /** What the time button says: Şimdi çık, Çıkış 09:00, Varış yarın 09:00… */
 export function whenLabel(when: When, now = new Date()): string {
-  if (when.kind === 'now') return 'Şimdi çık'
+  if (when.kind === 'now') return t('directions.leaveNow')
   const at = parseLocal(when.at)
-  if (!at) return 'Şimdi çık'
+  if (!at) return t('directions.leaveNow')
   const day = dayLabel(at, now)
-  const time = `${pad(at.getHours())}:${pad(at.getMinutes())}`
-  return `${when.kind === 'depart' ? 'Çıkış' : 'Varış'} ${day ? `${day} ` : ''}${time}`
+  return t('directions.whenLabel', {
+    kind: t(when.kind === 'depart' ? 'directions.depart' : 'directions.arrive'),
+    day: day ? `${day} ` : '',
+    time: formatTime(at),
+  })
 }

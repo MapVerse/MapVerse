@@ -1,3 +1,4 @@
+import { currentLocale } from '../../i18n/index.ts'
 import { PHOTON_URL } from '../../lib/endpoints.ts'
 import { categoryInfo, categoryLabel } from '../place/categories.ts'
 import type { Place } from '../place/place.ts'
@@ -73,11 +74,20 @@ export async function reverseGeocode(
   return feature ? formatAddress(feature.properties) : null
 }
 
+/**
+ * The language results are asked for in, where Photon has it: English
+ * names for English. Turkish isn't one it has, so for Turkish it gives the
+ * names as written locally, as it always has.
+ */
+const photonLanguage = () => (currentLocale() === 'en' ? 'en' : undefined)
+
 async function photon(
   path: string,
   signal?: AbortSignal,
 ): Promise<PhotonFeature[]> {
-  const res = await fetch(`${API}${path}`, { signal })
+  const lang = photonLanguage()
+  const url = `${API}${path}${lang ? `&lang=${lang}` : ''}`
+  const res = await fetch(url, { signal })
   if (!res.ok) throw new Error(`Photon request failed: ${res.status}`)
   return ((await res.json()) as { features: PhotonFeature[] }).features
 }

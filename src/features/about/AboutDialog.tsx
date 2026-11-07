@@ -1,4 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { t, useLocale } from '../../i18n/index.ts'
+import { formatDate } from '../../i18n/format.ts'
 import { Icon } from '../../icons/Icon.tsx'
 import {
   NOMINATIM_URL,
@@ -31,6 +33,7 @@ function Link({ href, children }: { href: string; children: ReactNode }) {
 /** What the app is, where its data comes from, and what goes where. */
 export default function AboutDialog() {
   const open = useAboutOpen()
+  useLocale()
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
   const [step, setStep] = useState<'idle' | 'confirm' | 'done'>('idle')
@@ -79,122 +82,112 @@ export default function AboutDialog() {
       <div className="mv-about-body">
         <header className="mv-about-head">
           <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="" width={40} />
-          <h2 id={titleId}>Hakkında ve gizlilik</h2>
+          <h2 id={titleId}>{t('about.title')}</h2>
           <button
             type="button"
             className="mv-about-close"
-            aria-label="Kapat"
+            aria-label={t('common.close')}
             onClick={() => ref.current?.close()}
           >
             <Icon name="close" size={20} />
           </button>
         </header>
 
-        <p>
-          MapVerse, OpenStreetMap verisiyle yapılmış açık kaynaklı bir keşif ve
-          gezi haritası: yer ve adres arama, mekân bilgileri ve yol tarifi.
-          Hesap gerekmez, reklam ya da izleme yoktur.
-        </p>
+        <p>{t('about.intro')}</p>
         <p className="mv-about-version">
-          Sürüm {__APP_VERSION__} ·{' '}
+          {t('about.version', { version: __APP_VERSION__ })} ·{' '}
           {__APP_COMMIT__ === 'dev' ? (
-            'geliştirme'
+            t('about.development')
           ) : (
             <Link href={`${REPO}/commit/${__APP_COMMIT__}`}>
               {__APP_COMMIT__}
             </Link>
           )}
           {!Number.isNaN(built.getTime()) && (
-            <> · {built.toLocaleDateString('tr-TR', { dateStyle: 'long' })}</>
+            <> · {formatDate(built, { dateStyle: 'long' })}</>
           )}{' '}
-          · <Link href={REPO}>Kaynak kodu</Link>
+          · <Link href={REPO}>{t('about.source')}</Link>
         </p>
 
-        <h3>Gizlilik</h3>
+        <h3>{t('about.privacy')}</h3>
         <ul>
+          <li>{t('about.noServer')}</li>
+          <li>{t('about.local')}</li>
+          <li>{t('about.location')}</li>
           <li>
-            Bizim bir sunucumuz ya da hesap sistemimiz yok; sana ait hiçbir şey
-            bize gelmez.
-          </li>
-          <li>
-            Profilin, ayarların, favorilerin ve son aramaların yalnızca bu
-            tarayıcıda (localStorage) durur.
-          </li>
-          <li>
-            Konumun yalnızca sen istediğinde, bu cihazda kullanılır; hiçbir yere
-            kaydedilmez.
-          </li>
-          <li>
-            Haritayı göstermek ve aradığını bulmak için bazı bilgiler doğrudan
-            tarayıcından şu açık servislere gider:
+            {t('about.services')}
             <ul>
               <li>
-                Arama metni ve haritanın baktığı yer:{' '}
+                {t('about.photon')}{' '}
                 <Link href="https://www.komoot.com/privacy">
                   Photon ({host(PHOTON_URL)})
                 </Link>
               </li>
               <li>
-                Seçilen alanın sınırı:{' '}
+                {t('about.nominatim')}{' '}
                 <Link href="https://osmfoundation.org/wiki/Privacy_Policy">
                   Nominatim ({host(NOMINATIM_URL)})
                 </Link>
               </li>
               <li>
-                Mekân bilgileri ve yakındaki yerler için harita alanı:{' '}
+                {t('about.overpass')}{' '}
                 <Link href="https://dev.overpass-api.de/overpass-doc/en/preface/commons.html">
                   Overpass ({overpassHosts})
                 </Link>
               </li>
               <li>
-                Rotanın başlangıç ve varış noktaları:{' '}
+                {t('about.valhalla')}{' '}
                 <Link href="https://www.fossgis.de/datenschutzerklaerung/">
                   Valhalla ({host(VALHALLA_URL)})
                 </Link>
               </li>
               <li>
-                Harita karoları:{' '}
+                {t('about.tiles')}{' '}
                 <Link href="https://openfreemap.org/privacy/">
                   OpenFreeMap (tiles.openfreemap.org)
                 </Link>
               </li>
             </ul>
-            Bu servisler, her web sitesi gibi, isteğin geldiği IP adresini ve
-            tarayıcı bilgisini görür.
+            {t('about.servicesSee')}
           </li>
         </ul>
 
-        <h3>Veri kaynakları</h3>
+        <h3>{t('about.sources')}</h3>
         <ul>
           <li>
-            Harita verisi ©{' '}
+            {t('about.mapData')}{' '}
             <Link href="https://www.openstreetmap.org/copyright">
               OpenStreetMap
             </Link>{' '}
-            katkıcıları (ODbL)
+            {t('about.contributors')}
           </li>
           <li>
-            Karolar <Link href="https://openfreemap.org">OpenFreeMap</Link> ve{' '}
+            {t('about.tilesBy')}{' '}
+            <Link href="https://openfreemap.org">OpenFreeMap</Link>{' '}
+            {t('about.and')}{' '}
             <Link href="https://openmaptiles.org">OpenMapTiles</Link>
           </li>
           <li>
-            Yükselti{' '}
+            {t('about.elevation')}{' '}
             <Link href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md">
               Mapzen Terrain Tiles
             </Link>{' '}
             (AWS Open Data)
           </li>
           <li>
-            Arama <Link href="https://photon.komoot.io">Photon</Link>, alan
-            sınırları <Link href="https://nominatim.org">Nominatim</Link>,
-            mekânlar <Link href="https://overpass-api.de">Overpass API</Link>,
-            rotalar{' '}
+            {t('about.search')}{' '}
+            <Link href="https://photon.komoot.io">Photon</Link>,{' '}
+            {t('about.outlines')}{' '}
+            <Link href="https://nominatim.org">Nominatim</Link>,{' '}
+            {t('about.places')}{' '}
+            <Link href="https://overpass-api.de">Overpass API</Link>,{' '}
+            {t('about.routes')}{' '}
             <Link href="https://valhalla.github.io/valhalla/">Valhalla</Link>{' '}
-            (FOSSGIS sunucusu)
+            {t('about.fossgis')}
           </li>
         </ul>
 
-        <h3>Bu cihazdaki veriler</h3>
+        <h3>{t('about.deviceData')}</h3>
         {step === 'idle' && (
           <button
             type="button"
@@ -202,35 +195,32 @@ export default function AboutDialog() {
             onClick={() => setStep('confirm')}
           >
             <Icon name="trash" size={18} />
-            Bu cihazdaki verilerimi sil
+            {t('about.delete')}
           </button>
         )}
         {step === 'confirm' && (
           <div
             className="mv-about-confirm"
             role="group"
-            aria-label="Silmeyi onayla"
+            aria-label={t('about.confirmDelete')}
           >
-            <p>
-              Profilin, ayarların, favorilerin ve son aramaların bu tarayıcıdan
-              silinecek. Bu geri alınamaz.
-            </p>
+            <p>{t('about.deleteWarning')}</p>
             <div className="mv-about-confirm-actions">
               <button
                 type="button"
                 className="mv-about-delete is-confirm"
                 onClick={deleteData}
               >
-                Evet, sil
+                {t('about.deleteYes')}
               </button>
               <button type="button" onClick={() => setStep('idle')}>
-                Vazgeç
+                {t('common.cancel')}
               </button>
             </div>
           </div>
         )}
         <p className="mv-about-status" role="status">
-          {step === 'done' && 'Verilerin silindi. Sayfa yenileniyor…'}
+          {step === 'done' && t('about.deleted')}
         </p>
       </div>
     </dialog>

@@ -1,5 +1,10 @@
+import {
+  currentLocale,
+  t as message,
+  type MessageKey,
+} from '../../i18n/index.ts'
 import { overpass, type OverpassElement } from '../../lib/overpass.ts'
-import { FALLBACK_CATEGORY, categoryInfo } from '../place/categories.ts'
+import { categoryInfo, fallbackCategory } from '../place/categories.ts'
 import { distanceMeters } from '../place/place.ts'
 import type { SearchResult } from './photon.ts'
 
@@ -7,55 +12,51 @@ import type { SearchResult } from './photon.ts'
 export type QuickCategory = {
   /** Key into the category table, for the badge */
   key: string
-  label: string
   /** OpenStreetMap tag filters; a place matching any of them counts */
   filters: string[]
   /** Also list places without a name, such as most ATMs */
   unnamed?: boolean
 }
 
+/** A quick category's name, in the language in use. */
+export const quickLabel = (category: QuickCategory) =>
+  message(`quick.${category.key}` as MessageKey)
+
 export const QUICK_CATEGORIES: QuickCategory[] = [
   {
     key: 'restaurant',
-    label: 'Restoran',
     filters: ['["amenity"="restaurant"]'],
   },
-  { key: 'cafe', label: 'Kafe', filters: ['["amenity"="cafe"]'] },
+  { key: 'cafe', filters: ['["amenity"="cafe"]'] },
   {
     key: 'supermarket',
-    label: 'Market',
     filters: ['["shop"~"^(supermarket|convenience|grocery)$"]'],
   },
-  { key: 'pharmacy', label: 'Eczane', filters: ['["amenity"="pharmacy"]'] },
+  { key: 'pharmacy', filters: ['["amenity"="pharmacy"]'] },
   {
     key: 'fuel',
-    label: 'Akaryakıt',
     filters: ['["amenity"="fuel"]'],
     unnamed: true,
   },
   {
     key: 'atm',
-    label: 'ATM',
     filters: ['["amenity"="atm"]', '["amenity"="bank"]["atm"="yes"]'],
     unnamed: true,
   },
   {
     key: 'hotel',
-    label: 'Otel',
     filters: ['["tourism"~"^(hotel|hostel|guest_house|motel)$"]'],
   },
-  { key: 'hospital', label: 'Hastane', filters: ['["amenity"="hospital"]'] },
-  { key: 'park', label: 'Park', filters: ['["leisure"="park"]'] },
-  { key: 'museum', label: 'Müze', filters: ['["tourism"="museum"]'] },
+  { key: 'hospital', filters: ['["amenity"="hospital"]'] },
+  { key: 'park', filters: ['["leisure"="park"]'] },
+  { key: 'museum', filters: ['["tourism"="museum"]'] },
   {
     key: 'parking',
-    label: 'Otopark',
     filters: ['["amenity"="parking"]["access"!~"^(private|no)$"]'],
     unnamed: true,
   },
   {
     key: 'mosque',
-    label: 'Cami',
     filters: ['["amenity"="place_of_worship"]["religion"="muslim"]'],
   },
 ]
@@ -152,8 +153,10 @@ export function toSearchResult(
       t.tourism,
       t.leisure,
       category.key,
-    ) ?? FALLBACK_CATEGORY
-  const name = t['name:tr'] || t.name || t.brand || t.operator || info.label
+    ) ?? fallbackCategory()
+  const own =
+    currentLocale() === 'en' ? t['name:en'] || t.name : t['name:tr'] || t.name
+  const name = own || t.brand || t.operator || info.label
   const street = [t['addr:street'], t['addr:housenumber']]
     .filter(Boolean)
     .join(' ')

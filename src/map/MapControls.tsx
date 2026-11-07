@@ -1,4 +1,5 @@
 import { useControl } from '@vis.gl/react-maplibre'
+import { t } from '../i18n/index.ts'
 import { MeasureControl } from '../features/measure/MeasureControl.ts'
 import { ControlGroup } from './ControlGroup.ts'
 import { LocateControl } from './LocateControl.ts'
@@ -12,14 +13,14 @@ export default function MapControls() {
   // at the bottom, my location above it, and the view group on top
   useControl(
     ({ mapLib }) =>
-      new ControlGroup('Yakınlaştırma', [
+      new ControlGroup(t('controls.zoom'), [
         new mapLib.NavigationControl({ showCompass: false }),
       ]),
     position,
   )
   useControl(
     ({ mapLib }) =>
-      new ControlGroup('Konum', [
+      new ControlGroup(t('controls.location'), [
         // On a phone, with the way it points
         new LocateControl(
           new mapLib.GeolocateControl({ trackUserLocation: true }),
@@ -29,7 +30,7 @@ export default function MapControls() {
   )
   useControl(
     ({ mapLib }) =>
-      new ControlGroup('Görünüm', [
+      new ControlGroup(t('controls.view'), [
         new mapLib.NavigationControl({
           showZoom: false,
           visualizePitch: true,

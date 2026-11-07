@@ -10,6 +10,7 @@ import { DECK_LANDMARKS } from '../features/landmarks/deckLandmarks.ts'
 import { clearUnderDecks } from '../features/landmarks/decks.ts'
 import { LANDMARK_HIDE_ZONES } from '../features/landmarks/hideZones.ts'
 import { hideBuildings } from '../features/landmarks/landmarks.ts'
+import type { Locale } from '../i18n/index.ts'
 import type { Theme } from '../theme/theme.ts'
 import type { MapDesign } from './designSetting.ts'
 import {
@@ -369,12 +370,31 @@ const REGULAR = ['Noto Sans Regular']
 const BOLD = ['Noto Sans Bold']
 const ITALIC = ['Noto Sans Italic']
 
+/** A label's name: the Turkish one where the tiles have it. */
 const NAME: ExpressionSpecification = [
   'coalesce',
   ['get', 'name:tr'],
   ['get', 'name:latin'],
   ['get', 'name'],
 ]
+
+/** In English, the English name where the tiles have one. */
+const NAME_EN: ExpressionSpecification = [
+  'coalesce',
+  ['get', 'name:en'],
+  ['get', 'name_en'],
+  ['get', 'name:latin'],
+  ['get', 'name'],
+]
+
+/** Labels named in English rather than Turkish. */
+function inEnglish(layers: LayerSpecification[]): LayerSpecification[] {
+  return layers.map((layer) =>
+    layer.type === 'symbol' && layer.layout?.['text-field'] === NAME
+      ? { ...layer, layout: { ...layer.layout, 'text-field': NAME_EN } }
+      : layer,
+  )
+}
 
 const byZoom = (...stops: number[]): ExpressionSpecification =>
   ['interpolate', ['linear'], ['zoom'], ...stops] as ExpressionSpecification
@@ -727,6 +747,7 @@ function buildStyle(
   terrain: boolean,
   design: MapDesign,
   satellite: boolean,
+  locale: Locale,
 ): StyleSpecification {
   const c = palette(theme, design, satellite)
   const style: StyleSpecification = {
@@ -745,7 +766,15 @@ function buildStyle(
         'terrain-dem': DEM_SOURCE,
         'hillshade-dem': DEM_SOURCE,
       }),
-      ...(satellite && { satellite: SATELLITE_SOURCE }),
+      ...(satellite && {
+        satellite:
+          locale === 'en'
+            ? {
+                ...SATELLITE_SOURCE,
+                attribution: 'Imagery © Esri, Maxar, Earthstar Geographics',
+              }
+            : SATELLITE_SOURCE,
+      }),
     },
     ...(terrain && {
       terrain: { source: 'terrain-dem', exaggeration: 1.4 },
@@ -1161,6 +1190,7 @@ function buildStyle(
     ],
   }
   if (satellite) style.layers = overImagery(style.layers)
+  if (locale === 'en') style.layers = inEnglish(style.layers)
   return style
 }
 
@@ -1168,19 +1198,20 @@ const styles = new Map<string, StyleSpecification>()
 
 /**
  * The map style for a theme and design, with or without 3D terrain and
- * satellite imagery.
+ * satellite imagery, its labels named in a language.
  */
 export function mapStyle(
   theme: Theme,
   terrain: boolean,
   design: MapDesign = 'standard',
   satellite = false,
+  locale: Locale = 'tr',
 ): StyleSpecification {
   // The same object each time, so the map only restyles on a real change
-  const key = `${design}:${theme}:${terrain}:${satellite}`
+  const key = `${design}:${theme}:${terrain}:${satellite}:${locale}`
   let style = styles.get(key)
   if (!style) {
-    style = buildStyle(theme, terrain, design, satellite)
+    style = buildStyle(theme, terrain, design, satellite, locale)
     styles.set(key, style)
   }
   return style

@@ -1,4 +1,5 @@
 import type { MapGeoJSONFeature, StyleSpecification } from 'maplibre-gl'
+import { currentLocale, t } from '../../i18n/index.ts'
 import { categoryInfo, categoryLabel } from './categories.ts'
 import type { Place } from './place.ts'
 
@@ -9,6 +10,13 @@ export function findPoiLayerIds(style: StyleSpecification): string[] {
       (layer) => 'source-layer' in layer && layer['source-layer'] === 'poi',
     )
     .map((layer) => layer.id)
+}
+
+/** A map feature's name, as its label on the map reads it. */
+function ownName(p: Record<string, string | undefined>) {
+  return currentLocale() === 'en'
+    ? p['name:en'] || p.name_en || p['name:latin'] || p.name
+    : p['name:tr'] || p.name
 }
 
 export function toPoi(
@@ -31,7 +39,7 @@ export function toPoi(
   )?.['icon-color']
   return {
     key: `poi:${lngLat.join(',')}`,
-    name: p['name:tr'] || p.name || category || 'Yer',
+    name: ownName(p) || category || t('common.place'),
     category,
     categoryKey: categoryInfo(p.subclass, p.class)?.key,
     lngLat,

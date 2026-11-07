@@ -1,3 +1,5 @@
+import { t } from '../../i18n/index.ts'
+import { formatTime } from '../../i18n/format.ts'
 import type { StrokeName } from '../../icons/strokes.ts'
 import type { Route } from './valhalla.ts'
 
@@ -29,19 +31,17 @@ export function decodePolyline6(encoded: string): [number, number][] {
 
 /**
  * Clock time after `seconds` from `now`, like 10:04, marked with the days
- * on when it falls on a later day, like 00:47 (+1 gün).
+ * on when it falls on a later day, like 00:47 (+1 gün); a 12-hour clock
+ * where the language in use keeps one.
  */
 export function formatArrival(seconds: number, now = new Date()): string {
   const at = new Date(now.getTime() + seconds * 1000)
-  const time = at.toLocaleTimeString('tr-TR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  const time = formatTime(at)
   // Calendar days apart (rounded, as a day may be an hour short or long)
   const day = (d: Date) =>
     new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
   const days = Math.round((day(at) - day(now)) / 86_400_000)
-  return days > 0 ? `${time} (+${days} gün)` : time
+  return days > 0 ? t('time.laterDay', { time, days }) : time
 }
 
 /** The south-west and north-east corners round a line's points. */
@@ -66,10 +66,12 @@ export function shapeBounds(
 
 export function formatDuration(seconds: number): string {
   const minutes = Math.max(1, Math.round(seconds / 60))
-  if (minutes < 60) return `${minutes} dk`
+  if (minutes < 60) return t('duration.minutes', { m: minutes })
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
-  return rest ? `${hours} sa ${rest} dk` : `${hours} sa`
+  return rest
+    ? t('duration.hoursMinutes', { h: hours, m: rest })
+    : t('duration.hours', { h: hours })
 }
 
 // Valhalla maneuver types: https://valhalla.github.io/valhalla/api/turn-by-turn/api-reference/
@@ -124,9 +126,9 @@ export function routeLabels(routes: Route[]): (string | undefined)[] {
   const shortest = Math.min(...routes.map((r) => r.meters))
   return routes.map((route, i) =>
     i === 0
-      ? 'Önerilen'
+      ? t('directions.suggested')
       : route.meters === shortest && route.meters < routes[0].meters * 0.95
-        ? 'Daha kısa'
+        ? t('directions.shorter')
         : undefined,
   )
 }

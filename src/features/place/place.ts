@@ -1,3 +1,7 @@
+import { t } from '../../i18n/index.ts'
+import { formatNumber } from '../../i18n/format.ts'
+import { categoryInfo } from './categories.ts'
+
 export type OsmRef = { type: string; id: number }
 
 export type Place = {
@@ -35,15 +39,21 @@ export function distanceMeters(
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(a))
 }
 
-const oneDecimal = new Intl.NumberFormat('tr-TR', {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-})
-const whole = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 })
+const ONE_DECIMAL = { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+const WHOLE = { maximumFractionDigits: 0 }
 
+/** A distance as the language in use writes it: 450 m, 1,2 km or 1.2 km. */
 export function formatDistance(meters: number): string {
   // Rounded to tens first, so 995 m and up read as a kilometre
   const tens = Math.max(10, Math.round(meters / 10) * 10)
-  if (tens < 1000) return `${tens} m`
-  return `${(meters < 9_950 ? oneDecimal : whole).format(meters / 1000)} km`
+  if (tens < 1000) return t('unit.meters', { n: tens })
+  const km = formatNumber(meters / 1000, meters < 9_950 ? ONE_DECIMAL : WHOLE)
+  return t('unit.kilometers', { n: km })
+}
+
+/** A place's kind, in the language in use where it is a kind we know. */
+export function placeCategory(
+  place: Pick<Place, 'category' | 'categoryKey'>,
+): string | undefined {
+  return categoryInfo(place.categoryKey)?.label ?? place.category
 }

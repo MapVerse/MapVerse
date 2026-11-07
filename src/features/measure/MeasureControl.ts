@@ -1,4 +1,5 @@
 import type { IControl } from 'maplibre-gl'
+import { t } from '../../i18n/index.ts'
 import { STROKES } from '../../icons/strokes.ts'
 import {
   isMeasuring,
@@ -22,8 +23,8 @@ export class MeasureControl implements IControl {
     this.container.className = 'maplibregl-ctrl maplibregl-ctrl-group'
     this.button.type = 'button'
     this.button.className = 'mv-measure-button'
-    this.button.title = 'Mesafe ölç (M)'
-    this.button.setAttribute('aria-label', 'Mesafe ölç')
+    this.button.title = t('controls.measureTitle')
+    this.button.setAttribute('aria-label', t('controls.measure'))
     this.button.setAttribute('aria-keyshortcuts', 'M')
     this.button.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${STROKES.ruler}"/></svg>`
     this.button.addEventListener('click', toggleMeasuring)
