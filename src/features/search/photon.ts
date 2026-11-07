@@ -1,3 +1,4 @@
+import { PHOTON_URL } from '../../lib/endpoints.ts'
 import { categoryInfo, categoryLabel } from '../place/categories.ts'
 import type { Place } from '../place/place.ts'
 
@@ -26,7 +27,7 @@ export type PhotonFeature = {
   properties: PhotonProperties
 }
 
-const API = 'https://photon.komoot.io'
+const API = PHOTON_URL
 
 /** Result types worth outlining; buildings and streets would just be boxes. */
 const OUTLINED_TYPES = new Set([

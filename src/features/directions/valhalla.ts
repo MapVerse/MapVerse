@@ -1,3 +1,4 @@
+import { VALHALLA_URL } from '../../lib/endpoints.ts'
 import { decodePolyline6 } from './directions.ts'
 
 export type TravelMode = 'auto' | 'pedestrian' | 'bicycle'
@@ -42,8 +43,7 @@ export type ValhallaResponse = {
 
 // The public FOSSGIS server is meant for light use; point this at your own
 // Valhalla instance for anything more.
-const API =
-  import.meta.env.VITE_VALHALLA_URL ?? 'https://valhalla1.openstreetmap.de'
+const API = VALHALLA_URL
 
 /**
  * Why there is no route: the points are too far apart for the server, one

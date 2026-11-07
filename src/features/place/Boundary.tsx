@@ -1,6 +1,7 @@
 import { Layer, Source } from '@vis.gl/react-maplibre'
 import type { FeatureCollection, MultiPolygon, Polygon } from 'geojson'
 import { useEffect, useState } from 'react'
+import { NOMINATIM_URL } from '../../lib/endpoints.ts'
 import { useMapDesign } from '../../map/designSetting.ts'
 import type { OsmRef } from './place.ts'
 
@@ -55,7 +56,7 @@ export default function Boundary({ osm, bbox }: { osm: OsmRef; bbox?: Bbox }) {
   )
 }
 
-const NOMINATIM = 'https://nominatim.openstreetmap.org/lookup'
+const NOMINATIM = `${NOMINATIM_URL}/lookup`
 
 /**
  * How far, in degrees, the outline may stray from the true border: about

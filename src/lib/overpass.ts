@@ -1,5 +1,7 @@
 // OpenStreetMap data through public Overpass instances; they need no key
 
+import { OVERPASS_URLS } from './endpoints.ts'
+
 export type OverpassElement = {
   type: 'node' | 'way' | 'relation'
   id: number
@@ -38,10 +40,7 @@ export class OverpassError extends Error {
 }
 
 // Tried in turn, so one being busy or down doesn't stop the app
-const ENDPOINTS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.private.coffee/api/interpreter',
-]
+const ENDPOINTS = OVERPASS_URLS
 
 /** Longer than any query's own [timeout:…], so the server gives up first. */
 export const TIMEOUT_MS = 25_000
