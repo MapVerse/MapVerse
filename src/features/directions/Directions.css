@@ -803,6 +803,37 @@ button.directions-handle:focus-visible {
   white-space: nowrap;
 }
 
+/* Turn by turn along the picked route */
+.directions-go {
+  flex: none;
+  padding: 4px 10px 2px;
+}
+
+.directions-start {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  border-radius: 999px;
+  background: var(--mv-primary) !important;
+  color: #fff !important;
+  font-weight: 650 !important;
+  transition:
+    background-color 160ms,
+    transform 160ms var(--mv-ease-out);
+}
+
+.directions-start:active {
+  transform: scale(0.98);
+}
+
+.directions-start:focus-visible {
+  outline: 2px solid var(--mv-accent);
+  outline-offset: 2px;
+}
+
 .directions-steps-title {
   display: flex;
   flex: none;
@@ -1397,6 +1428,14 @@ button.directions-handle:focus-visible {
   }
 
   /* The routes side by side, swiped through */
+  .directions-go {
+    padding: 4px 12px 2px;
+  }
+
+  .directions-results.is-stepping:not(.is-expanded) .directions-go {
+    display: none;
+  }
+
   .directions-routes {
     display: flex;
     gap: 8px;

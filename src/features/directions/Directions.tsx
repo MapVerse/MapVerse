@@ -14,6 +14,7 @@ import {
 import { Icon } from '../../icons/Icon.tsx'
 import type { StrokeName } from '../../icons/strokes.ts'
 import { useMapDesign } from '../../map/designSetting.ts'
+import Navigation from '../navigation/Navigation.tsx'
 import { RISE_ZOOM, rising } from '../../map/style.ts'
 import { useTheme, type Theme } from '../../theme/theme.ts'
 import { DECK_LANDMARKS } from '../landmarks/deckLandmarks.ts'
@@ -43,6 +44,7 @@ import { useRoutes } from './useRoutes.ts'
 import {
   canAvoid,
   type Avoid,
+  type Route,
   type RouteRequest,
   type TravelMode,
   type When,
@@ -297,6 +299,11 @@ export default function Directions({
   const dragFrom = useRef(0)
   // Said to a screen reader as a field is moved
   const [moved, setMoved] = useState('')
+  // Turn by turn along the route picked, as it was when started
+  const [navigation, setNavigation] = useState<{
+    route: Route
+    request: RouteRequest
+  } | null>(null)
 
   const origin = slots[0].end
   const destination = slots[slots.length - 1].end
@@ -424,6 +431,8 @@ export default function Directions({
     if (leaving) return
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return
+      // Not out of turn by turn by a stray key: that takes Bitir
+      if (navigation) return
       if (panel) closePanel()
       else if (picking !== null) setPicking(null)
       else onClose()
@@ -469,8 +478,9 @@ export default function Directions({
     }
   }
 
-  /** Moves the map to show the whole of the picked route. */
-  function fitRoute() {
+  /** Moves the map to show the whole of the picked route (and flat, north
+   *  up, when back from turn by turn). */
+  function fitRoute(level = false) {
     // By public transport, the two ends it is opened with
     const shape =
       route?.shape ??
@@ -479,12 +489,35 @@ export default function Directions({
         : null)
     const bounds = shape && shapeBounds(shape)
     if (!map || !bounds) return
-    map.fitBounds(bounds, { padding: padding(), duration: 800 })
+    map.fitBounds(bounds, {
+      padding: padding(),
+      duration: reducedMotion() ? 0 : 800,
+      ...(level && { pitch: 0, bearing: 0 }),
+    })
+  }
+
+  /** Turn by turn along the picked route, from where the device is. */
+  function navigate() {
+    if (!route || !request) return
+    setPanel(null)
+    setEditing(null)
+    setPicking(null)
+    setStep(null)
+    setExpanded(false)
+    setNavigation({ route, request })
+  }
+
+  /** Back from turn by turn to the planner, saying why if it had to stop. */
+  function endNavigation(problem?: string) {
+    setNavigation(null)
+    if (problem) setNotice({ text: problem, problem: true })
+    // Once the planner is back, to leave room for it
+    requestAnimationFrame(() => fitRoute(true))
   }
 
   // Fit each route as it comes, or is picked
   const ends = mode === 'transit' && `${origin?.lngLat}|${destination?.lngLat}`
-  useEffect(fitRoute, [map, route, ends]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => fitRoute(), [map, route, ends]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Draw the picked route in from its start: the whole of it as one line
   // while it is drawn in, then its pieces on the ground as before
@@ -1004,6 +1037,18 @@ export default function Directions({
         : indexOf(picking) === slots.length - 1
           ? 'Varış noktasını seç'
           : 'Durağı seç'
+
+  if (navigation) {
+    return (
+      <Navigation
+        route={navigation.route}
+        request={navigation.request}
+        colors={colors}
+        beforeId={beforeId}
+        onEnd={endNavigation}
+      />
+    )
+  }
 
   return (
     <>
@@ -1529,6 +1574,16 @@ export default function Directions({
                     )
                   })}
                 </ul>
+                <div className="directions-go">
+                  <button
+                    type="button"
+                    className="directions-start"
+                    onClick={navigate}
+                  >
+                    <Icon name="directions" size={18} />
+                    Başlat
+                  </button>
+                </div>
                 {when.kind !== 'now' &&
                   routes.length === 1 &&
                   filled.length === 2 && (
