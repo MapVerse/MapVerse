@@ -4,15 +4,21 @@ import { ATLANTIS, ATLANTIS_CITY } from './atlantis.ts'
 import type { Landmark, Material, Part, XY } from './landmarks.ts'
 import { RAMS_PARK } from './ramsPark.ts'
 import {
+  arcade,
   dome,
+  domeOutline,
   ellipse,
+  fluted,
   grid,
   grown,
+  hipRoof,
   lightsAlong,
   lightsRound,
   minaret,
   mosque,
   scaled,
+  windowRow,
+  windowsRound,
 } from './shapes.ts'
 
 /*
@@ -1583,6 +1589,906 @@ const BRIDGE: Landmark = {
   parts: bridgeParts(),
 }
 
+/**
+ * Istanbul: Ortaköy Camii (Büyük Mecidiye), Balyan's baroque mosque on
+ * the water's edge by the bridge: its square, white prayer hall with tall
+ * arched windows on every side, under a dome on a windowed drum, the
+ * sultan's pavilion behind it and two slender minarets of one balcony
+ * each between them. `u` runs along the shore, `v` inland, away from the
+ * water and Mecca. The outline is OpenStreetMap's; the heights are
+ * estimates.
+ */
+const ortakoy = grid(38.9 * DEG)
+const ORTAKOY_HALL = ortakoy.box(-10.55, -10.5, 10.55, 10.5)
+/** The sultan's pavilion, a U behind the hall */
+const ORTAKOY_PAVILION: XY[] = (
+  [
+    [-10.55, 10.5],
+    [10.55, 10.5],
+    [15, 10.5],
+    [15, 16.4],
+    [17.6, 16.4],
+    [17.6, 29.9],
+    [7.4, 29.9],
+    [7.4, 19.9],
+    [-7.4, 19.9],
+    [-7.4, 29.9],
+    [-17.7, 29.9],
+    [-17.7, 16.4],
+    [-15, 16.4],
+    [-15, 10.5],
+  ] as XY[]
+).map(([u, v]) => ortakoy.at(u, v))
+const ORTAKOY_WALL = 18
+
+const ORTAKOY: Landmark = {
+  id: 'ortakoy',
+  lights: lightsAlong(grown(ORTAKOY_HALL, 4), 6),
+  name: 'Ortaköy Camii',
+  near: [29.026895, 41.047223],
+  hide: [{ within: 1, tallerThan: 0 }],
+  parts: [
+    {
+      kind: 'block',
+      material: 'whitewash',
+      footprint: ORTAKOY_HALL,
+      base: 0,
+      top: ORTAKOY_WALL,
+    },
+    // The cornice, and an arched crest over the middle of each side
+    {
+      kind: 'block',
+      material: 'whitewash',
+      footprint: grown(ORTAKOY_HALL, 0.5),
+      base: ORTAKOY_WALL,
+      top: ORTAKOY_WALL + 1,
+    },
+    ...(
+      [
+        [-4, -11, 4, 11],
+        [-11, -4, 11, 4],
+      ] as const
+    ).map(([u0, v0, u1, v1]): Part => ({
+      kind: 'block',
+      material: 'whitewash',
+      footprint: ortakoy.box(u0, v0, u1, v1),
+      base: ORTAKOY_WALL + 1,
+      top: ORTAKOY_WALL + 3,
+    })),
+    // Tall arched windows, in two tiers, on every side
+    ...windowsRound(ORTAKOY_HALL, 5, 1.7, [
+      [2.5, 7.5],
+      [9.5, 16.5],
+    ]),
+    // The corner piers, rising to pinnacles
+    ...(
+      [
+        [-10.55, -10.5],
+        [10.55, -10.5],
+        [10.55, 10.5],
+        [-10.55, 10.5],
+      ] as const
+    ).flatMap(([u, v]): Part[] => [
+      {
+        kind: 'round',
+        material: 'whitewash',
+        sides: 8,
+        at: ortakoy.at(u, v),
+        outline: [
+          [1.5, 0],
+          [1.5, ORTAKOY_WALL + 2],
+          [1, ORTAKOY_WALL + 2],
+          [0.2, ORTAKOY_WALL + 4.5],
+        ],
+      },
+    ]),
+    // The dome, on a drum ringed with windows
+    {
+      kind: 'round',
+      material: 'whitewash',
+      sides: 16,
+      outline: [
+        [7.6, ORTAKOY_WALL + 1],
+        [7.6, ORTAKOY_WALL + 5],
+      ],
+    },
+    {
+      kind: 'round',
+      material: 'windows',
+      sides: 16,
+      outline: [
+        [7.7, ORTAKOY_WALL + 2],
+        [7.7, ORTAKOY_WALL + 4],
+      ],
+    },
+    ...dome(7.2, ORTAKOY_WALL + 5, 6.5),
+    // The sultan's pavilion, of two storeys
+    {
+      kind: 'block',
+      material: 'whitewash',
+      footprint: ORTAKOY_PAVILION,
+      base: 0,
+      top: 11,
+    },
+    {
+      kind: 'block',
+      material: 'lead',
+      footprint: grown(ORTAKOY_PAVILION, -0.6),
+      base: 11,
+      top: 11.6,
+    },
+    ...windowsRound(ORTAKOY_PAVILION, 3.2, 1.2, [
+      [2, 4.5],
+      [6.5, 9.5],
+    ]),
+    ...(
+      [
+        [-12.75, 13.45],
+        [12.75, 13.45],
+      ] as const
+    ).flatMap(([u, v]) =>
+      minaret(ortakoy.at(u, v), 38, 1.3, {
+        balconies: 1,
+        material: 'whitewash',
+      }),
+    ),
+  ],
+}
+
+/**
+ * Istanbul: Haydarpaşa Garı, the station of 1908 at the water's edge in
+ * Kadıköy: a U of grey stone, four storeys under steep slate roofs, its
+ * front to the sea between two round corner towers with pointed roofs,
+ * and its wings reaching back along the tracks. `u` runs back from the
+ * sea along the wings, `v` along the front. The outline is
+ * OpenStreetMap's; the heights are estimates.
+ */
+const haydarpasa = grid(36.5 * DEG)
+const HAYDARPASA_EAVES = 20
+/** The front, and the two wings behind it */
+const HAYDARPASA_WINGS: [number, number, number, number][] = [
+  [-13, -25, 7, 35.4],
+  [-8, -30.9, 67, -12.8],
+  [-9, 24.8, 31.3, 41],
+]
+const HAYDARPASA_TOWERS: XY[] = [
+  haydarpasa.at(-11, -24.9),
+  haydarpasa.at(-11.6, 35.4),
+]
+const HAYDARPASA_STOREYS: [number, number][] = [
+  [3, 6.5],
+  [8.5, 11.5],
+  [13, 16],
+  [17, 19],
+]
+
+const HAYDARPASA: Landmark = {
+  id: 'haydarpasa',
+  lights: [
+    ...Array.from({ length: 8 }, (_, i) => haydarpasa.at(-19, -18 + 6.7 * i)),
+    ...HAYDARPASA_TOWERS.flatMap((at) => lightsRound(9, 5, at)),
+  ],
+  name: 'Haydarpaşa Garı',
+  near: [29.01863, 40.99611],
+  hide: [{ within: 1, tallerThan: 0 }],
+  parts: [
+    ...HAYDARPASA_WINGS.flatMap((wing): Part[] => [
+      {
+        kind: 'block',
+        material: 'stone',
+        footprint: haydarpasa.box(...wing),
+        base: 0,
+        top: HAYDARPASA_EAVES,
+      },
+      ...hipRoof(haydarpasa.box, wing, HAYDARPASA_EAVES, 9, 6),
+    ]),
+    // The gabled middle of the front, standing forward and higher
+    {
+      kind: 'block',
+      material: 'stone',
+      footprint: haydarpasa.box(-14.5, -0.5, -6, 10.9),
+      base: 0,
+      top: HAYDARPASA_EAVES + 3,
+    },
+    ...hipRoof(
+      haydarpasa.box,
+      [-14.5, -0.5, -6, 10.9],
+      HAYDARPASA_EAVES + 3,
+      8,
+      5,
+    ),
+    // Windows down the front, along the wings and on their ends
+    ...windowRow(
+      haydarpasa.at(-13, 29),
+      haydarpasa.at(-13, 10.9),
+      3,
+      1.8,
+      HAYDARPASA_STOREYS,
+    ),
+    ...windowRow(
+      haydarpasa.at(-14.5, 10.9),
+      haydarpasa.at(-14.5, -0.5),
+      3,
+      1.8,
+      HAYDARPASA_STOREYS,
+    ),
+    ...windowRow(
+      haydarpasa.at(-13, -0.5),
+      haydarpasa.at(-13, -18.5),
+      3,
+      1.8,
+      HAYDARPASA_STOREYS,
+    ),
+    ...windowRow(
+      haydarpasa.at(-5, -30.9),
+      haydarpasa.at(67, -30.9),
+      16,
+      1.8,
+      HAYDARPASA_STOREYS,
+    ),
+    ...windowRow(
+      haydarpasa.at(67, -30.9),
+      haydarpasa.at(67, -12.8),
+      4,
+      1.8,
+      HAYDARPASA_STOREYS,
+    ),
+    ...windowRow(
+      haydarpasa.at(31.3, 41),
+      haydarpasa.at(-5, 41),
+      8,
+      1.8,
+      HAYDARPASA_STOREYS,
+    ),
+    // The two round towers, under tall pointed roofs
+    ...HAYDARPASA_TOWERS.flatMap((at): Part[] => [
+      {
+        kind: 'round',
+        material: 'stone',
+        sides: 24,
+        at,
+        outline: [
+          [6.1, 0],
+          [6.1, 24],
+          [6.6, 24.3],
+          [6.6, 25.2],
+        ],
+      },
+      {
+        kind: 'round',
+        material: 'roof',
+        sides: 24,
+        at,
+        outline: [
+          [6.4, 25.2],
+          [0.4, 41],
+        ],
+      },
+      {
+        kind: 'round',
+        material: 'lead',
+        sides: 8,
+        at,
+        outline: [
+          [0.3, 41],
+          [0.1, 44],
+        ],
+      },
+      ...([0, 1, 2, 3, 4, 5, 6, 7] as const).flatMap((i) => {
+        const a = (i / 8) * 2 * Math.PI
+        const [x, y] = [Math.cos(a), Math.sin(a)]
+        return windowRow(
+          [at[0] + 6.1 * x - 0.8 * y, at[1] + 6.1 * y + 0.8 * x],
+          [at[0] + 6.1 * x + 0.8 * y, at[1] + 6.1 * y - 0.8 * x],
+          1,
+          1.3,
+          [...HAYDARPASA_STOREYS, [20.5, 23]],
+        )
+      }),
+    ]),
+  ],
+}
+
+/**
+ * Bursa: Ulu Camii, the great mosque of 1399: a stone hall under twenty
+ * domes, five across and four deep, the middle ones higher, one with a
+ * glazed lantern over the fountain inside, and a minaret at each of its
+ * front corners. `u` runs across it from west to east, `v` from the
+ * qibla wall to the front. The outline and minarets are OpenStreetMap's;
+ * the heights are estimates.
+ */
+const bursa = grid(6.5 * DEG)
+const BURSA_HALL = bursa.box(-35.2, -30.3, 35.2, 30.3)
+const BURSA_WALL = 13
+
+const BURSA: Landmark = {
+  id: 'bursa-ulu-camii',
+  lights: lightsAlong(grown(BURSA_HALL, 4), 9),
+  name: 'Bursa Ulu Camii',
+  near: [29.061882, 40.183923],
+  hide: [{ within: 1, tallerThan: 0 }],
+  parts: [
+    {
+      kind: 'block',
+      material: 'stone',
+      footprint: BURSA_HALL,
+      base: 0,
+      top: BURSA_WALL,
+    },
+    {
+      kind: 'block',
+      material: 'stone',
+      footprint: grown(BURSA_HALL, 0.4),
+      base: BURSA_WALL - 0.8,
+      top: BURSA_WALL,
+    },
+    // The portal in the front wall
+    {
+      kind: 'block',
+      material: 'stone',
+      footprint: bursa.box(-4, 30, 4, 31.6),
+      base: 0,
+      top: BURSA_WALL - 1,
+    },
+    ...windowsRound(BURSA_HALL, 7, 1.6, [
+      [3, 6.5],
+      [8, 11],
+    ]),
+    ...[0, 1, 2, 3, 4].flatMap((i) =>
+      [0, 1, 2, 3].flatMap((j): Part[] => {
+        const at = bursa.at(-28.16 + 14.08 * i, -22.73 + 15.15 * j)
+        const drum = BURSA_WALL + (i === 2 ? 4.5 : 2.5)
+        const parts: Part[] = [
+          {
+            kind: 'round',
+            material: 'stone',
+            sides: 8,
+            at,
+            outline: [
+              [6.3, BURSA_WALL],
+              [6.3, drum],
+            ],
+          },
+        ]
+        // Over the fountain, the dome is open under a glazed lantern
+        if (i === 2 && j === 2) {
+          parts.push(
+            {
+              kind: 'round',
+              material: 'lead',
+              at,
+              outline: domeOutline(5.9, drum, 5).slice(0, 7),
+            },
+            {
+              kind: 'round',
+              material: 'windows',
+              sides: 12,
+              at,
+              outline: [
+                [2.6, drum + 4.3],
+                [2.6, drum + 6.3],
+              ],
+            },
+            ...dome(2.8, drum + 6.3, 1.6, at),
+          )
+        } else {
+          parts.push(...dome(5.9, drum, 5.2, at))
+        }
+        return parts
+      }),
+    ),
+    ...(
+      [
+        [32.8, 31.2],
+        [-31.8, 31],
+      ] as const
+    ).flatMap(([u, v]) => minaret(bursa.at(u, v), 38, 1.8, { balconies: 1 })),
+  ],
+}
+
+/**
+ * Konya: Mevlana Müzesi, the dervish lodge round Rumi's tomb: its stone
+ * halls under lead domes, with the tomb's turquoise, fluted Yeşil Kubbe
+ * rising over them, the dervishes' cells under rows of small domes round
+ * the courtyard, its fountain, and the little octagonal tombs in the
+ * garden. Its outlines are OpenStreetMap's; the heights are estimates.
+ */
+const MEVLANA_HALLS: XY[] = [
+  [-23.7, 14.7],
+  [-20.8, 14.8],
+  [-0.9, 15.4],
+  [-1.1, 21.2],
+  [2.8, 21.3],
+  [2.8, 19.9],
+  [21.5, 20.5],
+  [22.1, 0.5],
+  [17.9, 0.3],
+  [18.3, -14],
+  [14.7, -14.1],
+  [14.9, -20.3],
+  [4.6, -20.1],
+  [4.7, -22.9],
+  [-7.6, -23.2],
+  [-6.1, -21.6],
+  [-6.1, -19.1],
+  [-7.7, -17.6],
+  [-12.3, -17.7],
+  [-12.6, -9.6],
+  [-23, -9.9],
+]
+/** The dervishes' cells, round the courtyard's west and north sides */
+const MEVLANA_CELLS: XY[] = [
+  [-31.6, -29.3],
+  [-31.6, -20.6],
+  [-41.5, -20.8],
+  [-42.1, 16.5],
+  [-23.2, 16.9],
+  [-23.3, 25.5],
+  [-53.6, 24.7],
+  [-51.8, -23.4],
+  [-55.7, -23.5],
+  [-56, -30.8],
+  [-48.6, -31],
+  [-48.3, -42.9],
+  [-30.5, -43.1],
+  [-30.5, -35.8],
+]
+const YESIL_KUBBE: XY = [2.4, -15.4]
+const MEVLANA_TOP = 9
+
+const MEVLANA: Landmark = {
+  id: 'mevlana',
+  lights: [
+    ...lightsRound(8, 6, YESIL_KUBBE),
+    ...lightsAlong(
+      [
+        [-38, -18],
+        [-38, 12],
+        [-26, 12],
+        [-26, -12],
+      ],
+      7,
+    ),
+  ],
+  name: 'Mevlana Müzesi',
+  near: [32.504994, 37.870706],
+  // The halls, the cells, the tombs and the fountain, and nothing beyond
+  hide: [{ at: [-15, -8], within: 30, tallerThan: 0 }],
+  parts: [
+    {
+      kind: 'block',
+      material: 'stone',
+      footprint: MEVLANA_HALLS,
+      base: 0,
+      top: MEVLANA_TOP,
+    },
+    // The ritual hall's and the mosque's domes, and the smaller ones
+    // round them
+    ...(
+      [
+        [12, 7, 6.2, 3],
+        [-12, 3, 5.2, 2],
+        [-4, 8, 2.6, 0],
+        [4, 9, 2.6, 0],
+        [10, -8, 2.6, 0],
+        [-17, 9, 2.6, 0],
+      ] as const
+    ).flatMap(([x, y, radius, drum]): Part[] => [
+      ...(drum > 0
+        ? [
+            {
+              kind: 'round',
+              material: 'stone',
+              sides: 12,
+              at: [x, y],
+              outline: [
+                [radius + 0.5, MEVLANA_TOP],
+                [radius + 0.5, MEVLANA_TOP + drum],
+              ],
+            } satisfies Part,
+          ]
+        : []),
+      ...dome(radius, MEVLANA_TOP + drum, radius * 0.8, [x, y]),
+    ]),
+    // The Yeşil Kubbe: a square base, a fluted drum and a fluted cone,
+    // all in turquoise tiles, under a gilded finial
+    {
+      kind: 'block',
+      material: 'stone',
+      footprint: rectangle(-2.6, -20.4, 7.4, -10.4),
+      base: 0,
+      top: MEVLANA_TOP + 2,
+    },
+    {
+      kind: 'round',
+      material: 'stone',
+      sides: 8,
+      at: YESIL_KUBBE,
+      outline: [
+        [5, MEVLANA_TOP + 2],
+        [5, MEVLANA_TOP + 3.5],
+      ],
+    },
+    ...fluted(
+      YESIL_KUBBE,
+      [
+        [4, MEVLANA_TOP + 3.5],
+        [4, 19],
+      ],
+      16,
+      'turquoise',
+    ),
+    ...fluted(
+      YESIL_KUBBE,
+      [
+        [4.5, 19],
+        [4.3, 20],
+        [0.3, 27],
+      ],
+      16,
+      'turquoise',
+      0.12,
+    ),
+    {
+      kind: 'round',
+      material: 'gold',
+      sides: 8,
+      at: YESIL_KUBBE,
+      outline: [
+        [0.25, 27],
+        [0.1, 29.5],
+      ],
+    },
+    // The dervishes' cells, each under a small dome
+    {
+      kind: 'block',
+      material: 'stone',
+      footprint: MEVLANA_CELLS,
+      base: 0,
+      top: 5,
+    },
+    ...[
+      ...Array.from({ length: 9 }, (_, i): XY => [-47.5, -18 + 4.6 * i]),
+      ...Array.from({ length: 4 }, (_, i): XY => [-40 + 4.6 * i, 21]),
+      ...Array.from({ length: 5 }, (_, i): XY => [-50 + 4.6 * i, -27]),
+      ...Array.from({ length: 3 }, (_, i): XY => [-44 + 4.6 * i, -38]),
+    ].flatMap((at) => dome(1.8, 5, 1.6, at)),
+    // The fountain in the courtyard, under its canopy
+    {
+      kind: 'round',
+      material: 'stone',
+      sides: 8,
+      at: [-28.1, 1.2],
+      outline: [
+        [2.6, 0],
+        [2.6, 1],
+      ],
+    },
+    ...lightsRound(3.4, 8, [-28.1, 1.2]).map((at): Part => ({
+      kind: 'round',
+      material: 'stone',
+      sides: 6,
+      at,
+      outline: [
+        [0.2, 0],
+        [0.2, 4],
+      ],
+    })),
+    {
+      kind: 'round',
+      material: 'lead',
+      sides: 8,
+      at: [-28.1, 1.2],
+      outline: [
+        [4, 4],
+        [4, 4.5],
+      ],
+    },
+    ...dome(3.6, 4.5, 2.4, [-28.1, 1.2]),
+    // The tombs in the garden, octagonal under pointed roofs
+    ...(
+      [
+        [-19, -17.9, 3.2],
+        [-16.6, -26.2, 3.2],
+        [-8.9, -20.4, 2.8],
+      ] as const
+    ).flatMap(([x, y, radius]): Part[] => [
+      {
+        kind: 'round',
+        material: 'stone',
+        sides: 8,
+        at: [x, y],
+        outline: [
+          [radius, 0],
+          [radius, 6],
+        ],
+      },
+      {
+        kind: 'round',
+        material: 'lead',
+        sides: 8,
+        at: [x, y],
+        outline: [
+          [radius + 0.2, 6],
+          [0.2, 9.5],
+        ],
+      },
+    ]),
+    ...dome(3.5, 5, 3, [-29.5, -32.3]),
+  ],
+}
+
+/**
+ * Antalya: Hadrian Kapısı (Üçkapılar), the marble gate of AD 130 into the
+ * old town: three round arches between four piers, each fronted on both
+ * sides by a column on a pedestal under the cornice, and a stone tower at
+ * either end. `u` runs along the gate, `v` through it. The outlines are
+ * OpenStreetMap's; the heights are estimates.
+ */
+const hadrian = grid(-48.4 * DEG)
+const HADRIAN_TOP = 8.6
+/** The middles of the gate's piers */
+const HADRIAN_PIERS = [-8.4, -2.8, 2.8, 8.4]
+const HADRIAN_TOWERS: [number, number, number, number, number][] = [
+  [-17.9, -9.4, -9.4, 4.9, 12.5],
+  [9.5, -9.4, 17.7, 4.9, 14],
+]
+
+const HADRIAN: Landmark = {
+  id: 'hadrian-kapisi',
+  lights: [
+    ...HADRIAN_PIERS.flatMap((u) => [hadrian.at(u, -7.5), hadrian.at(u, 7.5)]),
+  ],
+  name: 'Hadrian Kapısı',
+  near: [30.708548, 36.885265],
+  hide: [
+    { within: 1, tallerThan: 0 },
+    { at: hadrian.at(-13.6, -2.2), within: 1, tallerThan: 0 },
+    { at: hadrian.at(13.6, -2.2), within: 1, tallerThan: 0 },
+  ],
+  parts: [
+    ...arcade(hadrian.box, {
+      u0: -9.4,
+      v0: -3.4,
+      v1: 3.4,
+      piers: [2, 2, 2, 2],
+      openings: [3.6, 3.6, 3.6],
+      springs: 5,
+      top: HADRIAN_TOP,
+      material: 'whitewash',
+    }),
+    // The cornice, and what is left of the storey above it
+    {
+      kind: 'block',
+      material: 'whitewash',
+      footprint: hadrian.box(-9.4, -4.9, 9.4, 4.9),
+      base: HADRIAN_TOP,
+      top: HADRIAN_TOP + 0.8,
+    },
+    {
+      kind: 'block',
+      material: 'whitewash',
+      footprint: hadrian.box(-9.4, -3, 9.4, 3),
+      base: HADRIAN_TOP + 0.8,
+      top: HADRIAN_TOP + 1.6,
+    },
+    // A column before each pier, on both sides
+    ...HADRIAN_PIERS.flatMap((u) =>
+      [-4.2, 4.2].flatMap((v): Part[] => [
+        {
+          kind: 'block',
+          material: 'whitewash',
+          footprint: hadrian.box(u - 0.65, v - 0.65, u + 0.65, v + 0.65),
+          base: 0,
+          top: 1.6,
+        },
+        {
+          kind: 'round',
+          material: 'andesite',
+          sides: 12,
+          at: hadrian.at(u, v),
+          outline: [
+            [0.4, 1.6],
+            [0.35, 7.6],
+            [0.6, 8],
+          ],
+        },
+        {
+          kind: 'block',
+          material: 'whitewash',
+          footprint: hadrian.box(u - 0.7, v - 0.7, u + 0.7, v + 0.7),
+          base: 8,
+          top: HADRIAN_TOP,
+        },
+      ]),
+    ),
+    // The towers at either end, with a parapet round their tops
+    ...HADRIAN_TOWERS.flatMap(([u0, v0, u1, v1, top]): Part[] => {
+      const footprint = hadrian.box(u0, v0, u1, v1)
+      return [
+        { kind: 'block', material: 'stone', footprint, base: 0, top },
+        {
+          kind: 'block',
+          material: 'stone',
+          footprint: grown(footprint, 0.3),
+          base: top,
+          top: top + 1.2,
+          holes: [grown(footprint, -0.5)],
+        },
+        ...windowsRound(footprint, 4.5, 0.5, [[top - 4, top - 2]], 'shade'),
+      ]
+    }),
+  ],
+}
+
+/**
+ * Ankara: the Grand National Assembly's main building (TBMM), Holzmeister's
+ * stone block of 1961 with its wings round courtyards, the plenary hall
+ * raised in its middle and the ceremonial front of tall square pillars
+ * looking north over the forecourt and Atatürk's statue. `u` runs along
+ * the front, `v` towards it. The outline is OpenStreetMap's; the heights
+ * are estimates.
+ */
+const tbmm = grid(-13.1 * DEG)
+/** Its outline, anticlockwise, with the colonnade in front left open */
+const TBMM_OUTLINE: XY[] = (
+  [
+    [-47.6, 81.8],
+    [-47.6, 74.4],
+    [-47.3, 43.9],
+    [-47, 19.6],
+    [-29.3, 19.8],
+    [23, 19.7],
+    [39.1, 19.8],
+    [38.7, 44.6],
+    [38.5, 75.1],
+    [38.5, 83.6],
+    [55, 83.7],
+    [54.9, 92.7],
+    [102.3, 93.1],
+    [102.6, 66.2],
+    [84.5, 66],
+    [84.4, 76.8],
+    [55.8, 76.5],
+    [56.1, 44.7],
+    [56.2, 33.4],
+    [120.3, 33.9],
+    [120.7, -0.8],
+    [102.9, -1],
+    [102.7, 15.8],
+    [58.4, 15.4],
+    [58.6, -0.6],
+    [34.8, -0.8],
+    [35, -23.6],
+    [83.2, -23.2],
+    [83.6, -55.6],
+    [35.6, -56.1],
+    [35.8, -73.5],
+    [23.1, -73.6],
+    [23.2, -87.1],
+    [7.4, -87.2],
+    [7.4, -92.6],
+    [-12.6, -92.8],
+    [-12.7, -86.4],
+    [-29.6, -86.6],
+    [-29.8, -73],
+    [-41.7, -73.2],
+    [-41.9, -58.9],
+    [-51.9, -59],
+    [-58.8, -56.5],
+    [-64.4, -52.3],
+    [-69.2, -44.5],
+    [-69.9, -39.9],
+    [-69.2, -32.9],
+    [-66.4, -26.9],
+    [-62.4, -22.4],
+    [-57.5, -19.5],
+    [-41.6, -19.3],
+    [-41.8, 3.5],
+    [-61, 3.3],
+    [-61.2, 18.4],
+    [-112.1, 17.9],
+    [-111.9, 3],
+    [-125.7, 2.8],
+    [-126, 32.4],
+    [-63.2, 33],
+    [-63.5, 63.8],
+    [-109.3, 63.4],
+    [-109.6, 93.1],
+    [-63, 93.6],
+    [-62.9, 81.7],
+  ] as XY[]
+)
+  .map(([u, v]) => tbmm.at(u, v))
+  .reverse()
+const TBMM_TOP = 17
+/** The plenary hall, raised over the middle */
+const TBMM_HALL: [number, number, number, number] = [-30, -52, 22, 12]
+
+const TBMM: Landmark = {
+  id: 'tbmm',
+  lights: [
+    ...Array.from({ length: 12 }, (_, i) => tbmm.at(-27.3 + 4.6 * i, 29)),
+    ...lightsAlong(tbmm.box(-36, -98, 30, -80), 10),
+  ],
+  name: 'Türkiye Büyük Millet Meclisi',
+  near: [32.851065, 39.911734],
+  hide: [{ within: 1, tallerThan: 0 }],
+  parts: [
+    {
+      kind: 'block',
+      material: 'stone',
+      footprint: TBMM_OUTLINE,
+      base: 0,
+      top: TBMM_TOP,
+    },
+    {
+      kind: 'block',
+      material: 'stone',
+      footprint: grown(TBMM_OUTLINE, 0.3),
+      base: TBMM_TOP - 0.8,
+      top: TBMM_TOP,
+    },
+    ...windowsRound(TBMM_OUTLINE, 3.6, 1.6, [
+      [2.5, 5],
+      [6.5, 9],
+      [10.5, 13],
+    ]),
+    // The plenary hall, its roof and its lights stepping up
+    {
+      kind: 'block',
+      material: 'stone',
+      footprint: tbmm.box(...TBMM_HALL),
+      base: TBMM_TOP,
+      top: TBMM_TOP + 9,
+    },
+    ...windowsRound(tbmm.box(...TBMM_HALL), 3, 1.4, [
+      [TBMM_TOP + 2, TBMM_TOP + 7],
+    ]),
+    {
+      kind: 'block',
+      material: 'roof',
+      footprint: tbmm.box(-26, -48, 18, 8),
+      base: TBMM_TOP + 9,
+      top: TBMM_TOP + 11,
+    },
+    // The colonnade: twelve tall square pillars under a deep cornice
+    ...Array.from({ length: 12 }, (_, i): Part => {
+      const u = -27.3 + 4.6 * i
+      return {
+        kind: 'block',
+        material: 'stone',
+        footprint: tbmm.box(u - 0.7, 22, u + 0.7, 23.6),
+        base: 0,
+        top: TBMM_TOP - 1,
+      }
+    }),
+    {
+      kind: 'block',
+      material: 'stone',
+      footprint: tbmm.box(-29.3, 19.5, 22.9, 24.3),
+      base: TBMM_TOP - 1,
+      top: TBMM_TOP + 1,
+    },
+    // The steps up to it
+    {
+      kind: 'block',
+      material: 'paving',
+      footprint: tbmm.box(-29.3, 19.5, 22.9, 27.5),
+      base: 0,
+      top: 0.6,
+    },
+    // The glass doors behind the pillars
+    {
+      kind: 'block',
+      material: 'windows',
+      footprint: tbmm.box(-24, 19.5, 18, 19.9),
+      base: 0.6,
+      top: TBMM_TOP - 3,
+    },
+  ],
+}
+
 export const LANDMARKS: Landmark[] = [
   ATAKULE,
   ANITKABIR,
@@ -1591,6 +2497,7 @@ export const LANDMARKS: Landmark[] = [
   ATLANTIS,
   ATLANTIS_CITY,
   KOCATEPE,
+  TBMM,
   GALATA,
   KIZ_KULESI,
   CAMLICA,
@@ -1603,6 +2510,11 @@ export const LANDMARKS: Landmark[] = [
   AYASOFYA,
   SULTANAHMET,
   BRIDGE,
+  ORTAKOY,
+  HAYDARPASA,
   KONAK,
   SELIMIYE,
+  BURSA,
+  MEVLANA,
+  HADRIAN,
 ]
