@@ -1,0 +1,137 @@
+/* The saved places in the profile menu, a short list that scrolls */
+.mv-saved-list {
+  display: grid;
+  gap: 2px;
+  max-height: 232px;
+  margin: 0 -6px;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.mv-saved-list li {
+  display: flex;
+  align-items: center;
+  border-radius: 12px;
+}
+
+.mv-saved-list li:hover {
+  background: var(--glass-hover);
+}
+
+.mv-account .mv-account-panel .mv-saved-open {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.mv-saved-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--mv-accent-soft);
+  color: var(--mv-accent);
+}
+
+.mv-saved-icon.is-star,
+.search-saved-icon.is-star {
+  background: color-mix(in srgb, var(--mv-star) 18%, transparent);
+  color: var(--mv-star);
+}
+
+.mv-saved-icon.is-star svg,
+.search-saved-icon.is-star svg {
+  fill: currentColor;
+}
+
+.mv-saved-text {
+  display: grid;
+  min-width: 0;
+}
+
+.mv-saved-name,
+.mv-saved-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mv-saved-name {
+  font-weight: 600;
+}
+
+.mv-saved-detail {
+  color: var(--mv-muted);
+  font-size: 12.5px;
+}
+
+.mv-account .mv-account-panel .mv-saved-remove {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-right: 2px;
+  border-radius: 50%;
+  color: var(--mv-muted);
+}
+
+.mv-account .mv-account-panel .mv-saved-remove:hover {
+  background: var(--glass-hover);
+  color: var(--mv-danger);
+}
+
+.mv-saved-files {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mv-account .mv-account-panel .mv-saved-files button {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--glass-line);
+  border-radius: 999px;
+  background: var(--glass-fill);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mv-account .mv-account-panel .mv-saved-files button:not(:disabled):hover {
+  background: var(--glass-hover);
+}
+
+.mv-account .mv-account-panel .mv-saved-files button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.mv-saved-note {
+  min-height: 1.4em;
+}
+
+/* For a finger: a bin button easy to hit */
+@media (pointer: coarse) {
+  .mv-account .mv-account-panel .mv-saved-remove {
+    width: 40px;
+    height: 40px;
+  }
+
+  .mv-account .mv-account-panel .mv-saved-files button {
+    height: 40px;
+  }
+}

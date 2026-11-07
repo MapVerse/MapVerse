@@ -25,5 +25,43 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Yakındaki eczaneler",
+      "short_name": "Eczaneler",
+      "description": "En yakın eczaneleri haritada göster",
+      "url": "./?category=pharmacy",
+      "icons": [
+        { "src": "logo-192.png", "sizes": "192x192", "type": "image/png" }
+      ]
+    },
+    {
+      "name": "Yakındaki akaryakıt istasyonları",
+      "short_name": "Akaryakıt",
+      "description": "En yakın akaryakıt istasyonlarını haritada göster",
+      "url": "./?category=fuel",
+      "icons": [
+        { "src": "logo-192.png", "sizes": "192x192", "type": "image/png" }
+      ]
+    },
+    {
+      "name": "Yakındaki ATM'ler",
+      "short_name": "ATM",
+      "description": "En yakın ATM'leri haritada göster",
+      "url": "./?category=atm",
+      "icons": [
+        { "src": "logo-192.png", "sizes": "192x192", "type": "image/png" }
+      ]
+    },
+    {
+      "name": "Kayıtlı yerler",
+      "short_name": "Kayıtlı",
+      "description": "Ev, iş ve yıldızlı yerlerin",
+      "url": "./?saved=1",
+      "icons": [
+        { "src": "logo-192.png", "sizes": "192x192", "type": "image/png" }
+      ]
+    }
   ]
 }
