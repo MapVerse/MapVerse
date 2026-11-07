@@ -21,18 +21,22 @@ import {
   website,
   wikipedia,
 } from './details.ts'
+import { copyText } from './clipboard.ts'
+import { isFreeEscape } from './escape.ts'
 import {
   dayHours,
   describeOpenState,
+  hoursOn,
+  isHolidayToday,
+  mentionsHolidays,
   openState,
-  parseOpeningHours,
-  todayIndex,
+  parseHours,
   weekLines,
 } from './openingHours.ts'
 import type { Place } from './place.ts'
 import { sharePlace } from './share.ts'
 import { useAddress } from './useAddress.ts'
-import { useNow, usePlaceDetails } from './usePlaceDetails.ts'
+import { usePlaceDetails, usePlaceTime } from './usePlaceDetails.ts'
 import './PlaceCard.css'
 import './PlaceDetails.css'
 
@@ -50,6 +54,9 @@ type Props = {
   onDirections: () => void
   onClose: () => void
 }
+
+/** What was copied, or tried to be, and whether it was. */
+type Copied = { what: 'link' | 'coordinates'; ok: boolean }
 
 /** How long "copied" shows on a button, in ms. */
 const COPIED_MS = 1600
@@ -110,11 +117,13 @@ export default function PlaceDetails({
   const info = categoryInfo(place.categoryKey)
   const lookedUp = useAddress(place)
   // undefined while they are looked up, null when there are none
-  const details = usePlaceDetails(place)
+  const { details, failed, retry } = usePlaceDetails(place)
   const [week, setWeek] = useState(false)
-  const [copied, setCopied] = useState<'link' | 'coordinates' | null>(null)
-  // The time, to tell whether it is open; kept current while it is shown
-  const now = useNow()
+  const [copied, setCopied] = useState<Copied | null>(null)
+  // The time where the place is, to tell whether it is open; kept current
+  // while it is shown
+  const { wall, isHoliday } = usePlaceTime(place.lngLat)
+  const heading = useRef<HTMLHeadingElement>(null)
   // Where it was when the panel opened
   const openedAt = useRef(place.lngLat)
   // A pull on the sheet, under way: where it started, when, how far it has
@@ -173,11 +182,17 @@ export default function PlaceDetails({
     // Again as it goes to a peek, which has a button of its own
   }, [place.key, peek])
 
-  // Escape closes it
+  // Opened, it takes the focus, so a keyboard or screen reader goes on
+  // from it (a glance at a place is a card of its own, and takes none)
+  useEffect(() => {
+    heading.current?.focus({ preventScroll: true })
+  }, [])
+
+  // Escape closes it, unless something nearer takes it first
   useEffect(() => {
     if (leaving) return
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (isFreeEscape(event)) onClose()
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
@@ -233,8 +248,12 @@ export default function PlaceDetails({
   const tags = details?.tags
   const address = (tags && tagAddress(tags)) ?? lookedUp
   const hours = tags?.opening_hours
-  const parsed = hours ? parseOpeningHours(hours) : null
-  const open = parsed && openState(parsed, now).open
+  const parsed = hours ? parseHours(hours) : null
+  const open = parsed && openState(parsed, wall, isHoliday).open
+  const holidayToday = parsed ? isHolidayToday(parsed, wall, isHoliday) : false
+  // Hours for holidays that can't be told here: the religious ones, which
+  // move, and any outside Turkey
+  const holidayNote = !!hours && mentionsHolidays(hours)
   const call = tags && phone(tags)
   const site = tags && website(tags)
   const mail = tags && email(tags)
@@ -244,13 +263,18 @@ export default function PlaceDetails({
   const coordinates = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
 
   async function share() {
-    if ((await sharePlace(place)) === 'copied') setCopied('link')
+    const shared = await sharePlace(place)
+    if (shared === 'copied' || shared === 'failed') {
+      setCopied({ what: 'link', ok: shared === 'copied' })
+    }
   }
 
   async function copyCoordinates() {
-    await navigator.clipboard?.writeText(coordinates)
-    setCopied('coordinates')
+    setCopied({ what: 'coordinates', ok: await copyText(coordinates) })
   }
+
+  const linkCopied = copied?.what === 'link' ? copied : null
+  const coordinatesCopied = copied?.what === 'coordinates' ? copied : null
 
   /** Takes the sheet to one of its heights, or closes it. */
   function goTo(to: Detent | 'closed') {
@@ -348,7 +372,9 @@ export default function PlaceDetails({
       <header className="place-panel-head">
         <CategoryBadge categoryKey={place.categoryKey} size={52} />
         <div className="place-panel-title">
-          <h2>{place.name}</h2>
+          <h2 ref={heading} tabIndex={-1}>
+            {place.name}
+          </h2>
           {place.category && place.category !== place.name && (
             <p
               className="place-panel-kind"
@@ -365,7 +391,7 @@ export default function PlaceDetails({
                 <p
                   className={`place-panel-status ${open ? 'is-open' : 'is-closed'}`}
                 >
-                  {describeOpenState(parsed, now)}
+                  {describeOpenState(parsed, wall, isHoliday)}
                 </p>
               )
             )}
@@ -386,9 +412,16 @@ export default function PlaceDetails({
           <Icon name="directions" size={18} />
           Yol tarifi
         </button>
-        <button type="button" onClick={share}>
-          <Icon name={copied === 'link' ? 'check' : 'share'} size={18} />
-          {copied === 'link' ? 'Bağlantı kopyalandı' : 'Paylaş'}
+        <button type="button" onClick={share} aria-live="polite">
+          <Icon
+            name={!linkCopied ? 'share' : linkCopied.ok ? 'check' : 'info'}
+            size={18}
+          />
+          {!linkCopied
+            ? 'Paylaş'
+            : linkCopied.ok
+              ? 'Bağlantı kopyalandı'
+              : 'Kopyalanamadı'}
         </button>
         {peek && (
           <button
@@ -440,18 +473,29 @@ export default function PlaceDetails({
                       aria-expanded={week}
                       onClick={() => setWeek((w) => !w)}
                     >
-                      <span>Bugün {dayHours(parsed[todayIndex(now)])}</span>
+                      <span>
+                        Bugün
+                        {holidayToday ? ' (resmî tatil)' : ''}{' '}
+                        {dayHours(hoursOn(parsed, wall, isHoliday))}
+                      </span>
                       <Icon name="chevronDown" size={16} />
                     </button>
                     {week && (
                       <dl className="place-week">
-                        {weekLines(parsed).map(({ days, hours }) => (
-                          <div key={days}>
-                            <dt>{days}</dt>
-                            <dd>{hours}</dd>
-                          </div>
-                        ))}
+                        {weekLines(parsed.week, parsed.holiday).map(
+                          ({ days, hours }) => (
+                            <div key={days}>
+                              <dt>{days}</dt>
+                              <dd>{hours}</dd>
+                            </div>
+                          ),
+                        )}
                       </dl>
+                    )}
+                    {holidayNote && (
+                      <p className="place-hours-note">
+                        Resmî tatillerde saatler farklı olabilir.
+                      </p>
                     )}
                   </div>
                 ) : (
@@ -515,7 +559,13 @@ export default function PlaceDetails({
             )}
             <li style={row(i++)}>
               <Icon
-                name={copied === 'coordinates' ? 'check' : 'copy'}
+                name={
+                  !coordinatesCopied
+                    ? 'copy'
+                    : coordinatesCopied.ok
+                      ? 'check'
+                      : 'info'
+                }
                 size={20}
               />
               <button
@@ -523,8 +573,13 @@ export default function PlaceDetails({
                 className="place-fact-text place-copy"
                 onClick={copyCoordinates}
                 title="Koordinatları kopyala"
+                aria-live="polite"
               >
-                {copied === 'coordinates' ? 'Kopyalandı' : coordinates}
+                {!coordinatesCopied
+                  ? coordinates
+                  : coordinatesCopied.ok
+                    ? 'Kopyalandı'
+                    : 'Kopyalanamadı'}
               </button>
             </li>
           </ul>
@@ -539,11 +594,19 @@ export default function PlaceDetails({
             </ul>
           )}
 
-          {details === null && (
-            <p className="place-panel-note">
-              OpenStreetMap'te bu yer için başka bilgi yok.
-            </p>
-          )}
+          {details === null &&
+            (failed ? (
+              <p className="place-panel-note place-panel-failed" role="status">
+                Bilgiler şu anda alınamadı.{' '}
+                <button type="button" onClick={retry}>
+                  Tekrar dene
+                </button>
+              </p>
+            ) : (
+              <p className="place-panel-note">
+                OpenStreetMap'te bu yer için başka bilgi yok.
+              </p>
+            ))}
           {details && (
             <p className="place-panel-note">
               Bilgiler OpenStreetMap katkıcılarından ·{' '}

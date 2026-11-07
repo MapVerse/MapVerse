@@ -2,6 +2,8 @@ import { Marker, useMap } from '@vis.gl/react-maplibre'
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../../icons/Icon.tsx'
 import { describePoint, type PointDescription } from '../search/photon.ts'
+import { copyText } from './clipboard.ts'
+import { isFreeEscape } from './escape.ts'
 import type { Place } from './place.ts'
 import { sharePlace } from './share.ts'
 import './PlaceCard.css'
@@ -67,16 +69,20 @@ export default function PointCard({
   const { current: ref } = useMap()
   const card = useRef<HTMLElement>(null)
   const here = usePointDescription(place.lngLat)
-  const [copied, setCopied] = useState<'link' | 'coordinates' | null>(null)
+  // What was copied, or tried to be, and whether it was
+  const [copied, setCopied] = useState<{
+    what: 'link' | 'coordinates'
+    ok: boolean
+  } | null>(null)
   const [lng, lat] = place.lngLat
   const coordinates = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
   const title = here?.title ?? (here === null ? 'Seçilen nokta' : undefined)
 
-  // Escape closes it
+  // Escape closes it, unless something nearer takes it first
   useEffect(() => {
     if (leaving) return
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (isFreeEscape(event)) onClose()
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
@@ -106,14 +112,18 @@ export default function PointCard({
   }, [ref])
 
   async function share() {
-    if ((await sharePlace(place)) === 'copied') setCopied('link')
+    const shared = await sharePlace(place)
+    if (shared === 'copied' || shared === 'failed') {
+      setCopied({ what: 'link', ok: shared === 'copied' })
+    }
   }
 
   async function copyCoordinates() {
-    if (!navigator.clipboard) return
-    await navigator.clipboard.writeText(coordinates)
-    setCopied('coordinates')
+    setCopied({ what: 'coordinates', ok: await copyText(coordinates) })
   }
+
+  const linkCopied = copied?.what === 'link' ? copied : null
+  const coordinatesCopied = copied?.what === 'coordinates' ? copied : null
 
   return (
     <>
@@ -159,10 +169,21 @@ export default function PointCard({
               className="point-card-coordinates"
               title="Koordinatları kopyala"
               onClick={copyCoordinates}
+              aria-live="polite"
             >
-              {copied === 'coordinates' ? 'Kopyalandı' : coordinates}
+              {!coordinatesCopied
+                ? coordinates
+                : coordinatesCopied.ok
+                  ? 'Kopyalandı'
+                  : 'Kopyalanamadı'}
               <Icon
-                name={copied === 'coordinates' ? 'check' : 'copy'}
+                name={
+                  !coordinatesCopied
+                    ? 'copy'
+                    : coordinatesCopied.ok
+                      ? 'check'
+                      : 'info'
+                }
                 size={14}
               />
             </button>
@@ -187,9 +208,16 @@ export default function PointCard({
             <Icon name="directions" size={17} />
             Yol tarifi
           </button>
-          <button type="button" onClick={share}>
-            <Icon name={copied === 'link' ? 'check' : 'share'} size={17} />
-            {copied === 'link' ? 'Bağlantı kopyalandı' : 'Paylaş'}
+          <button type="button" onClick={share} aria-live="polite">
+            <Icon
+              name={!linkCopied ? 'share' : linkCopied.ok ? 'check' : 'info'}
+              size={17}
+            />
+            {!linkCopied
+              ? 'Paylaş'
+              : linkCopied.ok
+                ? 'Bağlantı kopyalandı'
+                : 'Kopyalanamadı'}
           </button>
         </div>
       </section>

@@ -144,6 +144,23 @@ describe('overpass', () => {
     )
     expect(sent).toEqual(['first', 'third'])
   })
+  it('lets what the person asked for go ahead of background tiles', async () => {
+    const { overpass } = await load()
+    let finish!: (res: Response) => void
+    fetchMock.mockImplementationOnce(
+      () => new Promise<Response>((resolve) => (finish = resolve)),
+    )
+    fetchMock.mockImplementation(async () => json({ elements: [] }))
+    const first = overpass('first')
+    const tiles = overpass('tiles', undefined, { background: true })
+    const search = overpass('search')
+    finish(json({ elements: [] }))
+    await Promise.all([first, tiles, search])
+    const sent = fetchMock.mock.calls.map(([, init]) =>
+      (init!.body as URLSearchParams).get('data'),
+    )
+    expect(sent).toEqual(['first', 'search', 'tiles'])
+  })
 })
 
 describe('parseRetryAfter', () => {

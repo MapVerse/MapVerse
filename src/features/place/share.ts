@@ -1,3 +1,4 @@
+import { copyText } from './clipboard.ts'
 import type { Place } from './place.ts'
 
 /** A link to the map, centred close in on a place. */
@@ -7,11 +8,12 @@ export function placeUrl({ lngLat: [lng, lat] }: Place): string {
 
 /**
  * Shares a link to a place: through the device's own share sheet where
- * there is one, or else by copying it. Says which, or null if neither.
+ * there is one, or else by copying it. Says which: null if it was
+ * dismissed, 'failed' if it could not be copied.
  */
 export async function sharePlace(
   place: Place,
-): Promise<'shared' | 'copied' | null> {
+): Promise<'shared' | 'copied' | 'failed' | null> {
   const url = placeUrl(place)
   if (navigator.share) {
     try {
@@ -22,7 +24,5 @@ export async function sharePlace(
       return null
     }
   }
-  if (!navigator.clipboard) return null
-  await navigator.clipboard.writeText(url)
-  return 'copied'
+  return (await copyText(url)) ? 'copied' : 'failed'
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { findMatch } from './match.ts'
+import { readRecent } from './useRecentSearches.ts'
 import { describePointFrom, formatAddress, toSearchResult } from './photon.ts'
 
 describe('toSearchResult', () => {
@@ -146,5 +147,60 @@ describe('findMatch', () => {
     expect(findMatch('İstanbul Havalimanı', 'istan')).toEqual([0, 5])
     expect(findMatch('Galata Kulesi', 'KULE')).toEqual([7, 11])
     expect(findMatch('Galata', 'xyz')).toBeNull()
+  })
+
+  it('falls back to plain casing, so an ASCII I matches i', () => {
+    expect(findMatch('IKEA Bayrampaşa', 'ikea')).toEqual([0, 4])
+    expect(findMatch('Yeni IKEA', 'Ikea')).toEqual([5, 9])
+    // İ lowers to two characters the plain way; the match still lines up
+    expect(findMatch('İzmir IKEA', 'ikea')).toEqual([6, 10])
+  })
+})
+
+describe('readRecent', () => {
+  const good = {
+    key: 'N42',
+    name: 'Kahve Durağı',
+    detail: 'Beyoğlu',
+    lngLat: [28.97, 41.02],
+  }
+
+  it('keeps entries that can be shown, and drops the rest', () => {
+    const stored = JSON.stringify([
+      good,
+      { key: 'N1', name: 'Konumsuz' },
+      { key: 'N2', name: 'Bozuk', lngLat: [28.9, 'x'] },
+      { key: 'N3', name: 'Eksik', lngLat: [28.9] },
+      { name: 'Anahtarsız', lngLat: [28.9, 41] },
+      null,
+      'metin',
+    ])
+    expect(readRecent(stored)).toEqual([
+      expect.objectContaining({ key: 'N42', lngLat: [28.97, 41.02] }),
+    ])
+  })
+
+  it('drops a bad bbox or OSM reference but keeps the place', () => {
+    const [result] = readRecent(
+      JSON.stringify([
+        {
+          ...good,
+          detail: 5,
+          bbox: [1, 2, 3],
+          osm: { type: 'N' },
+          outline: true,
+        },
+      ]),
+    )
+    expect(result).toMatchObject({ key: 'N42', detail: '' })
+    expect(result.bbox).toBeUndefined()
+    expect(result.osm).toBeUndefined()
+    expect(result.outline).toBe(false)
+  })
+
+  it('reads nothing from what is not a list', () => {
+    expect(readRecent(null)).toEqual([])
+    expect(readRecent('{"key":"N1"}')).toEqual([])
+    expect(readRecent('not json')).toEqual([])
   })
 })

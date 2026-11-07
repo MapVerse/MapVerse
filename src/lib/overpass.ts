@@ -69,22 +69,26 @@ export function parseRetryAfter(
  * couple of slots per address and answer more with 429. A job whose signal
  * is aborted while it waits leaves the queue at once, never sent.
  */
-const queue: (() => void)[] = []
+const queue: { start: () => void; background: boolean }[] = []
 let running = false
 
 function pump() {
   if (running) return
-  const start = queue.shift()
-  if (!start) return
+  const next = queue.shift()
+  if (!next) return
   running = true
-  start()
+  next.start()
 }
 
-function exclusive<T>(task: () => Promise<T>, signal?: AbortSignal) {
+function exclusive<T>(
+  task: () => Promise<T>,
+  signal: AbortSignal | undefined,
+  background: boolean,
+) {
   return new Promise<T>((resolve, reject) => {
     if (signal?.aborted) return reject(signal.reason)
     const onAbort = () => {
-      const at = queue.indexOf(start)
+      const at = queue.findIndex((job) => job.start === start)
       if (at < 0) return
       queue.splice(at, 1)
       reject(signal?.reason)
@@ -99,7 +103,11 @@ function exclusive<T>(task: () => Promise<T>, signal?: AbortSignal) {
         })
     }
     signal?.addEventListener('abort', onAbort, { once: true })
-    queue.push(start)
+    // What the person asked for goes ahead of background tile fetches
+    const job = { start, background }
+    const at = background ? -1 : queue.findIndex((j) => j.background)
+    if (at < 0) queue.push(job)
+    else queue.splice(at, 0, job)
     pump()
   })
 }
@@ -112,8 +120,9 @@ function exclusive<T>(task: () => Promise<T>, signal?: AbortSignal) {
 export function overpass(
   query: string,
   signal?: AbortSignal,
+  { background = false }: { background?: boolean } = {},
 ): Promise<OverpassElement[]> {
-  return exclusive(() => request(query, signal), signal)
+  return exclusive(() => request(query, signal), signal, background)
 }
 
 async function request(query: string, signal?: AbortSignal) {

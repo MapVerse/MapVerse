@@ -5,13 +5,23 @@ const category = (key: string) => QUICK_CATEGORIES.find((c) => c.key === key)!
 
 describe('buildQuery', () => {
   it('asks for named places of the category around a point', () => {
-    expect(buildQuery(category('pharmacy'), [28.97412, 41.02563], 1000)).toBe(
-      '[out:json][timeout:15];(nwr["amenity"="pharmacy"]["name"](around:1000,41.02563,28.97412););out center tags 200;',
+    expect(
+      buildQuery(category('pharmacy'), [28.97412, 41.02563], [1000], 1000),
+    ).toBe(
+      '[out:json][timeout:15];(nwr["amenity"="pharmacy"]["name"](around:1000,41.02563,28.97412););out center tags 1000;',
+    )
+  })
+
+  it('asks further out in rings, each sent apart, so the nearest come whole', () => {
+    expect(buildQuery(category('pharmacy'), [29, 41], [3000, 10000], 500)).toBe(
+      '[out:json][timeout:15];' +
+        '(nwr["amenity"="pharmacy"]["name"](around:3000,41.00000,29.00000);)->.a0;.a0 out center tags 500;' +
+        '(nwr["amenity"="pharmacy"]["name"](around:10000,41.00000,29.00000);)->.a1;(.a1; - .a0;)->.r1;.r1 out center tags 500;',
     )
   })
 
   it('also takes unnamed places for categories that are often unnamed', () => {
-    const query = buildQuery(category('atm'), [29, 41], 3000)
+    const query = buildQuery(category('atm'), [29, 41], [3000], 200)
     expect(query).toContain(
       'nwr["amenity"="atm"](around:3000,41.00000,29.00000);',
     )

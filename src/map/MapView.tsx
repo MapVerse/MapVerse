@@ -424,7 +424,11 @@ export default function MapView() {
         <SearchResults results={nearby.results} selectedKey={place?.key} />
       )}
       {place?.outline && place.osm && (
-        <Boundary key={`outline:${place.key}`} osm={place.osm} />
+        <Boundary
+          key={`outline:${place.key}`}
+          osm={place.osm}
+          bbox={place.bbox}
+        />
       )}
       {/* The open place's own area, when it is one, such as a park */}
       {details.map(({ key, item, leaving }) =>

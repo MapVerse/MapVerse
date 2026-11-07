@@ -34,6 +34,8 @@ export async function fetchAreaNames(
   tiles: Tile[],
   signal?: AbortSignal,
 ): Promise<AreaName[]> {
-  const elements = await overpass(buildAreaQuery(tiles), signal)
+  const elements = await overpass(buildAreaQuery(tiles), signal, {
+    background: true,
+  })
   return elements.map(toAreaName).filter((area) => area !== null)
 }

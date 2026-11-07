@@ -60,8 +60,17 @@ export const QUICK_CATEGORIES: QuickCategory[] = [
   },
 ]
 
-/** Search this far out, widening only when too few places turn up. */
-const RADII_M = [1000, 3000, 10000]
+/**
+ * Overpass lists what it finds in id order, not by distance, so a cap on
+ * how many it sends could cut the nearest. The first ask is close in, with
+ * a cap no ordinary neighbourhood comes near; only if too few places turn
+ * up does a second ask go further, in rings, each ring capped by itself so
+ * the nearer one always comes whole.
+ */
+const NEAR_M = 1000
+const RINGS_M = [3000, 10000]
+const NEAR_CAP = 1000
+const RING_CAP = 500
 const ENOUGH = 8
 const LIMIT = 20
 
@@ -71,16 +80,9 @@ export async function searchCategory(
   center: [number, number],
   signal?: AbortSignal,
 ): Promise<SearchResult[]> {
-  let results: SearchResult[] = []
-  for (const radius of RADII_M) {
-    const elements = await overpass(
-      buildQuery(category, center, radius),
-      signal,
-    )
-    results = elements
-      .map((element) => toSearchResult(element, category))
-      .filter((result) => result !== null)
-    if (results.length >= ENOUGH) break
+  let results = await search(category, center, [NEAR_M], NEAR_CAP, signal)
+  if (results.length < ENOUGH) {
+    results = await search(category, center, RINGS_M, RING_CAP, signal)
   }
   return results
     .map((result) => ({ result, d: distanceMeters(center, result.lngLat) }))
@@ -89,15 +91,47 @@ export async function searchCategory(
     .map(({ result }) => result)
 }
 
+async function search(
+  category: QuickCategory,
+  center: [number, number],
+  radii: number[],
+  cap: number,
+  signal?: AbortSignal,
+) {
+  const elements = await overpass(
+    buildQuery(category, center, radii, cap),
+    signal,
+  )
+  return elements
+    .map((element) => toSearchResult(element, category))
+    .filter((result) => result !== null)
+}
+
+/**
+ * The Overpass query for places of a category within each of `radii` in
+ * turn (nearest first), each ring sent apart, up to `cap` places in it.
+ */
 export function buildQuery(
   category: QuickCategory,
   [lng, lat]: [number, number],
-  radius: number,
+  radii: number[],
+  cap: number,
 ): string {
-  const around = `(around:${radius},${lat.toFixed(5)},${lng.toFixed(5)})`
   const named = category.unnamed ? '' : '["name"]'
-  const parts = category.filters.map((f) => `nwr${f}${named}${around};`)
-  return `[out:json][timeout:15];(${parts.join('')});out center tags 200;`
+  const within = (radius: number) => {
+    const around = `(around:${radius},${lat.toFixed(5)},${lng.toFixed(5)})`
+    return `(${category.filters.map((f) => `nwr${f}${named}${around};`).join('')})`
+  }
+  const head = '[out:json][timeout:15];'
+  if (radii.length === 1)
+    return `${head}${within(radii[0])};out center tags ${cap};`
+  // Each ring is what lies within it and not within the one before
+  const rings = radii.map((radius, i) =>
+    i === 0
+      ? `${within(radius)}->.a0;.a0 out center tags ${cap};`
+      : `${within(radius)}->.a${i};(.a${i}; - .a${i - 1};)->.r${i};.r${i} out center tags ${cap};`,
+  )
+  return head + rings.join('')
 }
 
 const OSM_TYPES = { node: 'N', way: 'W', relation: 'R' } as const

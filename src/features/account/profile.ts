@@ -29,7 +29,7 @@ function load(): Profile | null {
   }
 }
 
-/** Saves the profile, or signs out with null. */
+/** Saves the profile, or removes it with null. */
 export function setProfile(next: Profile | null) {
   profile = next
   try {

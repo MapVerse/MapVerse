@@ -66,6 +66,10 @@ export default function SearchBox({
       : typed
         ? results
         : []
+  // The highlighted row, kept within the list as it shrinks
+  const current = Math.min(active, items.length - 1)
+  // The panel under the box: the categories, or a list
+  const popup = showCategories || items.length > 0
   const message = !open
     ? null
     : nearby
@@ -135,7 +139,7 @@ export default function SearchBox({
   /** The search button picks the highlighted result, or opens the list. */
   function search() {
     if (!showRecent && items.length > 0) {
-      select(items[active] ?? items[0])
+      select(items[current] ?? items[0])
     } else {
       setOpen(true)
       inputRef.current?.focus()
@@ -146,15 +150,17 @@ export default function SearchBox({
     if (event.key === 'ArrowDown') {
       event.preventDefault()
       setOpen(true)
-      setActive((i) => Math.min(i + 1, items.length - 1))
+      setActive(Math.min(current + 1, items.length - 1))
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
-      setActive((i) => Math.max(i - 1, 0))
+      setActive(Math.max(current - 1, 0))
     } else if (event.key === 'Enter' && items.length > 0) {
-      select(items[active] ?? items[0])
-    } else if (event.key === 'Escape') {
-      // Only close the list; a search box would also clear its text
+      select(items[current] ?? items[0])
+    } else if (event.key === 'Escape' && (popup || message)) {
+      // Only close the list; a search box would also clear its text. Taken
+      // here, it closes nothing else, such as an open place
       event.preventDefault()
+      event.stopPropagation()
       setOpen(false)
     }
   }
@@ -183,10 +189,11 @@ export default function SearchBox({
           role="combobox"
           aria-label="Arama ve yer seçimi"
           aria-autocomplete="list"
-          aria-expanded={items.length > 0}
-          aria-controls={listId}
+          aria-expanded={popup}
+          // Only while the list is there to point to
+          aria-controls={items.length > 0 ? listId : undefined}
           aria-activedescendant={
-            items.length > 0 && active >= 0 ? `${listId}-${active}` : undefined
+            current >= 0 ? `${listId}-${current}` : undefined
           }
           placeholder={narrow ? 'Burada ara' : 'Arama ve yer seçimi'}
           autoComplete="off"
@@ -235,7 +242,7 @@ export default function SearchBox({
           <Icon name="route" size={22} strokeWidth={1.9} />
         </button>
       </div>
-      {(showCategories || items.length > 0) && (
+      {popup && (
         <div
           className="search-panel"
           // Keep focus in the input so the click below still lands
@@ -281,7 +288,7 @@ export default function SearchBox({
                   // The rows come in one after another
                   style={{ '--row': Math.min(i, 8) } as CSSProperties}
                   role="option"
-                  aria-selected={i === active}
+                  aria-selected={i === current}
                   onClick={() => select(item)}
                 >
                   {showRecent ? (

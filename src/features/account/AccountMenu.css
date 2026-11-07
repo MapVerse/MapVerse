@@ -74,6 +74,11 @@
   text-align: left;
 }
 
+/* Focused as it opens, for a keyboard to go on from: no ring */
+.mv-account-panel:focus {
+  outline: none;
+}
+
 .mv-profile {
   display: flex;
   align-items: center;

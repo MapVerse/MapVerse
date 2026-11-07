@@ -177,6 +177,47 @@ export function pickArea(
   )
 }
 
+/**
+ * How wide an area may be, in degrees either way, to be drawn: past this
+ * (some 50 km) it is a sea, a river's basin, a long route or a great
+ * national park, megabytes of outline to download for a tint no one sees
+ * whole.
+ */
+const MAX_SPAN_DEG = 0.5
+
+/** Whether a box, west, south, east, north, is too wide to draw. */
+export const tooWide = ([w, s, e, n]: [number, number, number, number]) =>
+  e - w > MAX_SPAN_DEG || n - s > MAX_SPAN_DEG
+
+/** Kinds of relation that are never an area worth tinting, or are vast. */
+export function neverDrawn(tags: Record<string, string> = {}) {
+  return (
+    /^(route|route_master|superroute|network|waterway|collection)$/.test(
+      tags.type ?? '',
+    ) ||
+    'waterway' in tags ||
+    /^(water|sea|strait|bay|coastline|peninsula)$/.test(tags.natural ?? '') ||
+    /^(sea|ocean)$/.test(tags.place ?? '')
+  )
+}
+
+type Bounds = { minlat: number; minlon: number; maxlat: number; maxlon: number }
+
+/**
+ * The cheap look first, for a relation of no known size: its tags and
+ * its box only, so a vast one is never asked for in full.
+ */
+export const sizeQuery = (id: number) =>
+  `[out:json][timeout:12];relation(${id});out tags bb;`
+
+/** Whether a relation, from `sizeQuery`'s answer, is worth drawing. */
+export function worthDrawing(elements: OverpassElement[]): boolean {
+  const [element] = elements as (OverpassElement & { bounds?: Bounds })[]
+  if (!element || neverDrawn(element.tags)) return false
+  const b = element.bounds
+  return !b || !tooWide([b.minlon, b.minlat, b.maxlon, b.maxlat])
+}
+
 const cache = new Map<string, Promise<MultiPolygon | null>>()
 
 /** A place's shape on the ground, if it is an area: null if not, or unknown. */
@@ -188,7 +229,21 @@ export function fetchPlaceArea(
   if (known) return known
   const query = areaQuery(place, areaKind(kind))
   if (!query) return Promise.resolve(null)
-  const found = overpass(query).then((elements) => pickArea(elements, place))
+  // A search result too wide to draw, by the box it came with
+  const element = place.osm?.type === 'W' || place.osm?.type === 'R'
+  if (element && place.bbox && tooWide(place.bbox)) {
+    return Promise.resolve(null)
+  }
+  // A relation of no known size is sized up first
+  const sized =
+    place.osm?.type === 'R' && !place.bbox
+      ? overpass(sizeQuery(place.osm.id)).then(worthDrawing)
+      : Promise.resolve(true)
+  const found = sized.then((worth) =>
+    worth
+      ? overpass(query).then((elements) => pickArea(elements, place))
+      : null,
+  )
   cache.set(place.key, found)
   // Asked again after a failure, it is tried again
   found.catch(() => cache.delete(place.key))

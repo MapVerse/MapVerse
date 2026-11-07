@@ -39,6 +39,8 @@ export async function fetchTrafficSignals(
   tiles: Tile[],
   signal?: AbortSignal,
 ): Promise<TrafficSignal[]> {
-  const elements = await overpass(buildSignalQuery(tiles), signal)
+  const elements = await overpass(buildSignalQuery(tiles), signal, {
+    background: true,
+  })
   return elements.map(toTrafficSignal).filter((light) => light !== null)
 }

@@ -5,7 +5,11 @@ import {
   areaQuery,
   elementShape,
   joinRings,
+  neverDrawn,
   pickArea,
+  sizeQuery,
+  tooWide,
+  worthDrawing,
 } from './area.ts'
 
 const pts = (...xy: [number, number][]) =>
@@ -131,5 +135,41 @@ describe('pickArea', () => {
       elementShape(small),
     )
     expect(pickArea([], { name: 'Park' })).toBeNull()
+  })
+})
+
+describe('vast areas', () => {
+  it('leaves out boxes too wide to draw', () => {
+    expect(tooWide([28.9, 41.0, 29.0, 41.1])).toBe(false)
+    expect(tooWide([27.0, 40.5, 41.5, 46.5])).toBe(true) // Karadeniz
+  })
+
+  it('leaves out kinds that are never an area worth tinting', () => {
+    expect(neverDrawn({ type: 'route', route: 'bus' })).toBe(true)
+    expect(neverDrawn({ type: 'waterway', waterway: 'river' })).toBe(true)
+    expect(neverDrawn({ type: 'multipolygon', natural: 'strait' })).toBe(true)
+    expect(neverDrawn({ type: 'multipolygon', leisure: 'park' })).toBe(false)
+  })
+
+  it('sizes a relation up by its tags and box before asking for it whole', () => {
+    expect(sizeQuery(42)).toBe(
+      '[out:json][timeout:12];relation(42);out tags bb;',
+    )
+    const relation = (tags: Record<string, string>, span: number) =>
+      ({
+        type: 'relation',
+        id: 42,
+        tags,
+        bounds: {
+          minlat: 41,
+          minlon: 29,
+          maxlat: 41 + span,
+          maxlon: 29 + span,
+        },
+      }) as OverpassElement
+    expect(worthDrawing([relation({ leisure: 'park' }, 0.02)])).toBe(true)
+    expect(worthDrawing([relation({ leisure: 'park' }, 2)])).toBe(false)
+    expect(worthDrawing([relation({ type: 'route' }, 0.02)])).toBe(false)
+    expect(worthDrawing([])).toBe(false)
   })
 })

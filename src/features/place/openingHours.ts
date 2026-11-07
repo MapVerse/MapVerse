@@ -1,14 +1,18 @@
 /*
  * OpenStreetMap's `opening_hours`, in its everyday forms: `24/7`, or rules
- * such as `Mo-Fr 08:00-18:00; Sa 09:00-14:00; Su off`. Anything more (months,
- * week numbers, sunrise, holidays' own hours, comments) is left to be shown
- * as written.
+ * such as `Mo-Fr 08:00-18:00; Sa 09:00-14:00; Su off; PH off`. Anything more
+ * (months, week numbers, sunrise, comments) is left to be shown as written.
  */
 
 /** Minutes from midnight to minutes from midnight, past 24:00 if it runs on. */
 export type Interval = [from: number, to: number]
 /** Each day's hours, Monday first. */
 export type Week = Interval[][]
+/**
+ * A place's hours: its week, and its hours on public holidays when it
+ * says what they are (`PH off`, `PH 10:00-14:00`).
+ */
+export type Hours = { week: Week; holiday?: Interval[] }
 
 const DAY_KEYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
 export const DAY_NAMES = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']
@@ -26,11 +30,18 @@ const minutes = (time: string) => {
   return h * 60 + m
 }
 
-/** The days a list such as `Mo-We,Fr` names, or null if it names only holidays. */
-function days(list: string): number[] | null {
+/**
+ * The days a list such as `Mo-We,Fr` or `Sa,PH` names, and whether it
+ * names public holidays; null if it names something else.
+ */
+function days(list: string): { days: number[]; holiday: boolean } | null {
   const picked = new Set<number>()
+  let holiday = false
   for (const part of list.split(',').map((p) => p.trim())) {
-    if (/^PH$/i.test(part)) continue
+    if (/^PH$/i.test(part)) {
+      holiday = true
+      continue
+    }
     const [from, to = from] = part.split('-').map((d) => d.trim())
     const a = DAY_KEYS.findIndex((d) => d.toLowerCase() === from.toLowerCase())
     const b = DAY_KEYS.findIndex((d) => d.toLowerCase() === to.toLowerCase())
@@ -41,14 +52,17 @@ function days(list: string): number[] | null {
       if (d === b) break
     }
   }
-  return picked.size ? [...picked] : null
+  return picked.size || holiday ? { days: [...picked], holiday } : null
 }
 
-/** A week's hours from `opening_hours`, or null if it says more than that. */
-export function parseOpeningHours(spec: string): Week | null {
+const EVERY_DAY = { days: [0, 1, 2, 3, 4, 5, 6], holiday: false }
+
+/** A place's hours from `opening_hours`, or null if it says more than that. */
+export function parseHours(spec: string): Hours | null {
   const text = spec.trim()
-  if (/^24\/7$/.test(text)) return DAY_KEYS.map(() => [[0, DAY]])
+  if (/^24\/7$/.test(text)) return { week: DAY_KEYS.map(() => [[0, DAY]]) }
   const week: Week = DAY_KEYS.map(() => [])
+  let holiday: Interval[] | undefined
   // A comma before a day starts another rule, as a semicolon would
   const rules = text
     .replace(/(?<=\d)\s*,\s*(?=(?:Mo|Tu|We|Th|Fr|Sa|Su|PH)\b)/g, '; ')
@@ -59,9 +73,7 @@ export function parseOpeningHours(spec: string): Week | null {
     const match = RULE.exec(rule)
     if (!match) return null
     const [, dayList, times] = match
-    const picked = dayList ? days(dayList) : [0, 1, 2, 3, 4, 5, 6]
-    // Holidays' own hours are left out
-    if (dayList && /\bPH\b/i.test(dayList) && !picked) continue
+    const picked = dayList ? days(dayList) : EVERY_DAY
     if (!picked) return null
     const intervals: Interval[] = /^(off|closed)$/i.test(times)
       ? []
@@ -70,46 +82,189 @@ export function parseOpeningHours(spec: string): Week | null {
           return [from, to <= from ? to + DAY : to]
         })
     // A later rule overrides an earlier one for the days it names
-    for (const d of picked) week[d] = intervals
+    for (const d of picked.days) week[d] = intervals
+    if (picked.holiday) holiday = intervals
   }
-  return week
+  return holiday ? { week, holiday } : { week }
 }
 
-const isAlwaysOpen = (week: Week) =>
-  week.every((day) => day.some(([from, to]) => from === 0 && to >= DAY))
+/** A week's hours from `opening_hours`, or null if it says more than that. */
+export function parseOpeningHours(spec: string): Week | null {
+  return parseHours(spec)?.week ?? null
+}
 
-/** Whether a place is open at a time, and when that next changes. */
-export function openState(
-  week: Week,
-  now: Date,
-): {
+/** Whether `opening_hours` says anything of public holidays. */
+export const mentionsHolidays = (spec: string) => /\bPH\b/.test(spec)
+
+/** A day on the calendar, its month counted from 1. */
+export type CivilDate = { year: number; month: number; day: number }
+
+/** The time as the clocks show it where a place is. */
+export type WallClock = {
+  date: CivilDate
+  /** Monday being 0 */
+  weekday: number
+  /** Minutes since midnight */
+  minutes: number
+}
+
+const WEEKDAYS: Record<string, number> = {
+  Mon: 0,
+  Tue: 1,
+  Wed: 2,
+  Thu: 3,
+  Fri: 4,
+  Sat: 5,
+  Sun: 6,
+}
+
+/**
+ * What the clocks show at `now` in a time zone (the device's own if none
+ * is given): the place's own time, not the reader's, tells if it is open.
+ */
+export function wallClock(now: Date, timeZone?: string): WallClock {
+  let parts: Intl.DateTimeFormatPart[]
+  try {
+    parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      weekday: 'short',
+      hour: 'numeric',
+      minute: 'numeric',
+      hourCycle: 'h23',
+    }).formatToParts(now)
+  } catch {
+    // A zone this browser doesn't know: the device's own time
+    if (timeZone) return wallClock(now)
+    return {
+      date: {
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        day: now.getDate(),
+      },
+      weekday: (now.getDay() + 6) % 7,
+      minutes: now.getHours() * 60 + now.getMinutes(),
+    }
+  }
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? ''
+  return {
+    date: {
+      year: Number(get('year')),
+      month: Number(get('month')),
+      day: Number(get('day')),
+    },
+    weekday: WEEKDAYS[get('weekday')] ?? (now.getDay() + 6) % 7,
+    // Some engines write midnight as 24 even in a 23-hour cycle
+    minutes: (Number(get('hour')) % 24) * 60 + Number(get('minute')),
+  }
+}
+
+/** The day `days` after `date`. */
+export function addDays({ year, month, day }: CivilDate, days: number) {
+  const d = new Date(Date.UTC(year, month - 1, day + days))
+  return {
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth() + 1,
+    day: d.getUTCDate(),
+  }
+}
+
+/** Whether a day is a public holiday where a place is. */
+export type HolidayCheck = (date: CivilDate) => boolean
+
+/**
+ * Turkey's national holidays that fall on the same date every year. The
+ * religious ones (Ramazan and Kurban Bayramı) move with the lunar calendar
+ * and are not known here.
+ */
+const TURKISH_HOLIDAYS = [
+  [1, 1], // Yılbaşı
+  [4, 23], // Ulusal Egemenlik ve Çocuk Bayramı
+  [5, 1], // Emek ve Dayanışma Günü
+  [5, 19], // Atatürk'ü Anma, Gençlik ve Spor Bayramı
+  [7, 15], // Demokrasi ve Millî Birlik Günü
+  [8, 30], // Zafer Bayramı
+  [10, 29], // Cumhuriyet Bayramı
+]
+
+export const isTurkishHoliday: HolidayCheck = ({ month, day }) =>
+  TURKISH_HOLIDAYS.some(([m, d]) => m === month && d === day)
+
+const asHours = (hours: Hours | Week): Hours =>
+  Array.isArray(hours) ? { week: hours } : hours
+
+/** A day's hours, `offset` days on from the one `wall` is in. */
+export function hoursOn(
+  hours: Hours | Week,
+  wall: WallClock,
+  isHoliday?: HolidayCheck,
+  offset = 0,
+): Interval[] {
+  const h = asHours(hours)
+  if (h.holiday && isHoliday?.(addDays(wall.date, offset))) return h.holiday
+  return h.week[(((wall.weekday + offset) % 7) + 7) % 7]
+}
+
+/** Whether today, where the place is, is a holiday with hours of its own. */
+export const isHolidayToday = (
+  hours: Hours,
+  wall: WallClock,
+  isHoliday?: HolidayCheck,
+) => !!hours.holiday && !!isHoliday?.(wall.date)
+
+export type OpenState = {
   open: boolean
   always?: boolean
   change?: { inDays: number; at: number }
-} {
-  if (isAlwaysOpen(week)) return { open: true, always: true }
-  const today = (now.getDay() + 6) % 7
-  const yesterday = (today + 6) % 7
-  const m = now.getHours() * 60 + now.getMinutes()
-  for (const [from, to] of week[today]) {
-    if (m >= from && m < to) {
-      return { open: true, change: { inDays: to >= DAY ? 1 : 0, at: to % DAY } }
+}
+
+/**
+ * Whether a place is open at a time, and when that next changes. Hours
+ * that run on into the next day, as round the clock on weekdays, are
+ * followed to where they really end; it looks a full week ahead, to the
+ * same day next week.
+ */
+export function openState(
+  hours: Hours | Week,
+  wall: WallClock,
+  isHoliday?: HolidayCheck,
+): OpenState {
+  const m = wall.minutes
+  // The hours from yesterday (which may run on into today) to a week on,
+  // as minutes from today's midnight, those that touch run together
+  const spans: Interval[] = []
+  for (let k = -1; k <= 8; k++) {
+    for (const [from, to] of hoursOn(hours, wall, isHoliday, k)) {
+      spans.push([k * DAY + from, k * DAY + to])
     }
   }
-  for (const [, to] of week[yesterday]) {
-    if (to > DAY && m < to - DAY) {
-      return { open: true, change: { inDays: 0, at: to - DAY } }
+  spans.sort((a, b) => a[0] - b[0])
+  const merged: Interval[] = []
+  for (const span of spans) {
+    const last = merged[merged.length - 1]
+    if (last && span[0] <= last[1]) last[1] = Math.max(last[1], span[1])
+    else merged.push([...span])
+  }
+  const current = merged.find(([from, to]) => from <= m && m < to)
+  if (current) {
+    // Open a week on end: it never closes
+    if (current[1] - m >= 7 * DAY) return { open: true, always: true }
+    const to = current[1]
+    return {
+      open: true,
+      change: { inDays: Math.floor(to / DAY), at: to % DAY },
     }
   }
-  for (let ahead = 0; ahead < 7; ahead++) {
-    const starts = week[(today + ahead) % 7]
-      .map(([from]) => from)
-      .filter((from) => ahead > 0 || from > m)
-      .sort((a, b) => a - b)
-    if (starts.length)
-      return { open: false, change: { inDays: ahead, at: starts[0] } }
+  const next = merged.find(([from]) => from > m && from <= 7 * DAY + DAY)
+  if (!next) return { open: false }
+  const from = next[0]
+  return {
+    open: false,
+    change: { inDays: Math.floor(from / DAY), at: from % DAY },
   }
-  return { open: false }
 }
 
 export const clock = (at: number) => {
@@ -118,20 +273,28 @@ export const clock = (at: number) => {
 }
 
 /** A line saying whether a place is open now, and until or from when. */
-export function describeOpenState(week: Week, now: Date): string {
-  const state = openState(week, now)
+export function describeOpenState(
+  hours: Hours | Week,
+  wall: WallClock,
+  isHoliday?: HolidayCheck,
+): string {
+  const state = openState(hours, wall, isHoliday)
   if (state.always) return '24 saat açık'
   if (!state.change) return state.open ? 'Açık' : 'Kapalı'
   const { inDays, at } = state.change
+  const name = DAY_NAMES[(wall.weekday + inDays) % 7]
   if (state.open) {
-    return `Açık · Kapanış ${inDays ? 'gece ' : ''}${clock(at)}`
+    const when = inDays === 0 ? '' : inDays === 1 ? 'gece ' : `${name} `
+    return `Açık · Kapanış ${when}${clock(at)}`
   }
   const when =
     inDays === 0
       ? ''
       : inDays === 1
         ? 'yarın '
-        : `${DAY_NAMES[(((now.getDay() + 6) % 7) + inDays) % 7]} `
+        : inDays === 7
+          ? `gelecek ${name} `
+          : `${name} `
   return `Kapalı · Açılış ${when}${clock(at)}`
 }
 
@@ -143,11 +306,14 @@ export const dayHours = (day: Interval[]) =>
       ? '24 saat'
       : day.map(([from, to]) => `${clock(from)}–${clock(to)}`).join(', ')
 
-/** Today's hours, Monday being day 0. */
-export const todayIndex = (now: Date) => (now.getDay() + 6) % 7
-
-/** The week as lines, days with the same hours run together. */
-export function weekLines(week: Week): { days: string; hours: string }[] {
+/**
+ * The week as lines, days with the same hours run together; then public
+ * holidays, if their hours are given.
+ */
+export function weekLines(
+  week: Week,
+  holiday?: Interval[],
+): { days: string; hours: string }[] {
   const hours = week.map(dayHours)
   const lines: { days: string; hours: string }[] = []
   for (let d = 0; d < 7;) {
@@ -159,5 +325,6 @@ export function weekLines(week: Week): { days: string; hours: string }[] {
     })
     d = end + 1
   }
+  if (holiday) lines.push({ days: 'Resmî tatil', hours: dayHours(holiday) })
   return lines
 }

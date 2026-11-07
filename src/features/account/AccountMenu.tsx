@@ -25,8 +25,8 @@ class Slot implements IControl {
 }
 
 /**
- * The profile button in the corner, and its menu: signing in (a name and a
- * photo, kept on this device) and the app's settings.
+ * The profile button in the corner, and its menu: a profile (a name and a
+ * photo, kept on this device only, not an account) and the app's settings.
  */
 export default function AccountMenu({
   position,
@@ -37,10 +37,11 @@ export default function AccountMenu({
   const profile = useProfile()
   const toggleRef = useRef<HTMLButtonElement>(null)
   const photoRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const panelId = useId()
-  const title = profile ? profile.name : 'Giriş yap'
+  const title = profile ? profile.name : 'Profil oluştur'
   // Kept a moment once closed, to shrink back into the button
   const panels = usePresence(open || null, open ? 'panel' : null, 170)
 
@@ -53,20 +54,37 @@ export default function AccountMenu({
       // A press on the map that closes the menu does only that
       if (onMap(event.target)) swallowNextClick()
     }
+    // Escape closes the menu and only that: heard first (while the event
+    // comes down to its target), and marked as taken, so an open place or
+    // card under it stays open. Not while typing in a field elsewhere.
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      const target = event.target
+      if (
+        target instanceof Element &&
+        !slot.container.contains(target) &&
+        target.closest('input, textarea, select, [role="search"]')
+      ) {
+        return
+      }
+      event.preventDefault()
       setOpen(false)
       toggleRef.current?.focus()
     }
     document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('keydown', onKeyDown, true)
     return () => {
       document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('keydown', onKeyDown, true)
     }
   }, [open, slot])
 
-  function signIn(event: FormEvent) {
+  // Opened, the menu takes the focus, so a keyboard goes on from it
+  useEffect(() => {
+    if (open) panelRef.current?.focus({ preventScroll: true })
+  }, [open])
+
+  function createProfile(event: FormEvent) {
     event.preventDefault()
     const trimmed = name.trim()
     if (!trimmed) return
@@ -91,9 +109,7 @@ export default function AccountMenu({
         className="mv-account-toggle mv-glass"
         title={title}
         aria-label={
-          profile
-            ? `${profile.name}, profil ve ayarlar`
-            : 'Giriş yap ve ayarlar'
+          profile ? `${profile.name}, profil ve ayarlar` : 'Profil ve ayarlar'
         }
         aria-expanded={open}
         aria-controls={panelId}
@@ -104,6 +120,8 @@ export default function AccountMenu({
       {panels.map(({ key, leaving }) => (
         <section
           key={key}
+          ref={leaving ? undefined : panelRef}
+          tabIndex={-1}
           id={leaving ? undefined : panelId}
           className={`mv-account-panel mv-glass${leaving ? ' is-leaving' : ''}`}
           aria-label="Profil ve ayarlar"
@@ -115,7 +133,9 @@ export default function AccountMenu({
             <div className="mv-profile-text">
               <p className="mv-profile-name">{profile?.name ?? 'Misafir'}</p>
               <p className="mv-profile-note">
-                {profile ? 'Bu cihazdaki profilin' : 'Giriş yapmadın'}
+                {profile
+                  ? 'Bu cihazdaki profilin'
+                  : 'Henüz profil oluşturmadın'}
               </p>
             </div>
           </div>
@@ -124,7 +144,7 @@ export default function AccountMenu({
             <div className="mv-profile-actions">
               <button
                 type="button"
-                // Short on screen, so it fits beside the sign-out button
+                // Short on screen, so it fits beside the remove button
                 title={profile.photo ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'}
                 aria-label={
                   profile.photo ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'
@@ -136,7 +156,7 @@ export default function AccountMenu({
               </button>
               <button type="button" onClick={() => setProfile(null)}>
                 <Icon name="logout" size={18} />
-                Çıkış yap
+                Profili kaldır
               </button>
               <input
                 ref={photoRef}
@@ -150,7 +170,7 @@ export default function AccountMenu({
               />
             </div>
           ) : (
-            <form className="mv-sign-in" onSubmit={signIn}>
+            <form className="mv-sign-in" onSubmit={createProfile}>
               <input
                 type="text"
                 placeholder="Adın"
@@ -161,10 +181,10 @@ export default function AccountMenu({
                 onChange={(event) => setName(event.target.value)}
               />
               <button type="submit" disabled={!name.trim()}>
-                Giriş yap
+                Profil oluştur
               </button>
               <p className="mv-settings-hint">
-                Profilin yalnızca bu cihazda saklanır.
+                Hesap gerekmez: profilin yalnızca bu cihazda saklanır.
               </p>
             </form>
           )}
