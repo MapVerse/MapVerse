@@ -32,6 +32,8 @@ MapLibre GL JS ile yapılmış bir keşif ve gezi haritası.
 - Çalışma saatleri mekânın kendi saat dilimine göre (Türkiye'de Europe/Istanbul) hesaplanır, Türkiye'nin sabit tarihli resmî tatillerindeki saatler (`PH`) uygulanır, diğer tatiller için not düşülür
 - Kamu sunucularına saygılı: Overpass'a aynı anda tek istek gider, sizin aramalarınız arka plandaki karo isteklerinin önüne geçer, sunucu meşgulse (429) beklenir ve başarısız karolar artan aralıklarla yeniden denenir
 - Harita konumu URL'de tutulur (`#zoom/enlem/boylam`), link paylaşınca aynı görünüm açılır
+- Çevrimdışı da açılır: bir kez açıldıktan sonra uygulamanın dosyaları tarayıcıda saklanır, bağlantı yokken sayfa yine açılır ve çevrimdışı uyarısı görünür. Gezilen yerlerin harita karoları, yazı tipleri ve stil de saklanır (en fazla 2000 dosya, en uzun süredir bakılmayanlar önce silinir), daha önce bakılan yerler çevrimdışıyken de çizilir. Aramalar, mekân bilgileri, alan sınırları ve rotalar hiç saklanmaz, her seferinde sunucudan istenir. Yeni sürüm yayımlanınca üstte "Yeni sürüm hazır" notu çıkar, Yenile'ye basınca yeni sürüm açılır
+- Profil menüsünde Hakkında ve gizlilik: uygulamanın sürümü ve derlendiği commit, veri kaynakları ve atıflar, hangi bilginin hangi servise gittiğini sade Türkçeyle anlatan gizlilik notu (servislerin kendi politikalarına bağlantılarla) ve bu tarayıcıdaki tüm MapVerse verilerini (profil, ayarlar, favoriler, son aramalar) onay alarak silen "Bu cihazdaki verilerimi sil" düğmesi
 
 ## Geliştirme
 
@@ -44,9 +46,30 @@ npm run build         # tip kontrolü + üretim derlemesi
 npm run lint          # oxlint
 npm test              # vitest
 npm run format        # prettier
+npm run e2e           # Playwright ile uçtan uca testler
 ```
 
-Rotalar varsayılan olarak FOSSGIS'in herkese açık Valhalla sunucusundan (`valhalla1.openstreetmap.de`) alınır. Bu sunucu düşük hacimli kullanım içindir; kendi Valhalla sunucunu kullanmak için derlemeden önce `VITE_VALHALLA_URL` değişkenini tanımla.
+Uçtan uca testler (`e2e/`) üretim derlemesini `vite preview` ile açar ve dış istekleri küçük sahte yanıtlarla karşılar: boş bir harita, iki yer ve bir rota; internet gerekmez. İlk seferde tarayıcıyı `npx playwright install chromium` ile kur; başka bir Chromium kullanmak için yolunu `PLAYWRIGHT_CHROMIUM_PATH` ile ver.
+
+Service worker yalnızca üretim derlemesinde (`npm run build`, `npm run preview`) kaydedilir; `npm run dev` sırasında yoktur.
+
+### Ortam değişkenleri
+
+Hepsi isteğe bağlıdır ve derleme sırasında okunur (`.env.local` dosyasına ya da komutun önüne yazılabilir). Tanımlanmazsa herkese açık sunucular kullanılır; bunlar düşük hacimli kullanım içindir, yoğun kullanım için kendi sunucunu kur.
+
+| Değişken                | Varsayılan                                     | Ne için                                                                |
+| ----------------------- | ---------------------------------------------- | ---------------------------------------------------------------------- |
+| `VITE_PHOTON_URL`       | `https://photon.komoot.io`                     | Yer ve adres arama, tıklanan noktanın adresi                           |
+| `VITE_NOMINATIM_URL`    | `https://nominatim.openstreetmap.org`          | İl, ilçe ve semtlerin sınırı                                           |
+| `VITE_OVERPASS_URLS`    | `overpass-api.de` ve `overpass.private.coffee` | Mekân bilgileri ve yakındaki yerler; virgülle ayrılır, sırayla denenir |
+| `VITE_VALHALLA_URL`     | `https://valhalla1.openstreetmap.de`           | Rotalar (FOSSGIS'in sunucusu)                                          |
+| `VITE_ERROR_REPORT_URL` | yok                                            | Hata raporlarının gönderileceği adres                                  |
+
+Örnek: `VITE_OVERPASS_URLS=https://overpass.example.org/api/interpreter npm run build`
+
+Hata raporları varsayılan olarak kapalıdır: `VITE_ERROR_REPORT_URL` tanımlanmazsa hiçbir şey gönderilmez. Tanımlanırsa uygulama durduğunda ya da sayfada yakalanmamış bir hata olduğunda bu adrese küçük bir JSON `POST` edilir (`sendBeacon`, olmazsa `fetch` ile `keepalive`; ön kontrol isteği gerekmesin diye `text/plain` olarak): hata mesajı, kısaltılmış yığın izi, sorgu ve `#` kısmı atılmış sayfa adresi, tarayıcı bilgisi, sürüm ve commit. Bir oturumda en fazla 5 rapor gider, aynı mesaj bir kez gönderilir.
+
+Sürüm `package.json`'dan, commit GitHub Actions'ta `GITHUB_SHA`'dan, yerelde Git'ten alınır.
 
 ## Yol haritası
 
@@ -55,7 +78,9 @@ Rotalar varsayılan olarak FOSSGIS'in herkese açık Valhalla sunucusundan (`val
 - [x] Arama (Photon)
 - [ ] İşaretler ve popup (localStorage, GeoJSON dışa/içe aktarma)
 - [x] 3D binalar ve arazi
-- [ ] Mobil cila ve uçtan uca test
+- [ ] Mobil cila
+- [x] Uçtan uca testler (Playwright)
+- [x] Çevrimdışı açılış (service worker)
 
 ## Atıflar
 
