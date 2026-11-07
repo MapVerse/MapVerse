@@ -11,6 +11,8 @@ export type Maneuver = {
   streets: string[]
   /** Where it starts, as an index into its route's shape */
   at: number
+  /** For the arrival at a stop on the way, which one (from 1) */
+  stop?: number
 }
 
 export type Route = {
@@ -18,10 +20,17 @@ export type Route = {
   seconds: number
   shape: [number, number][]
   maneuvers: Maneuver[]
+  /**
+   * When it leaves and arrives, as local clock times like
+   * 2026-11-08T09:00, when asked for at a time
+   */
+  departs?: string
+  arrives?: string
 }
 
 type ValhallaTrip = {
   summary: { length: number; time: number }
+  locations?: { date_time?: string }[]
   legs: {
     shape: string
     maneuvers: {
@@ -75,23 +84,63 @@ export function noRouteReason(body: string): NoRouteReason {
   return 'none'
 }
 
-export async function getRoutes(
-  from: [number, number],
-  to: [number, number],
-  mode: TravelMode,
-  signal?: AbortSignal,
-): Promise<Route[]> {
-  const request = {
-    locations: [from, to].map(([lon, lat]) => ({ lon, lat })),
+/** Roads to keep off, where the way of travel has them. */
+export type Avoid = { tolls: boolean; highways: boolean; ferries: boolean }
+
+export const AVOID_NOTHING: Avoid = {
+  tolls: false,
+  highways: false,
+  ferries: false,
+}
+
+/**
+ * When to travel: now, leaving at a local clock time, or arriving by one
+ * (like 2026-11-08T09:00).
+ */
+export type When = { kind: 'now' } | { kind: 'depart' | 'arrive'; at: string }
+
+export type RouteRequest = {
+  /** From the start, through any stops, to the destination, as [lng, lat] */
+  points: [number, number][]
+  mode: TravelMode
+  avoid: Avoid
+  when: When
+}
+
+/** Whether a way of travel can keep off a kind of road at all. */
+export function canAvoid(mode: TravelMode, what: keyof Avoid): boolean {
+  return what === 'ferries' || mode === 'auto'
+}
+
+/** What Valhalla is asked, by its route API. */
+export function buildRequest({ points, mode, avoid, when }: RouteRequest) {
+  // 0 keeps off them as far as there is another way (1 would prefer them)
+  const options: Record<string, number> = {}
+  if (avoid.tolls && canAvoid(mode, 'tolls')) options.use_tolls = 0
+  if (avoid.highways && canAvoid(mode, 'highways')) options.use_highways = 0
+  if (avoid.ferries && canAvoid(mode, 'ferries')) options.use_ferry = 0
+  return {
+    locations: points.map(([lon, lat]) => ({ lon, lat })),
     costing: mode,
-    alternates: 2,
+    ...(Object.keys(options).length > 0 && {
+      costing_options: { [mode]: options },
+    }),
+    // Valhalla finds other ways only between two points
+    ...(points.length === 2 && { alternates: 2 }),
+    ...(when.kind !== 'now' && {
+      date_time: { type: when.kind === 'depart' ? 1 : 2, value: when.at },
+    }),
     directions_options: { units: 'kilometers', language: 'tr-TR' },
   }
+}
+
+export async function getRoutes(
+  request: RouteRequest,
+  signal?: AbortSignal,
+): Promise<Route[]> {
+  const query = encodeURIComponent(JSON.stringify(buildRequest(request)))
   // A GET keeps this a simple CORS request, without a preflight
-  const res = await fetch(
-    `${API}/route?json=${encodeURIComponent(JSON.stringify(request))}`,
-    { signal },
-  )
+  const res = await fetch(`${API}/route?json=${query}`, { signal })
   if (res.status === 400) {
     const body = await res.text()
     throw new NoRouteError(body, noRouteReason(body))
@@ -100,31 +149,48 @@ export async function getRoutes(
   return parseRoutes((await res.json()) as ValhallaResponse)
 }
 
+/** Valhalla's arrival maneuvers: at, on the right of, on the left of. */
+const ARRIVALS = new Set([4, 5, 6])
+
+/** Arriving at a stop on the way, rather than at the destination. */
+function stopArrival(type: number, stop: number): string {
+  if (type === 5) return `${stop}. durak sağınızda.`
+  if (type === 6) return `${stop}. durak solunuzda.`
+  return `${stop}. durağa vardınız.`
+}
+
 export function parseRoutes(data: ValhallaResponse): Route[] {
   return [data.trip, ...(data.alternates ?? []).map((a) => a.trip)].map(
     (trip) => {
       const shape: [number, number][] = []
       const maneuvers: Maneuver[] = []
-      for (const leg of trip.legs) {
+      trip.legs.forEach((leg, l) => {
         // Each leg counts its maneuvers' places from its own start
         const offset = shape.length
         shape.push(...decodePolyline6(leg.shape))
+        // Every leg but the last ends at a stop, not the destination
+        const stop = l < trip.legs.length - 1 ? l + 1 : undefined
         for (const m of leg.maneuvers) {
+          const atStop = stop !== undefined && ARRIVALS.has(m.type)
           maneuvers.push({
-            instruction: m.instruction,
+            instruction: atStop ? stopArrival(m.type, stop) : m.instruction,
             type: m.type,
             meters: m.length * 1000,
             seconds: m.time,
             streets: m.street_names ?? [],
             at: Math.min(offset + (m.begin_shape_index ?? 0), shape.length - 1),
+            ...(atStop && { stop }),
           })
         }
-      }
+      })
+      const departs = trip.locations?.[0]?.date_time
+      const arrives = trip.locations?.at(-1)?.date_time
       return {
         meters: trip.summary.length * 1000,
         seconds: trip.summary.time,
         shape,
         maneuvers,
+        ...(departs && arrives && { departs, arrives }),
       }
     },
   )

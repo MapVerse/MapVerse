@@ -20,22 +20,43 @@ import { DECK_LANDMARKS } from '../landmarks/deckLandmarks.ts'
 import { placeOnDecks, splitOnDecks } from '../landmarks/decks.ts'
 import { useOnTerrain } from '../landmarks/useOnTerrain.ts'
 import CategoryBadge from '../place/CategoryBadge.tsx'
+import { copyText } from '../place/clipboard.ts'
 import { distanceMeters, formatDistance, type Place } from '../place/place.ts'
 import { reverseGeocode, type SearchResult } from '../search/photon.ts'
 import { MIN_QUERY_LENGTH, usePlaceSearch } from '../search/usePlaceSearch.ts'
+import { loadAvoid, saveAvoid } from './avoid.ts'
 import {
-  formatArrival,
   formatDuration,
   maneuverIcon,
   routeLabels,
   routeVia,
   shapeBounds,
 } from './directions.ts'
+import {
+  directionsUrl,
+  MAX_STOPS,
+  type SharedDirections,
+  type SharedPoint,
+} from './share.ts'
+import { googleTransitUrl, type Mode } from './transit.ts'
 import { useRoutes } from './useRoutes.ts'
-import type { TravelMode } from './valhalla.ts'
+import {
+  canAvoid,
+  type Avoid,
+  type RouteRequest,
+  type TravelMode,
+  type When,
+} from './valhalla.ts'
+import {
+  formatClock,
+  localValue,
+  parseLocal,
+  routeTimes,
+  whenLabel,
+} from './when.ts'
 import './Directions.css'
 
-/** One end of a route. */
+/** One point of a route: an end, or a stop on the way. */
 type End = {
   name: string
   lngLat: [number, number]
@@ -43,13 +64,27 @@ type End = {
   /** The user's own location */
   mine?: boolean
 }
-/** Which end of the route. */
-type Target = 'origin' | 'destination'
+/** A field for a point, the start first and the destination last, kept
+ *  by its id as it is moved. */
+type Slot = { id: number; end: End | null }
 
-const MODES: { mode: TravelMode; label: string; icon: StrokeName }[] = [
+const MODES: { mode: Mode; label: string; icon: StrokeName }[] = [
   { mode: 'auto', label: 'Araba', icon: 'car' },
   { mode: 'pedestrian', label: 'Yürüyüş', icon: 'walk' },
   { mode: 'bicycle', label: 'Bisiklet', icon: 'bike' },
+  { mode: 'transit', label: 'Toplu taşıma', icon: 'bus' },
+]
+
+const AVOIDS: { key: keyof Avoid; label: string }[] = [
+  { key: 'tolls', label: 'Ücretli yollardan kaçın' },
+  { key: 'highways', label: 'Otoyoldan kaçın' },
+  { key: 'ferries', label: 'Feribottan kaçın' },
+]
+
+const WHENS: { kind: When['kind']; label: string }[] = [
+  { kind: 'now', label: 'Şimdi çık' },
+  { kind: 'depart', label: 'Çıkış saati' },
+  { kind: 'arrive', label: 'Varış saati' },
 ]
 
 // A white edge lifts routes off the light map; a dark one off the dark map
@@ -123,6 +158,9 @@ const PULL_PX = 24
 /** How often to bring arrival times up to date, in ms. */
 const CLOCK_MS = 30_000
 
+/** How long a passing notice (a link copied) stays, in ms. */
+const NOTICE_MS = 3500
+
 function whereAmI(): Promise<[number, number]> {
   return new Promise((resolve, reject) =>
     navigator.geolocation.getCurrentPosition(
@@ -137,8 +175,18 @@ function whereAmI(): Promise<[number, number]> {
 const shortAddress = (address: string) =>
   address.split(', ').slice(0, 2).join(', ')
 
+/** Now, a little on: the next five minutes, as a time to be picked. */
+function soon(): string {
+  const at = new Date(Date.now() + 5 * 60_000)
+  at.setMinutes(Math.ceil(at.getMinutes() / 5) * 5, 0, 0)
+  return localValue(at)
+}
+
 type Suggestion =
   { kind: 'locate' } | { kind: 'map' } | { kind: 'place'; place: SearchResult }
+
+/** What stands open under the card instead of the routes. */
+type Panel = 'when' | 'avoid'
 
 const reducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -146,6 +194,8 @@ const reducedMotion = () =>
 type Props = {
   /** Where to go; when missing, the destination is asked for */
   to: Place | null
+  /** Directions opened from a shared link, to start from instead */
+  shared?: SharedDirections | null
   /** Style layer to draw routes beneath, so labels stay readable */
   beforeId?: string
   onClose: () => void
@@ -153,15 +203,38 @@ type Props = {
   leaving?: boolean
 }
 
+/** The fields to start with: from a shared link, or to a place. */
+function firstSlots(to: Place | null, shared?: SharedDirections | null) {
+  if (shared) {
+    return shared.points.map((point, id) => ({
+      id,
+      end: point && { name: point.name, lngLat: point.lngLat },
+    }))
+  }
+  return [
+    { id: 0, end: null },
+    {
+      id: 1,
+      end: to && {
+        name: to.name,
+        lngLat: to.lngLat,
+        categoryKey: to.categoryKey,
+      },
+    },
+  ]
+}
+
 /**
- * Directions: a card to set both ends of a route (searched for, the user's
- * location, or picked on the map) and how to travel, and the routes found,
- * each with its turns. On a wide screen it all stands in a column beside
- * the map; on a phone the card stays at the top and the routes come up in
- * a sheet from the bottom, pulled up for the turns.
+ * Directions: a card to set both ends of a route and any stops on the way
+ * (searched for, the user's location, or picked on the map), how and when
+ * to travel and what to keep off, and the routes found, each with its
+ * turns. On a wide screen it all stands in a column beside the map; on a
+ * phone the card stays at the top and the routes come up in a sheet from
+ * the bottom, pulled up for the turns.
  */
 export default function Directions({
   to,
+  shared,
   beforeId,
   onClose,
   leaving = false,
@@ -169,8 +242,9 @@ export default function Directions({
   const { current: map } = useMap()
   const plannerRef = useRef<HTMLElement>(null)
   const resultsRef = useRef<HTMLElement>(null)
-  const originInput = useRef<HTMLInputElement>(null)
-  const destinationInput = useRef<HTMLInputElement>(null)
+  const fieldsRef = useRef<HTMLDivElement>(null)
+  const inputs = useRef(new Map<number, HTMLInputElement>())
+  const handles = useRef(new Map<number, HTMLButtonElement>())
   const sheetPull = useRef<{
     from: number
     by: number
@@ -178,85 +252,130 @@ export default function Directions({
   } | null>(null)
   // When a pull of the sheet last ended, so the click after it is let be
   const sheetPulled = useRef(0)
-  // How many times each end has been set
-  const changes = useRef<Record<Target, number>>({ origin: 0, destination: 0 })
+  // How many times each point has been set, by its field's id
+  const changes = useRef(new Map<number, number>())
   const listId = useId()
   const theme = useTheme()
   const colors =
     useMapDesign() === 'san-andreas' ? SAN_ANDREAS_ROUTE : ROUTE_COLORS[theme]
 
-  const [mode, setMode] = useState<TravelMode>('auto')
-  const [origin, setOrigin] = useState<End | null>(null)
-  const [destination, setDestination] = useState<End | null>(
-    to && { name: to.name, lngLat: to.lngLat, categoryKey: to.categoryKey },
+  const [mode, setMode] = useState<Mode>(shared?.mode ?? 'auto')
+  const [slots, setSlots] = useState<Slot[]>(() => firstSlots(to, shared))
+  const nextId = useRef(slots.length)
+  const [avoid, setAvoid] = useState<Avoid>(() => shared?.avoid ?? loadAvoid())
+  const [when, setWhen] = useState<When>(shared?.when ?? { kind: 'now' })
+  // When being picked, until the panel is closed
+  const [whenDraft, setWhenDraft] = useState<When>(when)
+  const [panel, setPanel] = useState<Panel | null>(null)
+  // The start is the user's location, unless it is set otherwise
+  const startsHere = canLocate && !slots[0].end
+  // Which point the user's location is being found for
+  const [locating, setLocating] = useState<number | null>(
+    startsHere ? slots[0].id : null,
   )
-  // Which end the user's location is being found for
-  const [locating, setLocating] = useState<Target | null>(
-    canLocate ? 'origin' : null,
-  )
-  const [notice, setNotice] = useState<string | null>(null)
-  // The end being typed in, and what has been typed
-  const [editing, setEditing] = useState<Target | null>(null)
+  const [notice, setNotice] = useState<{
+    text: string
+    problem?: boolean
+  } | null>(null)
+  // The point being typed in, and what has been typed
+  const [editing, setEditing] = useState<number | null>(null)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(-1)
-  // The end the next click on the map, or the pin's place, sets
-  const [picking, setPicking] = useState<Target | null>(null)
+  // The point the next click on the map, or the pin's place, sets
+  const [picking, setPicking] = useState<number | null>(null)
   const [selected, setSelected] = useState(0)
   const [step, setStep] = useState<number | null>(null)
   // On a phone, whether the sheet is pulled up to show the turns
   const [expanded, setExpanded] = useState(false)
+  // A field being dragged to another place in the list, and how far
+  const [drag, setDrag] = useState<{
+    id: number
+    by: number
+    /** The routes asked for as it was picked up */
+    request: RouteRequest | null
+  } | null>(null)
+  const dragFrom = useRef(0)
+  // Said to a screen reader as a field is moved
+  const [moved, setMoved] = useState('')
 
+  const origin = slots[0].end
+  const destination = slots[slots.length - 1].end
+  const stopCount = slots.length - 2
+  // The points set, and the stops among them numbered in order
+  const filled = slots.filter((s) => s.end)
+  const stops = slots.slice(1, -1).filter((s) => s.end)
+  const stopNumber = new Map(stops.map((slot, i) => [slot.id, i + 1]))
+  const routable = mode !== 'transit' && !!origin && !!destination
+  const request: RouteRequest | null = routable
+    ? {
+        points: filled.map((s) => s.end!.lngLat),
+        mode: mode as TravelMode,
+        avoid,
+        when,
+      }
+    : null
+  // While a field is dragged, the routes wait for where it is let go
   const { routes, status, reason, retry } = useRoutes(
-    origin?.lngLat ?? null,
-    destination?.lngLat ?? null,
-    mode,
+    drag ? drag.request : request,
   )
   const route = routes[selected] ?? routes[0]
   const labels = routeLabels(routes)
-  const search = usePlaceSearch(editing ? query : '')
+  const search = usePlaceSearch(editing !== null ? query : '')
 
-  const endOf = (target: Target) => (target === 'origin' ? origin : destination)
+  const slotOf = (id: number) => slots.find((s) => s.id === id)
+  const indexOf = (id: number) => slots.findIndex((s) => s.id === id)
 
-  function setEnd(target: Target, end: End | null) {
-    // Whatever was set last wins over a location still being found
-    changes.current[target]++
-    if (target === 'origin') setOrigin(end)
-    else setDestination(end)
+  /** Starts the routes afresh: the first, whole, with the sheet down. */
+  function freshRoutes() {
     setSelected(0)
     setStep(null)
     setExpanded(false)
   }
 
-  /** Finds the user's location for an end, unless it is set otherwise first. */
-  function findMe(target: Target) {
-    const change = changes.current[target]
-    const current = () => changes.current[target] === change
+  function setEnd(id: number, end: End | null) {
+    // Whatever was set last wins over a location still being found
+    changes.current.set(id, (changes.current.get(id) ?? 0) + 1)
+    setSlots((all) => all.map((s) => (s.id === id ? { ...s, end } : s)))
+    freshRoutes()
+  }
+
+  /** Finds the user's location for a point, unless it is set otherwise first. */
+  function findMe(id: number) {
+    const change = changes.current.get(id) ?? 0
+    const current = () => (changes.current.get(id) ?? 0) === change
     whereAmI()
       .then((lngLat) => {
-        if (current()) setEnd(target, { name: 'Konumum', lngLat, mine: true })
+        if (current()) setEnd(id, { name: 'Konumum', lngLat, mine: true })
       })
-      .catch(() => current() && setNotice('Konumuna erişilemedi.'))
-      .finally(() => setLocating((t) => (t === target ? null : t)))
+      .catch(
+        () =>
+          current() &&
+          setNotice({ text: 'Konumuna erişilemedi.', problem: true }),
+      )
+      .finally(() => setLocating((t) => (t === id ? null : t)))
   }
 
-  function locate(target: Target) {
-    setLocating(target)
+  function locate(id: number) {
+    setLocating(id)
     setNotice(null)
-    findMe(target)
+    findMe(id)
   }
 
-  /** Sets an end to a point picked on the map, named by its address. */
-  function picked(target: Target, lngLat: [number, number]) {
-    setEnd(target, { name: 'Haritada seçilen nokta', lngLat })
+  /** Sets a point to one picked on the map, named by its address. */
+  function picked(id: number, lngLat: [number, number]) {
+    setEnd(id, { name: 'Haritada seçilen nokta', lngLat })
     setPicking(null)
-    const rename = (end: End | null, address: string) =>
-      end && end.lngLat === lngLat ? { ...end, name: address } : end
     reverseGeocode(lngLat)
       .then((address) => {
         if (!address) return
         const name = shortAddress(address)
-        if (target === 'origin') setOrigin((end) => rename(end, name))
-        else setDestination((end) => rename(end, name))
+        setSlots((all) =>
+          all.map((s) =>
+            s.id === id && s.end?.lngLat === lngLat
+              ? { ...s, end: { ...s.end, name } }
+              : s,
+          ),
+        )
       })
       .catch(() => {})
   }
@@ -264,27 +383,58 @@ export default function Directions({
   // Start from the user's location, as long as they allow it; with nowhere
   // to go yet, ask for that first
   useEffect(() => {
-    if (canLocate) findMe('origin')
-    if (!to) destinationInput.current?.focus()
+    if (startsHere) findMe(slots[0].id)
+    if (!slots[slots.length - 1].end) {
+      inputs.current.get(slots[slots.length - 1].id)?.focus()
+    }
     // Only as it opens
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Escape steps back out of picking a point, or else closes directions
-  // (a field being typed in takes its own Escape first)
+  // A passing notice goes by itself
+  useEffect(() => {
+    if (!notice || notice.problem) return
+    const timer = setTimeout(() => setNotice(null), NOTICE_MS)
+    return () => clearTimeout(timer)
+  }, [notice])
+
+  /** Closes the panel under the card, taking the time picked in it. */
+  function closePanel() {
+    if (panel === 'when') {
+      const at = whenDraft.kind !== 'now' && parseLocal(whenDraft.at)
+      const next: When = at ? whenDraft : { kind: 'now' }
+      if (JSON.stringify(next) !== JSON.stringify(when)) {
+        setWhen(next)
+        freshRoutes()
+      }
+    }
+    setPanel(null)
+  }
+
+  function togglePanel(next: Panel) {
+    if (panel === next) return closePanel()
+    if (panel) closePanel()
+    if (next === 'when') setWhenDraft(when)
+    setPicking(null)
+    setPanel(next)
+  }
+
+  // Escape closes the panel, steps back out of picking a point, or else
+  // closes directions (a field being typed in takes its own Escape first)
   useEffect(() => {
     if (leaving) return
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) return
-      if (picking) setPicking(null)
+      if (panel) closePanel()
+      else if (picking !== null) setPicking(null)
       else onClose()
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [leaving, picking, onClose])
+  }) // Each render, as closing the panel reads what it holds now
 
-  // While picking, the next click on the map sets that end of the route
+  // While picking, the next click on the map sets that point of the route
   useEffect(() => {
-    if (!picking || !map) return
+    if (picking === null || !map) return
     const canvas = map.getCanvas()
     canvas.style.cursor = 'crosshair'
     const onClick = (event: { lngLat: { toArray(): [number, number] } }) =>
@@ -321,13 +471,20 @@ export default function Directions({
 
   /** Moves the map to show the whole of the picked route. */
   function fitRoute() {
-    const bounds = route && shapeBounds(route.shape)
+    // By public transport, the two ends it is opened with
+    const shape =
+      route?.shape ??
+      (mode === 'transit' && origin && destination
+        ? [origin.lngLat, destination.lngLat]
+        : null)
+    const bounds = shape && shapeBounds(shape)
     if (!map || !bounds) return
     map.fitBounds(bounds, { padding: padding(), duration: 800 })
   }
 
   // Fit each route as it comes, or is picked
-  useEffect(fitRoute, [map, route]) // eslint-disable-line react-hooks/exhaustive-deps
+  const ends = mode === 'transit' && `${origin?.lngLat}|${destination?.lngLat}`
+  useEffect(fitRoute, [map, route, ends]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Draw the picked route in from its start: the whole of it as one line
   // while it is drawn in, then its pieces on the ground as before
@@ -376,13 +533,12 @@ export default function Directions({
     }
   }, [map, route, colors.selected])
 
-  // Arrival times, kept up to the clock while routes show
-  const [, setClock] = useState(0)
+  // Arrival times and the day said for a time, kept up to the clock
+  const [now, setNow] = useState(() => new Date())
   useEffect(() => {
-    if (!route) return
-    const timer = setInterval(() => setClock((c) => c + 1), CLOCK_MS)
+    const timer = setInterval(() => setNow(new Date()), CLOCK_MS)
     return () => clearInterval(timer)
-  }, [route])
+  }, [])
 
   function focusStep(i: number) {
     const at = route?.shape[route.maneuvers[i]?.at]
@@ -406,35 +562,132 @@ export default function Directions({
     fitRoute()
   }
 
+  /** The other way round: the destination first, the stops in reverse. */
   function swap() {
-    changes.current.origin++
-    changes.current.destination++
-    setOrigin(destination)
-    setDestination(origin)
-    setSelected(0)
-    setStep(null)
+    setSlots((all) => [...all].reverse())
+    freshRoutes()
   }
 
-  // What to offer under the end being typed in
-  const suggestions: Suggestion[] = editing
-    ? [
-        ...(canLocate ? [{ kind: 'locate' } as const] : []),
-        { kind: 'map' } as const,
-        ...search.results.map((place) => ({ kind: 'place', place }) as const),
-      ]
-    : []
+  function addStop() {
+    if (stopCount >= MAX_STOPS) return
+    const id = nextId.current++
+    setSlots((all) => [...all.slice(0, -1), { id, end: null }, all.at(-1)!])
+    // Straight on to finding it
+    requestAnimationFrame(() => inputs.current.get(id)?.focus())
+  }
+
+  function removeStop(id: number) {
+    const at = indexOf(id)
+    changes.current.delete(id)
+    setSlots((all) => all.filter((s) => s.id !== id))
+    if (locating === id) setLocating(null)
+    if (picking === id) setPicking(null)
+    freshRoutes()
+    // Focus stays in the list, on the field that takes its place
+    const next = slots[at + 1] ?? slots[at - 1]
+    requestAnimationFrame(() => next && inputs.current.get(next.id)?.focus())
+  }
+
+  /** Moves a field to another place in the list. */
+  function moveTo(id: number, to: number) {
+    const from = indexOf(id)
+    if (from < 0 || to < 0 || to >= slots.length || to === from) return
+    const next = [...slots]
+    const [slot] = next.splice(from, 1)
+    next.splice(to, 0, slot)
+    setSlots(next)
+    freshRoutes()
+    setMoved(
+      `${slot.end?.name ?? 'Boş alan'}, ${to + 1}. sıraya taşındı (${
+        to === 0 ? 'başlangıç' : to === slots.length - 1 ? 'varış' : 'durak'
+      }).`,
+    )
+  }
+
+  // Said once, then out of the way of what is said of the routes
+  useEffect(() => {
+    if (!moved) return
+    const timer = setTimeout(() => setMoved(''), NOTICE_MS)
+    return () => clearTimeout(timer)
+  }, [moved])
+
+  // A moved field keeps the focus of its handle, as the list is reordered
+  const refocus = useRef<number | null>(null)
+  useEffect(() => {
+    if (refocus.current === null) return
+    handles.current.get(refocus.current)?.focus()
+    refocus.current = null
+  }, [slots])
+
+  function onHandleKey(id: number, event: KeyboardEvent<HTMLButtonElement>) {
+    const by =
+      event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : null
+    if (by === null) return
+    event.preventDefault()
+    refocus.current = id
+    moveTo(id, indexOf(id) + by)
+  }
+
+  /** How far apart the fields stand, top to top, in px. */
+  function rowStep(): number {
+    const rows = fieldsRef.current?.children
+    if (!rows || rows.length < 2) return 50
+    return (
+      rows[1].getBoundingClientRect().top - rows[0].getBoundingClientRect().top
+    )
+  }
+
+  // A field dragged by its handle follows the finger, and the others make
+  // way for it as it passes them
+  function onHandleDown(id: number, event: PointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+    dragFrom.current = event.clientY
+    setDrag({ id, by: 0, request })
+  }
+
+  function onHandleMove(id: number, event: PointerEvent<HTMLButtonElement>) {
+    if (drag?.id !== id) return
+    const by = event.clientY - dragFrom.current
+    const rowPx = rowStep()
+    const shift = Math.trunc((by + Math.sign(by) * rowPx * 0.5) / rowPx)
+    const from = indexOf(id)
+    const to = Math.min(Math.max(from + shift, 0), slots.length - 1)
+    if (to !== from) {
+      // Under the finger still, from its new place
+      dragFrom.current += (to - from) * rowPx
+      moveTo(id, to)
+      setDrag({ ...drag, by: event.clientY - dragFrom.current })
+    } else {
+      setDrag({ ...drag, by })
+    }
+  }
+
+  function onHandleUp() {
+    setDrag(null)
+  }
+
+  // What to offer under the point being typed in
+  const suggestions: Suggestion[] =
+    editing !== null
+      ? [
+          ...(canLocate ? [{ kind: 'locate' } as const] : []),
+          { kind: 'map' } as const,
+          ...search.results.map((place) => ({ kind: 'place', place }) as const),
+        ]
+      : []
   const typed = query.trim().length >= MIN_QUERY_LENGTH
 
   function choose(suggestion: Suggestion) {
-    const target = editing
-    if (!target) return
+    const id = editing
+    if (id === null) return
     setEditing(null)
-    ;(target === 'origin' ? originInput : destinationInput).current?.blur()
-    if (suggestion.kind === 'locate') locate(target)
-    else if (suggestion.kind === 'map') setPicking(target)
+    inputs.current.get(id)?.blur()
+    if (suggestion.kind === 'locate') locate(id)
+    else if (suggestion.kind === 'map') setPicking(id)
     else {
       const { name, lngLat, categoryKey } = suggestion.place
-      setEnd(target, { name, lngLat, categoryKey })
+      setEnd(id, { name, lngLat, categoryKey })
     }
   }
 
@@ -456,48 +709,110 @@ export default function Directions({
     }
   }
 
-  /** The suggestions listed under an end, and each one in it. */
-  const listOf = (target: Target) => `${listId}-${target}`
-  const optionOf = (target: Target, i: number) => `${listOf(target)}-${i}`
+  /** The suggestions listed under a point, and each one in it. */
+  const listOf = (id: number) => `${listId}-${id}`
+  const optionOf = (id: number, i: number) => `${listOf(id)}-${i}`
 
-  function field(target: Target) {
-    const end = endOf(target)
-    const isEditing = editing === target
+  /** What a field is called, by where it stands. */
+  function fieldName(index: number, id: number): string {
+    if (index === 0) return 'Başlangıç'
+    if (index === slots.length - 1) return 'Varış'
+    const n = stopNumber.get(id)
+    return n ? `${n}. durak` : 'Durak'
+  }
+
+  function field(slot: Slot, index: number) {
+    const { id, end } = slot
+    const isEditing = editing === id
+    const isStop = index > 0 && index < slots.length - 1
+    const kind = index === 0 ? 'origin' : isStop ? 'stop' : 'destination'
+    const name = fieldName(index, id)
+    const inputId = `${listOf(id)}-input`
     // Its list stands open only while it is typed in
     const open = isEditing && suggestions.length > 0
+    const movable = slots.length > 2
+    const dot = (
+      <span className={`directions-dot directions-dot-${kind}`}>
+        {isStop && stopNumber.get(id)}
+      </span>
+    )
     return (
-      <label className={`directions-field${isEditing ? ' is-editing' : ''}`}>
-        <span className={`directions-dot directions-dot-${target}`} />
+      <div
+        key={id}
+        className={`directions-field${isEditing ? ' is-editing' : ''}${
+          drag?.id === id ? ' is-dragged' : ''
+        }`}
+        style={
+          drag?.id === id
+            ? ({ '--drag': `${drag.by}px` } as CSSProperties)
+            : undefined
+        }
+        onClick={(event) => {
+          // Anywhere in the field but its buttons types into it
+          if (!(event.target as Element).closest('button')) {
+            inputs.current.get(id)?.focus()
+          }
+        }}
+      >
+        {movable ? (
+          <button
+            ref={(el) => {
+              if (el) handles.current.set(id, el)
+              else handles.current.delete(id)
+            }}
+            type="button"
+            className="directions-handle"
+            aria-label={`${name}: taşı`}
+            aria-description="Yukarı ve aşağı ok tuşlarıyla sırasını değiştir"
+            title="Sürükleyerek sırala"
+            onPointerDown={(event) => onHandleDown(id, event)}
+            onPointerMove={(event) => onHandleMove(id, event)}
+            onPointerUp={onHandleUp}
+            onPointerCancel={onHandleUp}
+            onKeyDown={(event) => onHandleKey(id, event)}
+          >
+            {dot}
+          </button>
+        ) : (
+          <span className="directions-handle">{dot}</span>
+        )}
         <input
-          ref={target === 'origin' ? originInput : destinationInput}
+          ref={(el) => {
+            if (el) inputs.current.set(id, el)
+            else inputs.current.delete(id)
+          }}
+          id={inputId}
           type="text"
           role="combobox"
-          aria-label={target === 'origin' ? 'Başlangıç' : 'Varış'}
+          aria-label={name}
           aria-expanded={open}
-          aria-controls={open ? listOf(target) : undefined}
+          aria-controls={open ? listOf(id) : undefined}
           aria-activedescendant={
-            open && suggestions[active] ? optionOf(target, active) : undefined
+            open && suggestions[active] ? optionOf(id, active) : undefined
           }
           aria-autocomplete="list"
           autoComplete="off"
           enterKeyHint="search"
           placeholder={
-            locating === target
+            locating === id
               ? 'Konum alınıyor…'
-              : target === 'origin'
+              : index === 0
                 ? 'Nereden?'
-                : 'Nereye?'
+                : isStop
+                  ? 'Nereye uğranacak?'
+                  : 'Nereye?'
           }
           value={isEditing ? query : (end?.name ?? '')}
           onFocus={(event) => {
-            setEditing(target)
+            if (panel) closePanel()
+            setEditing(id)
             setPicking(null)
             setQuery(end && !end.mine ? end.name : '')
             setActive(-1)
             const input = event.currentTarget
             requestAnimationFrame(() => input.select())
           }}
-          onBlur={() => setEditing((t) => (t === target ? null : t))}
+          onBlur={() => setEditing((t) => (t === id ? null : t))}
           onChange={(event) => {
             setQuery(event.target.value)
             setActive(-1)
@@ -505,7 +820,50 @@ export default function Directions({
           onKeyDown={onFieldKey}
         />
         {end?.mine && !isEditing && <Icon name="locate" size={16} />}
-      </label>
+        {isStop && (
+          <button
+            type="button"
+            className="directions-remove"
+            aria-label={`${name}: kaldır`}
+            title="Durağı kaldır"
+            onClick={() => removeStop(id)}
+          >
+            <Icon name="close" size={16} />
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  /** The directions as they would be shared: "my location" as the opener's. */
+  function toShare(): SharedDirections {
+    const points: SharedPoint[] = filled.map(({ end }, i) => {
+      if (end!.mine && i === 0 && origin) return null
+      return {
+        name: end!.mine ? 'Paylaşan kişinin konumu' : end!.name,
+        lngLat: end!.lngLat,
+      }
+    })
+    // A start not set yet is the opener's own location too
+    if (!origin) points.unshift(null)
+    return { points, mode, avoid, when }
+  }
+
+  async function share() {
+    if (!destination) return
+    const url = directionsUrl(toShare())
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `${destination.name} yol tarifi`, url })
+      } catch {
+        // Dismissed
+      }
+      return
+    }
+    setNotice(
+      (await copyText(url))
+        ? { text: 'Bağlantı kopyalandı.' }
+        : { text: 'Bağlantı kopyalanamadı.', problem: true },
     )
   }
 
@@ -558,17 +916,25 @@ export default function Directions({
     setExpanded((e) => !e)
   }
 
+  const between = stopCount > 0 ? 'Bu noktalar' : 'Bu iki nokta'
   const message =
     status === 'none'
       ? reason === 'too-far'
-        ? 'Bu iki nokta arası rota hesaplamak için fazla uzak.'
+        ? `${between} arası rota hesaplamak için fazla uzak.`
         : reason === 'off-road'
           ? 'Noktalardan biri bir yola yakın değil; yola daha yakın bir yer seç.'
-          : 'Bu iki nokta arasında rota bulunamadı.'
+          : `${between} arasında rota bulunamadı.`
       : status === 'error'
         ? 'Rota şu anda hesaplanamıyor.'
         : null
-  const showResults = !editing && (status === 'loading' || !!route || !!message)
+  const transit = mode === 'transit'
+  const showResults =
+    editing === null &&
+    !panel &&
+    (transit ? !!destination : status === 'loading' || !!route || !!message)
+  const avoided = AVOIDS.filter(
+    ({ key }) => avoid[key] && mode !== 'transit' && canAvoid(mode, key),
+  ).length
 
   // Along a bridge, routes run on its deck rather than the water below:
   // each route split round the decks once, then drawn picked or not
@@ -604,7 +970,8 @@ export default function Directions({
   )
   // What a screen reader is told of the routes as they come
   const announcement =
-    status === 'loading'
+    moved ||
+    (status === 'loading'
       ? 'Rota hesaplanıyor…'
       : (message ??
         (route
@@ -613,17 +980,36 @@ export default function Directions({
             }${formatDuration(routes[0].seconds)}, ${formatDistance(
               routes[0].meters,
             )}.`
-          : ''))
+          : '')))
   const raised = useOnTerrain(decks)
   const center = map?.getCenter().toArray()
   const focused =
     step !== null && route ? route.shape[route.maneuvers[step]?.at] : undefined
 
+  /** When a route leaves and arrives, as its card says it. */
+  function routeTime(r: (typeof routes)[number]): string {
+    const { departs, arrives } = routeTimes(r, when, now)
+    if (when.kind === 'now') return `Varış ${formatClock(arrives, now)}`
+    if (when.kind === 'depart') {
+      return `Çıkış ${formatClock(departs, departs)} · Varış ${formatClock(arrives, departs)}`
+    }
+    return `Çıkış ${formatClock(departs, arrives)} · Varış ${formatClock(arrives, arrives)}`
+  }
+
+  const pickingName =
+    picking === null
+      ? ''
+      : indexOf(picking) === 0
+        ? 'Başlangıç noktasını seç'
+        : indexOf(picking) === slots.length - 1
+          ? 'Varış noktasını seç'
+          : 'Durağı seç'
+
   return (
     <>
       <div
         className={`directions${leaving ? ' is-leaving' : ''}${
-          picking ? ' is-picking' : ''
+          picking !== null ? ' is-picking' : ''
         }`}
         inert={leaving || undefined}
       >
@@ -657,10 +1043,11 @@ export default function Directions({
                   type="button"
                   role="tab"
                   aria-selected={m.mode === mode}
+                  aria-label={m.label}
+                  title={m.label}
                   onClick={() => {
                     setMode(m.mode)
-                    setSelected(0)
-                    setStep(null)
+                    freshRoutes()
                   }}
                 >
                   <Icon name={m.icon} size={19} />
@@ -671,27 +1058,218 @@ export default function Directions({
           </div>
 
           <div className="directions-ends">
-            <div className="directions-fields">
-              {field('origin')}
-              {field('destination')}
+            <div ref={fieldsRef} className="directions-fields">
+              {slots.map(field)}
             </div>
             <button
               type="button"
               className="directions-swap"
-              aria-label="Başlangıç ile varışı değiştir"
-              title="Yer değiştir"
+              aria-label={
+                stopCount > 0
+                  ? 'Rotayı ters çevir'
+                  : 'Başlangıç ile varışı değiştir'
+              }
+              title={stopCount > 0 ? 'Ters çevir' : 'Yer değiştir'}
               disabled={!origin && !destination}
               onClick={swap}
             >
               <Icon name="swap" size={20} />
             </button>
           </div>
+
+          <div className="directions-actions">
+            {!transit && stopCount < MAX_STOPS && (
+              <button
+                type="button"
+                className="directions-chip"
+                onClick={addStop}
+              >
+                <Icon name="plus" size={16} />
+                Durak ekle
+              </button>
+            )}
+            {!transit && (
+              <button
+                type="button"
+                className={`directions-chip${
+                  when.kind !== 'now' ? ' is-set' : ''
+                }`}
+                aria-expanded={panel === 'when'}
+                aria-label={`Ne zaman: ${whenLabel(when, now)}`}
+                onClick={() => togglePanel('when')}
+              >
+                <Icon name="clock" size={16} />
+                {whenLabel(when, now)}
+              </button>
+            )}
+            {!transit && (
+              <button
+                type="button"
+                className={`directions-chip is-icon${avoided ? ' is-set' : ''}`}
+                title="Seçenekler"
+                aria-expanded={panel === 'avoid'}
+                aria-label={`Rota seçenekleri${
+                  avoided ? `: ${avoided} seçili` : ''
+                }`}
+                onClick={() => togglePanel('avoid')}
+              >
+                <Icon name="sliders" size={16} />
+                {avoided > 0 && (
+                  <span className="directions-chip-count">{avoided}</span>
+                )}
+              </button>
+            )}
+            <button
+              type="button"
+              className="directions-chip is-icon is-share"
+              aria-label="Yol tarifini paylaş"
+              title="Paylaş"
+              disabled={!destination}
+              onClick={share}
+            >
+              <Icon name="share" size={16} />
+            </button>
+          </div>
           <div role="status" aria-live="polite">
-            {notice && <p className="directions-notice">{notice}</p>}
+            {notice && (
+              <p
+                className={`directions-notice${
+                  notice.problem ? ' is-problem' : ''
+                }`}
+              >
+                {notice.text}
+              </p>
+            )}
           </div>
         </section>
 
-        {editing && (
+        {panel === 'when' && (
+          <section className="directions-panel mv-glass" aria-label="Ne zaman">
+            <div
+              className="directions-segments"
+              role="radiogroup"
+              aria-label="Ne zaman"
+              style={
+                {
+                  '--segment': WHENS.findIndex(
+                    (w) => w.kind === whenDraft.kind,
+                  ),
+                } as CSSProperties
+              }
+            >
+              {WHENS.map((w) => (
+                <button
+                  key={w.kind}
+                  type="button"
+                  role="radio"
+                  aria-checked={w.kind === whenDraft.kind}
+                  onClick={() =>
+                    setWhenDraft((draft) =>
+                      w.kind === 'now'
+                        ? { kind: 'now' }
+                        : {
+                            kind: w.kind,
+                            at: draft.kind === 'now' ? soon() : draft.at,
+                          },
+                    )
+                  }
+                >
+                  {w.label}
+                </button>
+              ))}
+            </div>
+            {whenDraft.kind !== 'now' && (
+              <div className="directions-when-fields">
+                <label>
+                  <span>Tarih</span>
+                  <input
+                    type="date"
+                    value={whenDraft.at.slice(0, 10)}
+                    onChange={(event) => {
+                      const day = event.target.value
+                      if (day) {
+                        setWhenDraft({
+                          ...whenDraft,
+                          at: `${day}${whenDraft.at.slice(10)}`,
+                        })
+                      }
+                    }}
+                  />
+                </label>
+                <label>
+                  <span>
+                    {whenDraft.kind === 'depart' ? 'Çıkış' : 'Varış'} saati
+                  </span>
+                  <input
+                    type="time"
+                    value={whenDraft.at.slice(11)}
+                    onChange={(event) => {
+                      const time = event.target.value
+                      if (time) {
+                        setWhenDraft({
+                          ...whenDraft,
+                          at: `${whenDraft.at.slice(0, 11)}${time.slice(0, 5)}`,
+                        })
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            )}
+            <button
+              type="button"
+              className="directions-done"
+              onClick={closePanel}
+            >
+              Tamam
+            </button>
+          </section>
+        )}
+
+        {panel === 'avoid' && (
+          <section
+            className="directions-panel mv-glass"
+            aria-label="Rota seçenekleri"
+          >
+            <ul className="directions-avoids">
+              {AVOIDS.map(({ key, label }) => {
+                const can = !transit && canAvoid(mode as TravelMode, key)
+                return (
+                  <li key={key}>
+                    <label className={can ? undefined : 'is-off'}>
+                      <span className="directions-avoid-text">
+                        {label}
+                        {!can && <small>Yalnızca araba için</small>}
+                      </span>
+                      <input
+                        type="checkbox"
+                        role="switch"
+                        className="directions-switch"
+                        checked={can && avoid[key]}
+                        disabled={!can}
+                        onChange={(event) => {
+                          const next = { ...avoid, [key]: event.target.checked }
+                          setAvoid(next)
+                          saveAvoid(next)
+                          freshRoutes()
+                        }}
+                      />
+                    </label>
+                  </li>
+                )
+              })}
+            </ul>
+            <button
+              type="button"
+              className="directions-done"
+              onClick={closePanel}
+            >
+              Tamam
+            </button>
+          </section>
+        )}
+
+        {editing !== null && (
           <section
             className="directions-suggestions mv-glass"
             aria-label="Öneriler"
@@ -775,7 +1353,43 @@ export default function Directions({
           {announcement}
         </p>
 
-        {showResults && (
+        {showResults && transit && destination && (
+          <section
+            className="directions-results directions-transit mv-glass"
+            aria-label="Toplu taşıma"
+          >
+            <span className="directions-transit-icon">
+              <Icon name="bus" size={22} />
+            </span>
+            <div className="directions-transit-text">
+              <strong>Toplu taşıma başka bir uygulamada açılır</strong>
+              <p>
+                Otobüs, metro ve vapur saatlerini burada hesaplayamıyoruz. Aynı
+                yolculuğu toplu taşıma tarifleri veren Google Haritalar'da aç
+                {origin ? '' : '; başlangıç bulunduğun yer olur'}.
+              </p>
+              {stops.length > 0 && (
+                <p className="directions-transit-note">
+                  Duraklar bu bağlantıya eklenmez.
+                </p>
+              )}
+            </div>
+            <a
+              className="directions-transit-link"
+              href={googleTransitUrl(
+                origin?.lngLat ?? null,
+                destination.lngLat,
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google Haritalar'da aç
+              <Icon name="external" size={16} />
+            </a>
+          </section>
+        )}
+
+        {showResults && !transit && (
           <section
             ref={resultsRef}
             className={`directions-results mv-glass${
@@ -839,7 +1453,11 @@ export default function Directions({
                 <div key={step} className="directions-stepper-turn">
                   <span className="directions-step-icon">
                     <Icon
-                      name={maneuverIcon(route.maneuvers[step].type)}
+                      name={
+                        route.maneuvers[step].stop
+                          ? 'pin'
+                          : maneuverIcon(route.maneuvers[step].type)
+                      }
                       size={20}
                     />
                   </span>
@@ -899,8 +1517,7 @@ export default function Directions({
                             )}
                           </span>
                           <span className="directions-route-meta">
-                            {formatDistance(r.meters)} · Varış{' '}
-                            {formatArrival(r.seconds)}
+                            {formatDistance(r.meters)} · {routeTime(r)}
                           </span>
                           {via && (
                             <span className="directions-route-via">
@@ -912,6 +1529,13 @@ export default function Directions({
                     )
                   })}
                 </ul>
+                {when.kind !== 'now' &&
+                  routes.length === 1 &&
+                  filled.length === 2 && (
+                    <p className="directions-hint">
+                      Belirli bir saat için tek rota hesaplanır.
+                    </p>
+                  )}
                 <h3 className="directions-steps-title">
                   <button
                     type="button"
@@ -931,11 +1555,18 @@ export default function Directions({
                     >
                       <button
                         type="button"
+                        className={m.stop ? 'is-stop' : undefined}
                         aria-current={i === step || undefined}
                         onClick={() => focusStep(i)}
                       >
                         <span className="directions-step-icon">
-                          <Icon name={maneuverIcon(m.type)} size={18} />
+                          {m.stop ? (
+                            <span className="directions-step-stop">
+                              {m.stop}
+                            </span>
+                          ) : (
+                            <Icon name={maneuverIcon(m.type)} size={18} />
+                          )}
                         </span>
                         <span className="directions-instruction">
                           {m.instruction}
@@ -955,17 +1586,13 @@ export default function Directions({
         )}
       </div>
 
-      {picking && (
+      {picking !== null && (
         <div className="directions-picking" role="status">
           {/* On a phone, the map moves under a pin in its middle */}
           <span className="directions-picking-pin" aria-hidden="true" />
           <div className="directions-picking-bar mv-glass">
             <span className="directions-picking-text">
-              <strong>
-                {picking === 'origin'
-                  ? 'Başlangıç noktasını seç'
-                  : 'Varış noktasını seç'}
-              </strong>
+              <strong>{pickingName}</strong>
               <small>
                 <span className="on-wide">Haritada bir yere tıkla</span>
                 <span className="on-phone">
@@ -982,7 +1609,7 @@ export default function Directions({
                 className="is-primary on-phone"
                 onClick={() => {
                   const at = map?.getCenter().toArray()
-                  if (at) picked(picking, at)
+                  if (at && slotOf(picking)) picked(picking, at)
                 }}
               >
                 Bu noktayı seç
@@ -1073,6 +1700,16 @@ export default function Directions({
           <span className={`route-origin${origin.mine ? ' is-mine' : ''}`} />
         </Marker>
       )}
+      {!transit &&
+        stops.map(({ id, end }) => (
+          <Marker
+            key={`${id}:${end!.lngLat.join()}`}
+            longitude={end!.lngLat[0]}
+            latitude={end!.lngLat[1]}
+          >
+            <span className="route-stop">{stopNumber.get(id)}</span>
+          </Marker>
+        ))}
       {destination && (
         <Marker
           key={destination.lngLat.join()}
