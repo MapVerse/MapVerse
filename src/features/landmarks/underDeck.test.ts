@@ -19,7 +19,11 @@ function tileOf([lng, lat]: [number, number]) {
 }
 
 /** Whether a line, given as metres along and across the deck, is kept */
-function kept(points: [number, number][], brunnel?: string) {
+function kept(
+  points: [number, number][],
+  brunnel?: string,
+  options?: { bridgesOnly?: boolean },
+) {
   const lngLats = points.map(([u, v]) =>
     offset(bridge.near, [
       u * Math.cos(angle) - v * Math.sin(angle),
@@ -37,7 +41,7 @@ function kept(points: [number, number][], brunnel?: string) {
     }),
   ]
   const filter = featureFilter(
-    ['all', clearUnderDecks(DECK_LANDMARKS)] as never,
+    ['all', clearUnderDecks(DECK_LANDMARKS, options)] as never,
     'filter',
   )
   return filter.filter(
@@ -108,6 +112,30 @@ describe('clearUnderDecks', () => {
           [100, 80],
         ],
         'bridge',
+      ),
+    ).toBe(true)
+  })
+
+  it('drops a road name along the deck, which has no bridge mark', () => {
+    const names = { bridgesOnly: false }
+    expect(
+      kept(
+        [
+          [from - 200, 2],
+          [to + 200, 2],
+        ],
+        undefined,
+        names,
+      ),
+    ).toBe(false)
+    expect(
+      kept(
+        [
+          [to + 5, 0],
+          [to + 300, 0],
+        ],
+        undefined,
+        names,
       ),
     ).toBe(true)
   })

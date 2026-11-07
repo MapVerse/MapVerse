@@ -255,13 +255,15 @@ const UNDER_DECK_MARGIN = 40
 const UNDER_DECK_REACH = 8
 
 /**
- * A filter that keeps the map's own bridge roads, and their names, off the
+ * A filter that keeps the map's own bridge roads, or their names, off the
  * stretch a landmark's deck carries, so they don't lie flat on the water
- * under it. It matches only bridges, along the deck's middle line short of
- * its ends, so the roads leading onto it stay.
+ * under it. It matches along the deck's middle line short of its ends, so
+ * the roads leading onto it stay; for roads, only bridges. Road names come
+ * without that mark, so for them any name along the deck goes.
  */
 export function clearUnderDecks(
   landmarks: readonly Landmark[],
+  { bridgesOnly = true }: { bridgesOnly?: boolean } = {},
 ): ExpressionSpecification {
   return [
     'all',
@@ -276,7 +278,7 @@ export function clearUnderDecks(
           '!',
           [
             'all',
-            ['==', ['get', 'brunnel'], 'bridge'],
+            bridgesOnly ? ['==', ['get', 'brunnel'], 'bridge'] : true,
             [
               '<',
               [

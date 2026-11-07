@@ -434,6 +434,10 @@ const ROAD_SORT: ExpressionSpecification = [
 
 /** The map's own roads, kept off what landmarks' decks carry */
 const CLEAR_UNDER_DECKS = clearUnderDecks(DECK_LANDMARKS)
+/** Their names, which come without the mark of a bridge */
+const CLEAR_NAMES_UNDER_DECKS = clearUnderDecks(DECK_LANDMARKS, {
+  bridgesOnly: false,
+})
 
 function roads(c: Palette, tunnel: boolean): LayerSpecification[] {
   const filter: FilterSpecification = [
@@ -950,7 +954,7 @@ function buildStyle(
         filter: [
           'all',
           isClass(...ROAD_CLASSES),
-          ['any', ['<', ['zoom'], RISE_ZOOM], CLEAR_UNDER_DECKS],
+          ['any', ['<', ['zoom'], RISE_ZOOM], CLEAR_NAMES_UNDER_DECKS],
         ],
         layout: {
           'symbol-placement': 'line',
