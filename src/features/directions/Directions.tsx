@@ -1,5 +1,9 @@
 import { Layer, Marker, Source, useMap } from '@vis.gl/react-maplibre'
-import { setMeasuring, useMeasuring } from '../measure/measureMode.ts'
+import {
+  isMeasuring,
+  setMeasuring,
+  subscribeMeasuring,
+} from '../measure/measureMode.ts'
 import type { FeatureCollection, LineString } from 'geojson'
 import type { ExpressionSpecification, PaddingOptions } from 'maplibre-gl'
 import {
@@ -434,10 +438,13 @@ export default function Directions({
   }) // Each render, as closing the panel reads what it holds now
 
   // Measuring takes the map's clicks: picking a point stops for it
-  const measuring = useMeasuring()
-  useEffect(() => {
-    if (measuring) setPicking(null)
-  }, [measuring])
+  useEffect(
+    () =>
+      subscribeMeasuring(() => {
+        if (isMeasuring()) setPicking(null)
+      }),
+    [],
+  )
 
   // While picking, the next click on the map sets that point of the route
   useEffect(() => {
